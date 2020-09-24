@@ -1,3 +1,5 @@
+use crate::error::ErrorBag;
+use crate::source_text::SourceText;
 use crate::tokens::{Token, TokenKind};
 
 macro_rules! add {
@@ -6,30 +8,32 @@ macro_rules! add {
     };
 }
 
-pub struct Lexer<'a> {
+pub struct Lexer<'bag, 'src> {
+    error_bag: &'bag mut ErrorBag<'src>,
     pub tokens: Vec<Token>,
-    text: &'a str,
-    chars: std::iter::Peekable<std::str::CharIndices<'a>>,
+    src: &'src SourceText<'src>,
+    chars: std::iter::Peekable<std::str::CharIndices<'src>>,
     open_brace: usize,
     close_brace: usize,
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(text: &str) -> Lexer {
+impl<'bag, 'src> Lexer<'bag, 'src> {
+    pub fn lex(src: &'src SourceText<'src>, error_bag: &'bag mut ErrorBag<'src>) -> Vec<Token> {
         let mut lexer = Lexer {
-            chars: text.char_indices().peekable(),
-            text,
+            error_bag,
+            chars: src.text.char_indices().peekable(),
+            src,
             open_brace: 0,
             close_brace: 0,
             tokens: Vec::new(),
         };
 
-        lexer.lex();
+        lexer._lex();
 
-        lexer
+        lexer.tokens
     }
 
-    fn lex(&mut self) {
+    fn _lex(&mut self) {
         while let Some((i, chr)) = self.chars.next() {
             if chr.is_whitespace() {
                 self.lex_whitespace(i);
@@ -127,7 +131,10 @@ impl<'a> Lexer<'a> {
                         self.close_brace += 1;
                         add!(self, TokenKind::CloseBrace, i => 1)
                     }
-                    _ => add!(self, TokenKind::Bad, i => 1),
+                    _ => {
+                        self.error_bag.bad_char(i);
+                        add!(self, TokenKind::Bad, i => 1);
+                    }
                 }
             }
         }
@@ -149,7 +156,7 @@ impl<'a> Lexer<'a> {
             if !chr.is_alphanumeric() {
                 add!(
                     self,
-                    match &self.text[start..*i] {
+                    match &self.src.text[start..*i] {
                         "true" | "false" => TokenKind::Boolean,
                         _ => TokenKind::Ident,
                     },
@@ -191,12 +198,12 @@ impl<'a> Lexer<'a> {
 use fmt::Write;
 use std::fmt;
 
-impl<'a> fmt::Display for Lexer<'a> {
+impl fmt::Display for Lexer<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[\n");
         for token in &self.tokens {
             f.write_char('\t')?;
-            token.prt(f, self.text)?;
+            token.fmt(f, self.src)?;
             write!(f, ",\n")?;
         }
         write!(f, "]")

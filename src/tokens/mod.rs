@@ -1,34 +1,50 @@
 mod token_kind;
 
+use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use std::fmt;
 
 pub use token_kind::TokenKind;
 
+#[derive(Clone)]
 pub struct Token {
-    token_kind: TokenKind,
-    text_span: TextSpan,
+    pub kind: TokenKind,
+    pub text_span: TextSpan,
 }
 
 impl Token {
-    pub fn new(token_kind: TokenKind, start: usize, len: usize) -> Token {
+    pub fn new(kind: TokenKind, start: usize, len: usize) -> Token {
         Token {
-            token_kind,
+            kind,
             text_span: TextSpan::new(start, len),
         }
     }
 
-    pub fn prt(&self, f: &mut fmt::Formatter, text: &str) -> fmt::Result {
+    pub fn prt(&self, src: &SourceText) {
+        print!(
+            "{:?} - ({}, {}) = '{}'",
+            self.kind,
+            self.text_span.start(),
+            self.text_span.end(),
+            if self.kind == TokenKind::Whitespace {
+                ""
+            } else {
+                &src[&self.text_span]
+            }
+        )
+    }
+
+    pub fn fmt(&self, f: &mut fmt::Formatter, src: &SourceText) -> fmt::Result {
         write!(
             f,
             "{:?} - ({}, {}) = '{}'",
-            self.token_kind,
+            self.kind,
             self.text_span.start(),
             self.text_span.end(),
-            if self.token_kind == TokenKind::Whitespace {
+            if self.kind == TokenKind::Whitespace {
                 ""
             } else {
-                self.text_span.get_str(text)
+                &src[&self.text_span]
             }
         )
     }

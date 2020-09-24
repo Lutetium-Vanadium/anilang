@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct TextSpan {
     start: usize,
     len: usize,
@@ -18,9 +19,5 @@ impl TextSpan {
 
     pub fn len(&self) -> usize {
         self.len
-    }
-
-    pub fn get_str<'a>(&self, text: &'a str) -> &'a str {
-        &text[self.start..self.end()]
     }
 }
