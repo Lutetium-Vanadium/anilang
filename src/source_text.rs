@@ -48,6 +48,10 @@ impl<'a> SourceText<'a> {
         }
         None
     }
+
+    pub fn len(&self) -> usize {
+        self.text.len()
+    }
 }
 
 impl Index<&TextSpan> for SourceText<'_> {

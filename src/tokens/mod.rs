@@ -6,7 +6,7 @@ use std::fmt;
 
 pub use token_kind::TokenKind;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub kind: TokenKind,
     pub text_span: TextSpan,
@@ -18,6 +18,14 @@ impl Token {
             kind,
             text_span: TextSpan::new(start, len),
         }
+    }
+
+    pub fn unary_precedence(&self) -> u8 {
+        self.kind.unary_precedence()
+    }
+
+    pub fn binary_precedence(&self) -> u8 {
+        self.kind.binary_precedence()
     }
 
     pub fn prt(&self, src: &SourceText) {

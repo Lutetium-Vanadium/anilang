@@ -47,14 +47,14 @@ pub enum TokenKind {
 use TokenKind::*;
 
 impl TokenKind {
-    pub fn unary_precedence(&self) -> i32 {
+    pub fn unary_precedence(&self) -> u8 {
         match self {
             NotOperator | PlusOperator | MinusOperator | MinusMinusOperator | PlusPlusOperator => 8,
             _ => 0,
         }
     }
 
-    pub fn binary_precedence(&self) -> i32 {
+    pub fn binary_precedence(&self) -> u8 {
         match self {
             CaretOperator => 7,
             ModOperator => 6,

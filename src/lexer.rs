@@ -13,8 +13,6 @@ pub struct Lexer<'bag, 'src> {
     pub tokens: Vec<Token>,
     src: &'src SourceText<'src>,
     chars: std::iter::Peekable<std::str::CharIndices<'src>>,
-    open_brace: usize,
-    close_brace: usize,
 }
 
 impl<'bag, 'src> Lexer<'bag, 'src> {
@@ -23,8 +21,6 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             error_bag,
             chars: src.text.char_indices().peekable(),
             src,
-            open_brace: 0,
-            close_brace: 0,
             tokens: Vec::new(),
         };
 
@@ -123,14 +119,8 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
                     ']' => add!(self, TokenKind::CloseBracket, i => 1),
                     '(' => add!(self, TokenKind::OpenParan, i => 1),
                     ')' => add!(self, TokenKind::CloseParan, i => 1),
-                    '{' => {
-                        self.open_brace += 1;
-                        add!(self, TokenKind::OpenBrace, i => 1)
-                    }
-                    '}' => {
-                        self.close_brace += 1;
-                        add!(self, TokenKind::CloseBrace, i => 1)
-                    }
+                    '{' => add!(self, TokenKind::OpenBrace, i => 1),
+                    '}' => add!(self, TokenKind::CloseBrace, i => 1),
                     _ => {
                         self.error_bag.bad_char(i);
                         add!(self, TokenKind::Bad, i => 1);
@@ -138,60 +128,79 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
                 }
             }
         }
+
+        self.tokens
+            .push(Token::new(TokenKind::EOF, self.src.len(), 0));
     }
 
     fn lex_whitespace(&mut self, start: usize) {
+        let mut e = start;
         while let Some((i, chr)) = self.chars.peek() {
+            e = *i;
+
             if !chr.is_whitespace() {
-                add!(self, TokenKind::Whitespace, start => i - start);
                 break;
             } else {
                 self.chars.next();
             }
         }
+
+        add!(self, TokenKind::Whitespace, start => e - start);
     }
 
     fn lex_ident(&mut self, start: usize) {
+        let mut e = start;
         while let Some((i, chr)) = self.chars.peek() {
+            e = *i;
+
             if !chr.is_alphanumeric() {
-                add!(
-                    self,
-                    match &self.src.text[start..*i] {
-                        "true" | "false" => TokenKind::Boolean,
-                        _ => TokenKind::Ident,
-                    },
-                    start => i - start
-                );
                 break;
             } else {
                 self.chars.next();
             }
         }
+
+        add!(
+            self,
+            match &self.src.text[start..e] {
+                "true" | "false" => TokenKind::Boolean,
+                _ => TokenKind::Ident,
+            },
+            start => e - start
+        );
     }
 
     fn lex_number(&mut self, start: usize) {
+        let mut e = start;
         while let Some((i, chr)) = self.chars.peek() {
+            e = *i;
+
             if !chr.is_numeric() {
-                add!(self, TokenKind::Number, start => i - start);
                 break;
             } else {
                 self.chars.next();
             }
         }
+        add!(self, TokenKind::Number, start => e-start);
     }
 
     fn lex_string(&mut self, start: usize, delim: char) {
         let mut is_escaped = false;
+        let mut e = start;
+
         while let Some((i, chr)) = self.chars.next() {
+            e = i;
+
             if is_escaped {
                 is_escaped = !is_escaped;
             } else if chr == '\\' {
                 is_escaped = true;
             } else if chr == delim {
-                add!(self, TokenKind::String, start => i - start + 1);
                 break;
             }
         }
+
+        add!(self, TokenKind::String, start => e - start + 1);
     }
 }
 
@@ -200,7 +209,7 @@ use std::fmt;
 
 impl fmt::Display for Lexer<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[\n");
+        write!(f, "[\n")?;
         for token in &self.tokens {
             f.write_char('\t')?;
             token.fmt(f, self.src)?;

@@ -1,5 +1,6 @@
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
+use crate::tokens::{Token, TokenKind};
 use std::fmt;
 
 struct Error {
@@ -90,6 +91,7 @@ impl<'a> ErrorBag<'a> {
 
 impl<'a> ErrorBag<'a> {
     fn report(&mut self, message: String, span: TextSpan) {
+        println!("Got error: {} - {:?}", message, span);
         self.errors.push(Error::new(message, span));
     }
 
@@ -99,6 +101,44 @@ impl<'a> ErrorBag<'a> {
             format!("BadCharError: Unknown character '{}'", &self.src[&span]),
             span,
         );
+    }
+
+    pub fn failed_parse(&mut self, token: &Token) {
+        if token.kind != TokenKind::Bad {
+            self.report(
+                format!(
+                    "FailedParse: Couldn't parse the value into a {}",
+                    match token.kind {
+                        TokenKind::String => "string",
+                        TokenKind::Number => "number",
+                        TokenKind::Boolean => "boolean",
+                        _ => unreachable!(),
+                    }
+                ),
+                token.text_span.clone(),
+            );
+        }
+    }
+
+    pub fn incorrect_token(&mut self, incorrect: &Token, correct: TokenKind) {
+        if incorrect.kind != TokenKind::Bad {
+            self.report(
+                format!(
+                    "IncorrectToken: {:?}, expected {:?}",
+                    incorrect.kind, correct,
+                ),
+                incorrect.text_span.clone(),
+            );
+        }
+    }
+
+    pub fn unexpected_token(&mut self, unexpected: &Token) {
+        if unexpected.kind != TokenKind::Bad {
+            self.report(
+                format!("UnexpectedToken: {:?}", unexpected.kind),
+                unexpected.text_span.clone(),
+            );
+        }
     }
 }
 
