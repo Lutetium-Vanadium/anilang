@@ -34,27 +34,6 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         parser.parse_block(TokenKind::EOF)
     }
 
-    fn parse_block(&mut self, delim: TokenKind) -> node::BlockNode {
-        let s = self.index.get();
-        let mut block: Vec<Node> = Vec::new();
-
-        while self.cur().kind != delim {
-            match self.cur().kind {
-                TokenKind::EOF => {
-                    // report EOF
-                    break;
-                }
-                TokenKind::OpenBrace => {
-                    self.index.set(self.index() + 1);
-                    block.push(Box::new(self.parse_block(TokenKind::CloseBrace)));
-                }
-                _ => block.push(self.parse_statement()),
-            };
-        }
-
-        node::BlockNode::new(block, TextSpan::new(s, self.index.get() - s))
-    }
-
     fn index(&self) -> usize {
         self.index.get()
     }
@@ -85,10 +64,34 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         cur
     }
 
+    fn parse_block(&mut self, delim: TokenKind) -> node::BlockNode {
+        let s = self.cur().text_span.start();
+        let mut block: Vec<Node> = Vec::new();
+
+        while self.cur().kind != delim {
+            match self.cur().kind {
+                TokenKind::EOF => {
+                    // report EOF
+                    break;
+                }
+                TokenKind::OpenBrace => {
+                    self.index.set(self.index() + 1);
+                    block.push(Box::new(self.parse_block(TokenKind::CloseBrace)));
+                }
+                _ => block.push(self.parse_statement()),
+            };
+        }
+        let e = self.next().text_span.end();
+
+        node::BlockNode::new(block, TextSpan::new(s, e - s))
+    }
+
     fn parse_statement(&mut self) -> Node {
         if self.cur().kind == TokenKind::Ident && self.peek(1).kind == TokenKind::AssignmentOperator
         {
             self.parse_assignment_expression()
+        } else if self.cur().kind == TokenKind::IfKeyword {
+            self.parse_if_statement()
         } else {
             self.parse_binary_expression(0)
         }
@@ -99,6 +102,24 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         self.next();
         let value = self.parse_statement();
         Box::new(node::AssignmentNode::new(ident, value, self.src))
+    }
+
+    fn parse_if_statement(&mut self) -> Node {
+        let if_token = self.match_token(TokenKind::IfKeyword);
+        let cond = self.parse_statement();
+
+        self.match_token(TokenKind::OpenBrace);
+        let if_block = self.parse_block(TokenKind::CloseBrace);
+
+        let else_block = if self.cur().kind == TokenKind::ElseKeyword {
+            self.index.set(self.index() + 1);
+            self.match_token(TokenKind::OpenBrace);
+            Some(self.parse_block(TokenKind::CloseBrace))
+        } else {
+            None
+        };
+
+        Box::new(node::IfNode::new(if_token, cond, if_block, else_block))
     }
 
     fn parse_binary_expression(&mut self, parent_precedence: u8) -> Node {

@@ -41,6 +41,10 @@ pub enum TokenKind {
     OpenBracket,
     CloseBracket,
 
+    // Keywords
+    IfKeyword,
+    ElseKeyword,
+
     Bad,
 }
 

@@ -10,7 +10,12 @@ fn main() {
     let source_code = r#"
 x = 23123
 asd = "asdkadba"
-x + 213"#;
+if x == 23123 {
+    x + 213
+} else {
+    x - 123
+}
+"#;
 
     let src = source_text::SourceText::new(source_code);
     let mut error_bag = error::ErrorBag::new(&src);

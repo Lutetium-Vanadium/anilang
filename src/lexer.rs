@@ -164,6 +164,8 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             self,
             match &self.src.text[start..e] {
                 "true" | "false" => TokenKind::Boolean,
+                "if" => TokenKind::IfKeyword,
+                "else" => TokenKind::ElseKeyword,
                 _ => TokenKind::Ident,
             },
             start => e - start
