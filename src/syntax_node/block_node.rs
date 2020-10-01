@@ -1,7 +1,7 @@
 use super::{Node, SyntaxNode};
 use crate::text_span::TextSpan;
 
-#[derive(Default)]
+#[derive(Default, Debug, Clone)]
 pub struct BlockNode {
     span: TextSpan,
     pub block: Vec<SyntaxNode>,
@@ -37,7 +37,7 @@ impl Node for BlockNode {
             crate::colour::LIGHT_GRAY,
             indent,
             marker,
-            crate::colour::BRIGHT_MAGENTA,
+            crate::colour::BRIGHT_BLUE,
             self,
             crate::colour::RESET,
         );

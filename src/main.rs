@@ -1,5 +1,6 @@
 mod colour;
 mod error;
+mod evaluator;
 mod lexer;
 mod parser;
 mod source_text;
@@ -12,19 +13,19 @@ use syntax_node::Node;
 
 fn main() {
     let source_code = r#"
-x = 23123
-asd = "asdkadba"
-if x == 23123 {
-    x + 213
-} else {
-    x - 123
+x = 10
+if x == 10 {
+    x = x + 1
 }
 
-loop {
-    while x == asd {
-        x = 232
-    }
+if x > 10 {
+    x = x + 2
 }
+
+while x < 100 {
+    x = x + 10
+}
+x
 "#;
 
     let src = source_text::SourceText::new(source_code);
@@ -33,7 +34,11 @@ loop {
     let tokens = lexer::Lexer::lex(&src, &mut error_bag);
     let root = parser::Parser::parse(tokens, &src, &mut error_bag);
 
-    if !error_bag.any() {
-        root.prt(String::new(), true);
+    if error_bag.any() {
+        return;
     }
+
+    root.prt(String::new(), true);
+    let value = evaluator::Evaluator::evaluate(root, &mut error_bag);
+    println!("{}", value);
 }

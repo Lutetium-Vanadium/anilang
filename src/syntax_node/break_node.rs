@@ -2,6 +2,7 @@ use super::Node;
 use crate::text_span::TextSpan;
 use std::fmt;
 
+#[derive(Debug, Clone)]
 pub struct BreakNode {
     span: TextSpan,
 }
@@ -31,7 +32,7 @@ impl Node for BreakNode {
             crate::colour::LIGHT_GRAY,
             indent,
             marker,
-            crate::colour::BRIGHT_YELLOW,
+            crate::colour::BRIGHT_GREEN,
             self,
             crate::colour::RESET,
         );

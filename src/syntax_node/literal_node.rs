@@ -35,9 +35,10 @@ impl Parse for bool {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct LiteralNode {
     token_kind: TokenKind,
-    value: Value,
+    pub value: Value,
     span: TextSpan,
 }
 
@@ -71,7 +72,7 @@ impl Node for LiteralNode {
             crate::colour::LIGHT_GRAY,
             indent,
             marker,
-            crate::colour::BRIGHT_YELLOW,
+            crate::colour::BRIGHT_GREEN,
             self,
             crate::colour::RESET,
         );

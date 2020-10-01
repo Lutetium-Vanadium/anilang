@@ -2,18 +2,19 @@ use super::{Node, SyntaxNode};
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 
+#[derive(Debug, Clone)]
 pub struct BinaryNode {
-    token_kind: TokenKind,
     span: TextSpan,
-    left: Box<SyntaxNode>,
-    right: Box<SyntaxNode>,
+    pub operator: TokenKind,
+    pub left: Box<SyntaxNode>,
+    pub right: Box<SyntaxNode>,
 }
 
 impl BinaryNode {
-    pub fn new(token: Token, left: SyntaxNode, right: SyntaxNode) -> Self {
+    pub fn new(operator: Token, left: SyntaxNode, right: SyntaxNode) -> Self {
         Self {
-            token_kind: token.kind,
-            span: token.text_span,
+            operator: operator.kind,
+            span: operator.text_span,
             left: Box::new(left),
             right: Box::new(right),
         }
@@ -23,7 +24,7 @@ impl BinaryNode {
 use std::fmt;
 impl fmt::Display for BinaryNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.token_kind)
+        write!(f, "{:?}", self.operator)
     }
 }
 
@@ -40,7 +41,7 @@ impl Node for BinaryNode {
             crate::colour::LIGHT_GRAY,
             indent,
             marker,
-            crate::colour::BRIGHT_MAGENTA,
+            crate::colour::BRIGHT_BLUE,
             self,
             crate::colour::RESET,
         );

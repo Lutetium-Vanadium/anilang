@@ -2,11 +2,12 @@ use super::{BlockNode, Node, SyntaxNode};
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 
+#[derive(Debug, Clone)]
 pub struct IfNode {
     span: TextSpan,
-    cond: Box<SyntaxNode>,
-    if_block: BlockNode,
-    else_block: Option<BlockNode>,
+    pub cond: Box<SyntaxNode>,
+    pub if_block: BlockNode,
+    pub else_block: Option<BlockNode>,
 }
 
 impl IfNode {
@@ -65,7 +66,7 @@ impl Node for IfNode {
             crate::colour::LIGHT_GRAY,
             indent,
             marker,
-            crate::colour::BRIGHT_MAGENTA,
+            crate::colour::BRIGHT_BLUE,
             self,
             crate::colour::RESET,
         );

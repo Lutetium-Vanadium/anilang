@@ -3,8 +3,9 @@ use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 
+#[derive(Debug, Clone)]
 pub struct VariableNode {
-    ident: String,
+    pub ident: String,
     span: TextSpan,
 }
 
@@ -37,7 +38,7 @@ impl Node for VariableNode {
             crate::colour::LIGHT_GRAY,
             indent,
             marker,
-            crate::colour::BRIGHT_YELLOW,
+            crate::colour::BRIGHT_GREEN,
             self,
             crate::colour::RESET,
         );

@@ -19,6 +19,7 @@ pub enum TokenKind {
     SlashOperator,
     ModOperator,
     CaretOperator,
+
     PlusPlusOperator,
     MinusMinusOperator,
 

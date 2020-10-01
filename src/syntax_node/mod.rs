@@ -25,6 +25,7 @@ pub trait Node: std::fmt::Display {
     fn prt(&self, indent: String, is_last: bool);
 }
 
+#[derive(Debug, Clone)]
 pub enum SyntaxNode {
     AssignmentNode(assignment_node::AssignmentNode),
     BinaryNode(binary_node::BinaryNode),

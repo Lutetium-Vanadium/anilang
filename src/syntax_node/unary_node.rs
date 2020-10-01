@@ -3,17 +3,26 @@ use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 use std::fmt;
 
+#[derive(Debug, Clone)]
 pub struct UnaryNode {
-    token_kind: TokenKind,
     span: TextSpan,
-    child: Box<SyntaxNode>,
+    pub operator: TokenKind,
+    pub child: Box<SyntaxNode>,
 }
 
 impl UnaryNode {
-    pub fn new(token: Token, child: SyntaxNode) -> Self {
+    pub fn new(operator: Token, child: SyntaxNode) -> Self {
         Self {
-            token_kind: token.kind,
-            span: token.text_span,
+            operator: operator.kind,
+            span: operator.text_span,
+            child: Box::new(child),
+        }
+    }
+
+    pub fn from_span(operator: TokenKind, child: SyntaxNode, span: TextSpan) -> Self {
+        Self {
+            operator,
+            span,
             child: Box::new(child),
         }
     }
@@ -21,7 +30,7 @@ impl UnaryNode {
 
 impl fmt::Display for UnaryNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.token_kind)
+        write!(f, "{:?}", self.operator)
     }
 }
 
@@ -38,7 +47,7 @@ impl Node for UnaryNode {
             crate::colour::LIGHT_GRAY,
             indent,
             marker,
-            crate::colour::BRIGHT_MAGENTA,
+            crate::colour::BRIGHT_BLUE,
             self,
             crate::colour::RESET,
         );

@@ -3,10 +3,11 @@ use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 
+#[derive(Debug, Clone)]
 pub struct AssignmentNode {
-    ident: String,
     span: TextSpan,
-    value: Box<SyntaxNode>,
+    pub ident: String,
+    pub value: Box<SyntaxNode>,
 }
 
 impl AssignmentNode {
@@ -39,7 +40,7 @@ impl Node for AssignmentNode {
             crate::colour::LIGHT_GRAY,
             indent,
             marker,
-            crate::colour::BRIGHT_MAGENTA,
+            crate::colour::BRIGHT_BLUE,
             self,
             self.ident,
             crate::colour::RESET,

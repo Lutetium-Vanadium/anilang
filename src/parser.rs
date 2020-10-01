@@ -145,11 +145,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         self.match_token(TokenKind::OpenBrace);
         let block = self.parse_block(TokenKind::CloseBrace);
 
-        SyntaxNode::LoopNode(node::LoopNode::construct_while(
-            &while_token,
-            Box::new(cond),
-            block,
-        ))
+        SyntaxNode::LoopNode(node::LoopNode::construct_while(&while_token, cond, block))
     }
 
     fn parse_binary_expression(&mut self, parent_precedence: u8) -> SyntaxNode {
