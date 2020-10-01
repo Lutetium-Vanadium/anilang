@@ -19,7 +19,7 @@ if x == 23123 {
     x - 123
 }
 
-loop {
+loop 
     while x == asd {
         x = 232
     }
@@ -32,9 +32,7 @@ loop {
     let tokens = lexer::Lexer::lex(&src, &mut error_bag);
     let root = parser::Parser::parse(tokens, &src, &mut error_bag);
 
-    if error_bag.any() {
-        println!("{}", error_bag);
-    } else {
+    if !error_bag.any() {
         root.prt(String::new(), true);
     }
 }

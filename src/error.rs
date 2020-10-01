@@ -2,7 +2,6 @@ use crate::colour;
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
-use std::fmt;
 
 struct Error {
     message: String,
@@ -14,14 +13,14 @@ impl Error {
         Error { message, span }
     }
 
-    pub fn fmt(&self, f: &mut fmt::Formatter, src: &SourceText) -> fmt::Result {
+    pub fn prt(&self, src: &SourceText) {
         let s = match src.lineno(self.span.start()) {
             Some(s) => s,
-            None => return Err(fmt::Error),
+            None => return,
         };
         let e = match src.lineno(self.span.end()) {
             Some(e) => e,
-            None => return Err(fmt::Error),
+            None => return,
         };
 
         let mut e2 = e;
@@ -31,12 +30,11 @@ impl Error {
             e2 /= 10;
         }
 
-        writeln!(f, "{}{}{}", colour::WHITE, self.message, colour::RESET)?;
-        writeln!(f, "{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET)?;
+        println!("{}{}{}", colour::WHITE, self.message, colour::RESET);
+        println!("{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET);
 
         if s == e {
-            writeln!(
-                f,
+            println!(
                 "{}{} |{} {}{}{}{}{}",
                 colour::BLUE,
                 s,
@@ -46,10 +44,9 @@ impl Error {
                 colour::RED,
                 &src.text[self.span.end()..src.lines[s].1],
                 colour::RESET,
-            )?;
+            );
         } else {
-            writeln!(
-                f,
+            println!(
                 "{}{:0w$} |{} {}{}{}",
                 colour::BLUE,
                 s,
@@ -58,21 +55,19 @@ impl Error {
                 colour::RED,
                 &src.text[self.span.start()..src.lines[s].1],
                 w = w
-            )?;
+            );
 
             for i in (s + 1)..e {
-                writeln!(
-                    f,
+                println!(
                     "{}{} |{} {}",
                     colour::BLUE,
                     i,
                     colour::RESET,
                     &src.text[src.lines[i].0..src.lines[i].1],
-                )?;
+                );
             }
 
-            writeln!(
-                f,
+            println!(
                 "{}{} |{} {}{}{}",
                 colour::BLUE,
                 e,
@@ -80,34 +75,36 @@ impl Error {
                 &src.text[src.lines[e].1..self.span.end()],
                 colour::RESET,
                 &src.text[self.span.end()..src.lines[e].1]
-            )?;
+            );
         }
 
-        writeln!(f, "{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET)
+        println!("{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET);
     }
 }
 
 pub struct ErrorBag<'a> {
     src: &'a SourceText<'a>,
-    errors: Vec<Error>,
+    num_errors: usize,
 }
 
 impl<'a> ErrorBag<'a> {
     pub fn new(src: &'a SourceText) -> ErrorBag<'a> {
-        ErrorBag {
-            src,
-            errors: Vec::new(),
-        }
+        ErrorBag { src, num_errors: 0 }
     }
 
     pub fn any(&self) -> bool {
-        self.errors.len() > 0
+        self.num_errors > 0
+    }
+
+    pub fn num_errors(&self) -> usize {
+        self.num_errors
     }
 }
 
 impl<'a> ErrorBag<'a> {
     fn report(&mut self, message: String, span: TextSpan) {
-        self.errors.push(Error::new(message, span));
+        self.num_errors += 1;
+        Error::new(message, span).prt(self.src);
     }
 
     pub fn bad_char(&mut self, index: usize) {
@@ -154,16 +151,5 @@ impl<'a> ErrorBag<'a> {
                 unexpected.text_span.clone(),
             );
         }
-    }
-}
-
-impl fmt::Display for ErrorBag<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for error in self.errors.iter() {
-            error.fmt(f, &self.src)?;
-            write!(f, "\n")?;
-        }
-
-        Ok(())
     }
 }
