@@ -1,4 +1,4 @@
-use super::Node;
+use super::{Node, SyntaxNode};
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
@@ -6,15 +6,15 @@ use crate::tokens::Token;
 pub struct AssignmentNode {
     ident: String,
     span: TextSpan,
-    value: Box<dyn Node>,
+    value: Box<SyntaxNode>,
 }
 
 impl AssignmentNode {
-    pub fn new(ident_token: Token, value: Box<dyn Node>, src: &SourceText) -> Self {
+    pub fn new(ident_token: Token, value: SyntaxNode, src: &SourceText) -> Self {
         Self {
             ident: src[&ident_token.text_span].to_owned(),
             span: TextSpan::from_spans(&ident_token.text_span, value.span()),
-            value,
+            value: Box::new(value),
         }
     }
 }

@@ -1,21 +1,21 @@
-use super::Node;
+use super::{Node, SyntaxNode};
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 
 pub struct BinaryNode {
     token_kind: TokenKind,
     span: TextSpan,
-    left: Box<dyn Node>,
-    right: Box<dyn Node>,
+    left: Box<SyntaxNode>,
+    right: Box<SyntaxNode>,
 }
 
 impl BinaryNode {
-    pub fn new(token: Token, left: Box<dyn Node>, right: Box<dyn Node>) -> Self {
+    pub fn new(token: Token, left: SyntaxNode, right: SyntaxNode) -> Self {
         Self {
             token_kind: token.kind,
             span: token.text_span,
-            left,
-            right,
+            left: Box::new(left),
+            right: Box::new(right),
         }
     }
 }

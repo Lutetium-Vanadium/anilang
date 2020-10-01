@@ -6,6 +6,7 @@ mod source_text;
 mod syntax_node;
 mod text_span;
 mod tokens;
+mod value;
 
 use syntax_node::Node;
 
@@ -19,7 +20,7 @@ if x == 23123 {
     x - 123
 }
 
-loop 
+loop {
     while x == asd {
         x = 232
     }

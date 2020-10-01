@@ -3,9 +3,8 @@ use crate::source_text::SourceText;
 use crate::syntax_node as node;
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
+use node::SyntaxNode;
 use std::cell::Cell;
-
-type Node = Box<dyn node::Node>;
 
 pub struct Parser<'bag, 'src> {
     error_bag: &'bag mut ErrorBag<'src>,
@@ -66,7 +65,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
 
     fn parse_block(&mut self, delim: TokenKind) -> node::BlockNode {
         let s = self.cur().text_span.start();
-        let mut block: Vec<Node> = Vec::new();
+        let mut block: Vec<SyntaxNode> = Vec::new();
 
         while self.cur().kind != delim {
             match self.cur().kind {
@@ -76,7 +75,9 @@ impl<'bag, 'src> Parser<'bag, 'src> {
                 }
                 TokenKind::OpenBrace => {
                     self.index.set(self.index() + 1);
-                    block.push(Box::new(self.parse_block(TokenKind::CloseBrace)));
+                    block.push(SyntaxNode::BlockNode(
+                        self.parse_block(TokenKind::CloseBrace),
+                    ));
                 }
                 _ => block.push(self.parse_statement()),
             };
@@ -86,7 +87,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         node::BlockNode::new(block, TextSpan::new(s, e - s))
     }
 
-    fn parse_statement(&mut self) -> Node {
+    fn parse_statement(&mut self) -> SyntaxNode {
         if self.cur().kind == TokenKind::Ident && self.peek(1).kind == TokenKind::AssignmentOperator
         {
             return self.parse_assignment_expression();
@@ -95,7 +96,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         match self.cur().kind {
             TokenKind::IfKeyword => self.parse_if_statement(),
             TokenKind::BreakKeyword => {
-                Box::new(node::BreakNode::new(self.next().text_span.clone()))
+                SyntaxNode::BreakNode(node::BreakNode::new(self.next().text_span.clone()))
             }
             TokenKind::LoopKeyword => self.parse_loop_statement(),
             TokenKind::WhileKeyword => self.parse_while_statement(),
@@ -103,14 +104,14 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         }
     }
 
-    fn parse_assignment_expression(&mut self) -> Node {
+    fn parse_assignment_expression(&mut self) -> SyntaxNode {
         let ident = self.next().clone();
         self.next();
         let value = self.parse_statement();
-        Box::new(node::AssignmentNode::new(ident, value, self.src))
+        SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
     }
 
-    fn parse_if_statement(&mut self) -> Node {
+    fn parse_if_statement(&mut self) -> SyntaxNode {
         let if_token = self.match_token(TokenKind::IfKeyword);
         let cond = self.parse_statement();
 
@@ -125,36 +126,40 @@ impl<'bag, 'src> Parser<'bag, 'src> {
             None
         };
 
-        Box::new(node::IfNode::new(if_token, cond, if_block, else_block))
+        SyntaxNode::IfNode(node::IfNode::new(if_token, cond, if_block, else_block))
     }
 
-    fn parse_loop_statement(&mut self) -> Node {
+    fn parse_loop_statement(&mut self) -> SyntaxNode {
         let loop_token = self.match_token(TokenKind::LoopKeyword);
 
         self.match_token(TokenKind::OpenBrace);
         let block = self.parse_block(TokenKind::CloseBrace);
 
-        Box::new(node::LoopNode::new(&loop_token, block))
+        SyntaxNode::LoopNode(node::LoopNode::new(&loop_token, block))
     }
 
-    fn parse_while_statement(&mut self) -> Node {
+    fn parse_while_statement(&mut self) -> SyntaxNode {
         let while_token = self.match_token(TokenKind::WhileKeyword);
         let cond = self.parse_statement();
 
         self.match_token(TokenKind::OpenBrace);
         let block = self.parse_block(TokenKind::CloseBrace);
 
-        Box::new(node::LoopNode::construct_while(&while_token, cond, block))
+        SyntaxNode::LoopNode(node::LoopNode::construct_while(
+            &while_token,
+            Box::new(cond),
+            block,
+        ))
     }
 
-    fn parse_binary_expression(&mut self, parent_precedence: u8) -> Node {
+    fn parse_binary_expression(&mut self, parent_precedence: u8) -> SyntaxNode {
         let unary_precedence = self.cur().unary_precedence();
         let mut left = if unary_precedence != 0 && unary_precedence >= parent_precedence {
             // is a unary operator and has more precedence than the previous node, so must be
             // inserted as a child node
             let op = self.next().clone();
             let operand = self.parse_binary_expression(unary_precedence);
-            Box::new(node::UnaryNode::new(op, operand))
+            SyntaxNode::UnaryNode(node::UnaryNode::new(op, operand))
         } else {
             self.parse_general_expression()
         };
@@ -167,42 +172,42 @@ impl<'bag, 'src> Parser<'bag, 'src> {
 
             let op = self.next().clone();
             let right = self.parse_binary_expression(precedence);
-            left = Box::new(node::BinaryNode::new(op, left, right));
+            left = SyntaxNode::BinaryNode(node::BinaryNode::new(op, left, right));
         }
 
         left
     }
 
-    fn parse_general_expression(&mut self) -> Node {
+    fn parse_general_expression(&mut self) -> SyntaxNode {
         let cur = self.next().clone();
         match cur.kind {
-            TokenKind::String => Box::new(self.parse_literal_expression::<String>(cur)),
-            TokenKind::Number => Box::new(self.parse_literal_expression::<i64>(cur)),
-            TokenKind::Boolean => Box::new(self.parse_literal_expression::<bool>(cur)),
-            TokenKind::Ident => Box::new(self.parse_literal_expression::<node::Variable>(cur)),
+            TokenKind::String => self.parse_literal_expression::<String>(cur),
+            TokenKind::Number => self.parse_literal_expression::<i64>(cur),
+            TokenKind::Boolean => self.parse_literal_expression::<bool>(cur),
+            TokenKind::Ident => SyntaxNode::VariableNode(node::VariableNode::new(cur, self.src)),
             TokenKind::OpenParan => self.parse_paran_expression(),
             _ => {
                 self.error_bag.unexpected_token(&cur);
-                Box::new(node::BadNode())
+                SyntaxNode::BadNode
             }
         }
     }
 
-    fn parse_paran_expression(&mut self) -> Node {
+    fn parse_paran_expression(&mut self) -> SyntaxNode {
         let expression = self.parse_statement();
         self.match_token(TokenKind::CloseParan);
         expression
     }
 
-    fn parse_literal_expression<T>(&mut self, token: Token) -> node::LiteralNode<T>
+    fn parse_literal_expression<T>(&mut self, token: Token) -> SyntaxNode
     where
-        T: node::Parse<T> + Default,
+        T: node::Parse,
     {
-        let node = match node::LiteralNode::new(&token, self.src) {
-            Ok(node) => node,
+        let node = match node::LiteralNode::new::<T>(&token, self.src) {
+            Ok(node) => SyntaxNode::LiteralNode(node),
             Err(_) => {
                 self.error_bag.failed_parse(&token);
-                node::LiteralNode::bad()
+                SyntaxNode::BadNode
             }
         };
         node

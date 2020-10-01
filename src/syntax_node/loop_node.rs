@@ -1,11 +1,11 @@
-use super::{BlockNode, BreakNode, IfNode, Node};
+use super::{BlockNode, BreakNode, IfNode, Node, SyntaxNode};
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 
 #[derive(Default)]
 pub struct LoopNode {
     span: TextSpan,
-    block: Vec<Box<dyn Node>>,
+    block: Vec<SyntaxNode>,
 }
 
 impl LoopNode {
@@ -17,15 +17,18 @@ impl LoopNode {
         }
     }
 
-    pub fn construct_while(token: &Token, cond: Box<dyn Node>, block: BlockNode) -> Self {
+    pub fn construct_while(token: &Token, cond: Box<SyntaxNode>, block: BlockNode) -> Self {
         let (block_span, mut block) = block.consume();
         let span = cond.span().clone();
 
         block.insert(
             0,
-            Box::new(IfNode::with_span(
+            SyntaxNode::IfNode(IfNode::with_span(
                 cond,
-                BlockNode::new(vec![Box::new(BreakNode::new(span.clone()))], span.clone()),
+                BlockNode::new(
+                    vec![SyntaxNode::BreakNode(BreakNode::new(span.clone()))],
+                    span.clone(),
+                ),
                 None,
                 span,
             )),

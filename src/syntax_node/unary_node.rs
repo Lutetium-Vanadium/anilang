@@ -1,4 +1,4 @@
-use super::Node;
+use super::{Node, SyntaxNode};
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 use std::fmt;
@@ -6,15 +6,15 @@ use std::fmt;
 pub struct UnaryNode {
     token_kind: TokenKind,
     span: TextSpan,
-    child: Box<dyn Node>,
+    child: Box<SyntaxNode>,
 }
 
 impl UnaryNode {
-    pub fn new(token: Token, child: Box<dyn Node>) -> Self {
+    pub fn new(token: Token, child: SyntaxNode) -> Self {
         Self {
             token_kind: token.kind,
             span: token.text_span,
-            child,
+            child: Box::new(child),
         }
     }
 }

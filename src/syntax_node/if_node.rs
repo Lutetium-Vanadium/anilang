@@ -1,10 +1,10 @@
-use super::{BlockNode, Node};
+use super::{BlockNode, Node, SyntaxNode};
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 
 pub struct IfNode {
     span: TextSpan,
-    cond: Box<dyn Node>,
+    cond: Box<SyntaxNode>,
     if_block: BlockNode,
     else_block: Option<BlockNode>,
 }
@@ -12,7 +12,7 @@ pub struct IfNode {
 impl IfNode {
     pub fn new(
         if_token: Token,
-        cond: Box<dyn Node>,
+        cond: SyntaxNode,
         if_block: BlockNode,
         else_block: Option<BlockNode>,
     ) -> Self {
@@ -24,14 +24,14 @@ impl IfNode {
                     None => if_block.span(),
                 },
             ),
-            cond,
+            cond: Box::new(cond),
             if_block,
             else_block,
         }
     }
 
     pub fn with_span(
-        cond: Box<dyn Node>,
+        cond: Box<SyntaxNode>,
         if_block: BlockNode,
         else_block: Option<BlockNode>,
         span: TextSpan,

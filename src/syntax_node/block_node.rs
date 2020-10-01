@@ -1,18 +1,18 @@
-use super::Node;
+use super::{Node, SyntaxNode};
 use crate::text_span::TextSpan;
 
 #[derive(Default)]
 pub struct BlockNode {
     span: TextSpan,
-    block: Vec<Box<dyn Node>>,
+    pub block: Vec<SyntaxNode>,
 }
 
 impl BlockNode {
-    pub fn new(block: Vec<Box<dyn Node>>, span: TextSpan) -> Self {
+    pub fn new(block: Vec<SyntaxNode>, span: TextSpan) -> Self {
         Self { span, block }
     }
 
-    pub fn consume(self) -> (TextSpan, Vec<Box<dyn Node>>) {
+    pub fn consume(self) -> (TextSpan, Vec<SyntaxNode>) {
         (self.span, self.block)
     }
 }
