@@ -89,11 +89,17 @@ impl<'bag, 'src> Parser<'bag, 'src> {
     fn parse_statement(&mut self) -> Node {
         if self.cur().kind == TokenKind::Ident && self.peek(1).kind == TokenKind::AssignmentOperator
         {
-            self.parse_assignment_expression()
-        } else if self.cur().kind == TokenKind::IfKeyword {
-            self.parse_if_statement()
-        } else {
-            self.parse_binary_expression(0)
+            return self.parse_assignment_expression();
+        }
+
+        match self.cur().kind {
+            TokenKind::IfKeyword => self.parse_if_statement(),
+            TokenKind::BreakKeyword => {
+                Box::new(node::BreakNode::new(self.next().text_span.clone()))
+            }
+            TokenKind::LoopKeyword => self.parse_loop_statement(),
+            TokenKind::WhileKeyword => self.parse_while_statement(),
+            _ => self.parse_binary_expression(0),
         }
     }
 
@@ -120,6 +126,25 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         };
 
         Box::new(node::IfNode::new(if_token, cond, if_block, else_block))
+    }
+
+    fn parse_loop_statement(&mut self) -> Node {
+        let loop_token = self.match_token(TokenKind::LoopKeyword);
+
+        self.match_token(TokenKind::OpenBrace);
+        let block = self.parse_block(TokenKind::CloseBrace);
+
+        Box::new(node::LoopNode::new(&loop_token, block))
+    }
+
+    fn parse_while_statement(&mut self) -> Node {
+        let while_token = self.match_token(TokenKind::WhileKeyword);
+        let cond = self.parse_statement();
+
+        self.match_token(TokenKind::OpenBrace);
+        let block = self.parse_block(TokenKind::CloseBrace);
+
+        Box::new(node::LoopNode::construct_while(&while_token, cond, block))
     }
 
     fn parse_binary_expression(&mut self, parent_precedence: u8) -> Node {

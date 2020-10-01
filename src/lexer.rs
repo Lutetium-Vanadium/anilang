@@ -166,6 +166,9 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
                 "true" | "false" => TokenKind::Boolean,
                 "if" => TokenKind::IfKeyword,
                 "else" => TokenKind::ElseKeyword,
+                "break" => TokenKind::BreakKeyword,
+                "loop" => TokenKind::LoopKeyword,
+                "while" => TokenKind::WhileKeyword,
                 _ => TokenKind::Ident,
             },
             start => e - start

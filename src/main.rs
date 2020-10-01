@@ -1,3 +1,4 @@
+mod colour;
 mod error;
 mod lexer;
 mod parser;
@@ -5,6 +6,8 @@ mod source_text;
 mod syntax_node;
 mod text_span;
 mod tokens;
+
+use syntax_node::Node;
 
 fn main() {
     let source_code = r#"
@@ -14,6 +17,12 @@ if x == 23123 {
     x + 213
 } else {
     x - 123
+}
+
+loop {
+    while x == asd {
+        x = 232
+    }
 }
 "#;
 
@@ -26,6 +35,6 @@ if x == 23123 {
     if error_bag.any() {
         println!("{}", error_bag);
     } else {
-        println!("{}", root);
+        root.prt(String::new(), true);
     }
 }

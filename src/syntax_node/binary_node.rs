@@ -23,12 +23,31 @@ impl BinaryNode {
 use std::fmt;
 impl fmt::Display for BinaryNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} => {}, {}", self.token_kind, self.left, self.right)
+        write!(f, "{:?}", self.token_kind)
     }
 }
 
 impl Node for BinaryNode {
     fn span(&self) -> &TextSpan {
         &self.span
+    }
+
+    fn prt(&self, mut indent: String, is_last: bool) {
+        let marker = if is_last { "└──" } else { "├──" };
+
+        println!(
+            "{}{}{} {}{}{}",
+            crate::colour::LIGHT_GRAY,
+            indent,
+            marker,
+            crate::colour::BRIGHT_MAGENTA,
+            self,
+            crate::colour::RESET,
+        );
+
+        indent += if is_last { "   " } else { "│  " };
+
+        self.left.prt(indent.clone(), false);
+        self.right.prt(indent, true);
     }
 }

@@ -22,12 +22,31 @@ impl AssignmentNode {
 use std::fmt;
 impl fmt::Display for AssignmentNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "AssignmentOperator => {} = {}", self.ident, self.value)
+        write!(f, "AssignmentOperator")
     }
 }
 
 impl Node for AssignmentNode {
     fn span(&self) -> &TextSpan {
         &self.span
+    }
+
+    fn prt(&self, mut indent: String, is_last: bool) {
+        let marker = if is_last { "└──" } else { "├──" };
+
+        println!(
+            "{}{}{} {}{} => {}{}",
+            crate::colour::LIGHT_GRAY,
+            indent,
+            marker,
+            crate::colour::BRIGHT_MAGENTA,
+            self,
+            self.ident,
+            crate::colour::RESET,
+        );
+
+        indent += if is_last { "   " } else { "│  " };
+
+        self.value.prt(indent, true);
     }
 }

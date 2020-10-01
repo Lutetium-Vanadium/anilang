@@ -44,6 +44,9 @@ pub enum TokenKind {
     // Keywords
     IfKeyword,
     ElseKeyword,
+    BreakKeyword,
+    WhileKeyword,
+    LoopKeyword,
 
     Bad,
 }

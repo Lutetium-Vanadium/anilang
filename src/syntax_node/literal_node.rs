@@ -82,7 +82,7 @@ where
     T: Parse<T> + fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} => {:?}", self.token_kind, self.value)
+        write!(f, "{:?} <{:?}>", self.value, self.token_kind)
     }
 }
 
@@ -92,5 +92,19 @@ where
 {
     fn span(&self) -> &TextSpan {
         &self.span
+    }
+
+    fn prt(&self, indent: String, is_last: bool) {
+        let marker = if is_last { "└──" } else { "├──" };
+
+        println!(
+            "{}{}{} {}{}{}",
+            crate::colour::LIGHT_GRAY,
+            indent,
+            marker,
+            crate::colour::BRIGHT_YELLOW,
+            self,
+            crate::colour::RESET,
+        );
     }
 }

@@ -29,21 +29,58 @@ impl IfNode {
             else_block,
         }
     }
+
+    pub fn with_span(
+        cond: Box<dyn Node>,
+        if_block: BlockNode,
+        else_block: Option<BlockNode>,
+        span: TextSpan,
+    ) -> Self {
+        Self {
+            cond,
+            if_block,
+            else_block,
+            span,
+        }
+    }
 }
 
 use std::fmt;
 impl fmt::Display for IfNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "if {} then \n{}", self.cond, self.if_block)?;
-        if let Some(ref else_block) = self.else_block {
-            write!(f, "else\n{}", else_block)?;
-        }
-        Ok(())
+        write!(f, "IfKeyword")
     }
 }
 
 impl Node for IfNode {
     fn span(&self) -> &TextSpan {
         &self.span
+    }
+
+    fn prt(&self, mut indent: String, is_last: bool) {
+        let marker = if is_last { "└──" } else { "├──" };
+
+        println!(
+            "{}{}{} {}{}{}",
+            crate::colour::LIGHT_GRAY,
+            indent,
+            marker,
+            crate::colour::BRIGHT_MAGENTA,
+            self,
+            crate::colour::RESET,
+        );
+
+        indent += if is_last { "   " } else { "│  " };
+
+        self.cond.prt(indent.clone(), false);
+        match self.else_block {
+            Some(ref else_block) => {
+                self.if_block.prt(indent.clone(), false);
+                else_block.prt(indent, true);
+            }
+            None => {
+                self.if_block.prt(indent, true);
+            }
+        }
     }
 }

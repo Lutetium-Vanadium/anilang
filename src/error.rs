@@ -1,3 +1,4 @@
+use crate::colour;
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
@@ -30,44 +31,59 @@ impl Error {
             e2 /= 10;
         }
 
-        writeln!(f, "{}", self.message)?;
-        writeln!(f, "{} |", " ".repeat(w))?;
+        writeln!(f, "{}{}{}", colour::WHITE, self.message, colour::RESET)?;
+        writeln!(f, "{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET)?;
 
         if s == e {
             writeln!(
                 f,
-                "{} | {}\x1B[38;5;1m{}\x1B[0m{}",
+                "{}{} |{} {}{}{}{}{}",
+                colour::BLUE,
                 s,
+                colour::RESET,
                 &src.text[src.lines[s].0..self.span.start()],
                 &src[&self.span],
+                colour::RED,
                 &src.text[self.span.end()..src.lines[s].1],
+                colour::RESET,
             )?;
         } else {
             writeln!(
                 f,
-                "{:0w$} | {}\x1B[38;5;1m{}",
+                "{}{:0w$} |{} {}{}{}",
+                colour::BLUE,
                 s,
+                colour::RESET,
                 &src.text[src.lines[s].0..self.span.start()],
+                colour::RED,
                 &src.text[self.span.start()..src.lines[s].1],
                 w = w
             )?;
 
             for i in (s + 1)..e {
-                writeln!(f, "{} | {}", i, &src.text[src.lines[i].0..src.lines[i].1],)?;
-            }
-
-            if s < e {
                 writeln!(
                     f,
-                    "{} | {}\x1B[0m{}",
-                    e,
-                    &src.text[src.lines[e].1..self.span.end()],
-                    &src.text[self.span.end()..src.lines[e].1]
+                    "{}{} |{} {}",
+                    colour::BLUE,
+                    i,
+                    colour::RESET,
+                    &src.text[src.lines[i].0..src.lines[i].1],
                 )?;
             }
+
+            writeln!(
+                f,
+                "{}{} |{} {}{}{}",
+                colour::BLUE,
+                e,
+                colour::RESET,
+                &src.text[src.lines[e].1..self.span.end()],
+                colour::RESET,
+                &src.text[self.span.end()..src.lines[e].1]
+            )?;
         }
 
-        writeln!(f, "{} |", " ".repeat(w))
+        writeln!(f, "{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET)
     }
 }
 
@@ -91,7 +107,6 @@ impl<'a> ErrorBag<'a> {
 
 impl<'a> ErrorBag<'a> {
     fn report(&mut self, message: String, span: TextSpan) {
-        println!("Got error: {} - {:?}", message, span);
         self.errors.push(Error::new(message, span));
     }
 
