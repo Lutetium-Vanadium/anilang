@@ -7,6 +7,7 @@ mod source_text;
 mod syntax_node;
 mod text_span;
 mod tokens;
+mod types;
 mod value;
 
 use syntax_node::Node;

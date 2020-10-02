@@ -1,7 +1,8 @@
 use crate::error::ErrorBag;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
-use crate::value::Value;
+// use crate::types::{Cast, Type};
+use crate::value::{ErrorKind, Value};
 use node::SyntaxNode;
 
 mod scope;
@@ -129,7 +130,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn evalute_unary(&mut self, node: node::UnaryNode) -> Value {
-        match node.operator {
+        let res = match node.operator {
             TokenKind::PlusPlusOperator => match *node.child {
                 SyntaxNode::VariableNode(v) => {
                     let ident = v.ident.clone();
@@ -137,20 +138,15 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     match val {
                         Value::Int(i) => {
                             self.scope.insert(ident, Value::Int(i + 1));
-                            val
+                            Ok(val)
                         }
-                        _ => todo!("Type error, variable should be int"),
+                        _ => Err(ErrorKind::IncorrectType),
                     }
                 }
                 _ => todo!("Error expected variable"),
             },
-            TokenKind::PlusOperator => {
-                let val = self.evaluate_node(*node.child);
-                match val {
-                    Value::Int(_) => val,
-                    _ => todo!("Type error"),
-                }
-            }
+            TokenKind::PlusOperator => self.evaluate_node(*node.child).plus(),
+
             TokenKind::MinusMinusOperator => match *node.child {
                 SyntaxNode::VariableNode(v) => {
                     let ident = v.ident.clone();
@@ -158,25 +154,22 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     match val {
                         Value::Int(i) => {
                             self.scope.insert(ident, Value::Int(i - 1));
-                            val
+                            Ok(val)
                         }
-                        _ => todo!("Type error, variable should be int"),
+                        _ => Err(ErrorKind::IncorrectType),
                     }
                 }
                 _ => todo!("Error expected variable"),
             },
-            TokenKind::MinusOperator => {
-                let val = self.evaluate_node(*node.child);
-                match val {
-                    Value::Int(val) => Value::Int(-val),
-                    _ => todo!("Type error"),
-                }
-            }
-            TokenKind::NotOperator => {
-                let val = self.evaluate_node(*node.child);
-                Value::Bool(!bool::from(val))
-            }
+            TokenKind::MinusOperator => self.evaluate_node(*node.child).minus(),
+
+            TokenKind::NotOperator => Ok(self.evaluate_node(*node.child).not()),
             _ => todo!("Error because unknown unary operator"),
+        };
+
+        match res {
+            Ok(v) => v,
+            Err(_) => todo!("Report error"),
         }
     }
 }
