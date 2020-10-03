@@ -24,6 +24,7 @@ impl TextSpan {
         self.start + self.len
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.len
     }

@@ -32,6 +32,7 @@ impl Token {
         self.kind.is_calc_assign()
     }
 
+    #[allow(dead_code)]
     pub fn prt(&self, src: &SourceText) {
         print!(
             "{:?} - ({}, {}) = '{}'",

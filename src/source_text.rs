@@ -38,7 +38,7 @@ impl<'a> SourceText<'a> {
 
         while s <= e {
             let m = (s + e) / 2;
-            if self.lines[m].0 < index && index < self.lines[m].1 {
+            if self.lines[m].0 <= index && index < self.lines[m].1 {
                 return Some(m);
             } else if self.lines[m].0 > index {
                 e = m - 1;

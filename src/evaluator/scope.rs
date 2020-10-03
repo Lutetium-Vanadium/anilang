@@ -7,6 +7,7 @@ pub struct Scope {
 }
 
 impl Scope {
+    #[allow(dead_code)]
     pub fn new(parent: Box<Scope>) -> Self {
         Self {
             vars: HashMap::new(),

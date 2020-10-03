@@ -18,7 +18,9 @@ impl Error {
             Some(s) => s,
             None => return,
         };
-        let e = match src.lineno(self.span.end()) {
+
+        // End is non inclusive
+        let e = match src.lineno(self.span.end() - 1) {
             Some(e) => e,
             None => return,
         };
@@ -40,10 +42,10 @@ impl Error {
                 s,
                 colour::RESET,
                 &src.text[src.lines[s].0..self.span.start()],
-                &src[&self.span],
                 colour::RED,
-                &src.text[self.span.end()..src.lines[s].1],
+                &src[&self.span],
                 colour::RESET,
+                &src.text[self.span.end()..src.lines[s].1],
             );
         } else {
             println!(
@@ -96,6 +98,7 @@ impl<'a> ErrorBag<'a> {
         self.num_errors > 0
     }
 
+    #[allow(dead_code)]
     pub fn num_errors(&self) -> usize {
         self.num_errors
     }
