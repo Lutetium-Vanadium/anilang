@@ -1,16 +1,19 @@
+use enumflags2::BitFlags;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Cast {
     Implicit(Type),
     Explicit, // NOTE: there is no way to explicitly convert as of now
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, BitFlags)]
+#[repr(u8)]
 pub enum Type {
-    Int,
-    Float,
-    String,
-    Bool,
-    Null,
+    Int = 0b00001,
+    Float = 0b00010,
+    String = 0b00100,
+    Bool = 0b01000,
+    Null = 0b10000,
 }
 
 impl Type {
@@ -24,6 +27,39 @@ impl Type {
             Type::Float if other == &Type::Int => Cast::Implicit(Type::Float),
             _ => Cast::Explicit,
         }
+    }
+}
+
+use std::fmt;
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Type::Int => "int",
+                Type::Float => "float",
+                Type::Bool => "bool",
+                Type::String => "string",
+                Type::Null => "null",
+            }
+        )
+    }
+}
+
+/// For whatever reason, it won't allow implementing `std::fmt::Display` for library structs
+/// This is a workaround to give to_string, so the error bag can print easily
+pub trait ToString {
+    fn to_string(&self) -> String;
+}
+impl ToString for BitFlags<Type> {
+    fn to_string(&self) -> String {
+        let mut iter = self.iter();
+        let mut s = format!("{}", iter.next().unwrap());
+        for t in iter {
+            s += &format!(" | {}", t);
+        }
+        s
     }
 }
 

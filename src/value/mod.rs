@@ -1,12 +1,14 @@
+use crate::types::Type;
+use enumflags2::BitFlags;
 mod from;
 
 type Result<T> = std::result::Result<T, ErrorKind>;
 #[derive(Debug, PartialEq, Eq)]
 pub enum ErrorKind {
-    IncorrectType,
-    IncorrectLeftType,
-    IncorrectRightType,
-    OutOfBounds(i64, i64),
+    IncorrectType { got: Type, expected: BitFlags<Type> },
+    IncorrectLeftType { got: Type, expected: BitFlags<Type> },
+    IncorrectRightType { got: Type, expected: BitFlags<Type> },
+    OutOfBounds { got: i64, start: i64, end: i64 },
     DivideByZero,
 }
 
@@ -80,99 +82,139 @@ impl fmt::Display for Value {
     }
 }
 
-// Also see `src/types.rs` for type impls
+// Also see `src/types.rs` for type impls &
+//          `src/value/from.rs` for to primitive impls
 
-// impl for the various unary operations
+/// impl for the various unary operations
 impl Value {
-    // Unary Plus +<num>
+    /// Unary Plus +<num>
     pub fn plus(self) -> Result<Value> {
         match self {
             Value::Int(_) => Ok(self),
             Value::Float(_) => Ok(self),
-            _ => Err(ErrorKind::IncorrectType),
+            _ => Err(ErrorKind::IncorrectType {
+                got: self.type_(),
+                expected: Type::Int | Type::Float,
+            }),
         }
     }
 
-    // Unary Minus -<num>
+    /// Unary Minus -<num>
     pub fn minus(self) -> Result<Value> {
         match self {
             Value::Int(i) => Ok(Value::Int(-i)),
             Value::Float(f) => Ok(Value::Float(-f)),
-            _ => Err(ErrorKind::IncorrectType),
+            _ => Err(ErrorKind::IncorrectType {
+                got: self.type_(),
+                expected: Type::Int | Type::Float,
+            }),
         }
     }
 
-    // Unary Not !<val>
+    /// Unary Not !<val>
     pub fn not(self) -> Value {
         Value::Bool(!bool::from(self))
     }
 }
 
-// impl for the various binary operations
+/// impl for the various binary operations
 impl Value {
-    // Binary Addition
-    //   * Arithemtic: <num> + <num>
-    //   * Concatenation: <str1> + <str2> = "<str1><str2>"
+    /// Binary Addition
+    ///   * Arithemtic: <num> + <num>
+    ///   * Concatenation: <str1> + <str2> = "<str1><str2>"
     pub fn add(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
-            .map_err(|_| ErrorKind::IncorrectRightType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         let left = self
             .try_cast(right.type_())
-            .map_err(|_| ErrorKind::IncorrectLeftType)?;
+            .map_err(|_| ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: right.type_().into(),
+            })?;
 
         match left {
             Value::Int(left) => Ok(Value::Int(left + i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left + f64::from(right))),
             Value::String(left) => Ok(Value::String(left + right.as_str())),
-            _ => Err(ErrorKind::IncorrectLeftType),
+            _ => Err(ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: Type::Int | Type::Float | Type::String,
+            }),
         }
     }
 
-    // Binary subtraction <num> - <num>
+    /// Binary subtraction <num> - <num>
     pub fn sub(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
-            .map_err(|_| ErrorKind::IncorrectRightType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         let left = self
             .try_cast(right.type_())
-            .map_err(|_| ErrorKind::IncorrectLeftType)?;
+            .map_err(|_| ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: right.type_().into(),
+            })?;
 
         match left {
             Value::Int(left) => Ok(Value::Int(left - i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left - f64::from(right))),
-            _ => Err(ErrorKind::IncorrectLeftType),
+            _ => Err(ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: Type::Int | Type::Float,
+            }),
         }
     }
 
-    // Binary multiplication <num> * <num>
+    /// Binary multiplication <num> * <num>
     pub fn mult(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
-            .map_err(|_| ErrorKind::IncorrectRightType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         let left = self
             .try_cast(right.type_())
-            .map_err(|_| ErrorKind::IncorrectLeftType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         match left {
             Value::Int(left) => Ok(Value::Int(left * i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left * f64::from(right))),
-            _ => Err(ErrorKind::IncorrectLeftType),
+            _ => Err(ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: Type::Int | Type::Float,
+            }),
         }
     }
 
-    // Binary division <num> / <num>
+    /// Binary division <num> / <num>
     pub fn div(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
-            .map_err(|_| ErrorKind::IncorrectRightType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         let left = self
             .try_cast(right.type_())
-            .map_err(|_| ErrorKind::IncorrectLeftType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         match left {
             Value::Int(left) => {
@@ -191,19 +233,28 @@ impl Value {
                     Ok(Value::Float(left / right))
                 }
             }
-            _ => Err(ErrorKind::IncorrectLeftType),
+            _ => Err(ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: Type::Int | Type::Float,
+            }),
         }
     }
 
-    // Binary mod <num> % <num>
+    /// Binary mod <num> % <num>
     pub fn modulo(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
-            .map_err(|_| ErrorKind::IncorrectRightType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         let left = self
             .try_cast(right.type_())
-            .map_err(|_| ErrorKind::IncorrectLeftType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         match left {
             Value::Int(left) => {
@@ -222,35 +273,51 @@ impl Value {
                     Ok(Value::Float(left % right))
                 }
             }
-            _ => Err(ErrorKind::IncorrectLeftType),
+            _ => Err(ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: Type::Int | Type::Float,
+            }),
         }
     }
 
-    // Binary exponentiation <num>^<num>
+    /// Binary exponentiation <num>^<num>
     pub fn pow(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
-            .map_err(|_| ErrorKind::IncorrectRightType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         let left = self
             .try_cast(right.type_())
-            .map_err(|_| ErrorKind::IncorrectLeftType)?;
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
 
         match left {
             Value::Int(left) => {
                 let right: i64 = right.into();
                 if right > u32::MAX as i64 || right.is_negative() {
-                    Err(ErrorKind::OutOfBounds(0, u32::MAX as i64))
+                    Err(ErrorKind::OutOfBounds {
+                        got: right,
+                        start: 0,
+                        end: u32::MAX as i64,
+                    })
                 } else {
                     Ok(Value::Int(left.pow(right as u32)))
                 }
             }
             Value::Float(left) => Ok(Value::Float(left.powf(right.into()))),
-            _ => Err(ErrorKind::IncorrectLeftType),
+            _ => Err(ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: Type::Int | Type::Float,
+            }),
         }
     }
 
-    // Binary or <val> || <val>
+    /// Binary or <val> || <val>
     pub fn or(self, right: Value) -> Value {
         if bool::from(&self) {
             self
@@ -259,7 +326,7 @@ impl Value {
         }
     }
 
-    // Binary and <val> && <val>
+    /// Binary and <val> && <val>
     pub fn and(self, right: Value) -> Value {
         if !bool::from(&self) {
             self
@@ -268,32 +335,32 @@ impl Value {
         }
     }
 
-    // <val> != <val>
+    /// <val> != <val>
     pub fn ne(self, right: Value) -> Value {
         Value::Bool(self != right)
     }
 
-    // <val> == <val>
+    /// <val> == <val>
     pub fn eq(self, right: Value) -> Value {
         Value::Bool(self == right)
     }
 
-    // <val> < <val>
+    /// <val> < <val>
     pub fn lt(self, right: Value) -> Value {
         Value::Bool(self < right)
     }
 
-    // <val> > <val>
+    /// <val> > <val>
     pub fn gt(self, right: Value) -> Value {
         Value::Bool(self > right)
     }
 
-    // <val> <= <val>
+    /// <val> <= <val>
     pub fn le(self, right: Value) -> Value {
         Value::Bool(self <= right)
     }
 
-    // <val> >= <val>
+    /// <val> >= <val>
     pub fn ge(self, right: Value) -> Value {
         Value::Bool(self >= right)
     }
