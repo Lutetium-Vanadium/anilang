@@ -1,4 +1,3 @@
-use crate::types::{Cast, Type};
 mod from;
 
 type Result<T> = std::result::Result<T, ErrorKind>;

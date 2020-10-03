@@ -1,7 +1,6 @@
 use crate::error::ErrorBag;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
-// use crate::types::{Cast, Type};
 use crate::value::{ErrorKind, Value};
 use node::SyntaxNode;
 
@@ -12,8 +11,6 @@ pub struct Evaluator<'bag, 'src> {
     scope: scope::Scope,
     should_break: bool,
 }
-
-// TODO use references in places instead of eating all the values
 
 impl<'bag, 'src> Evaluator<'bag, 'src> {
     pub fn evaluate(root: node::BlockNode, error_bag: &'bag mut ErrorBag<'src>) -> Value {
@@ -26,7 +23,15 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         evaluator.evalute_block(root)
     }
 
+    fn should_exit(&self) -> bool {
+        !self.error_bag.any()
+    }
+
     fn evaluate_node(&mut self, node: SyntaxNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
         match node {
             SyntaxNode::BlockNode(block) => self.evalute_block(block),
             SyntaxNode::LiteralNode(literal) => self.evalute_literal(literal),
@@ -45,6 +50,10 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn evalute_block(&mut self, block: node::BlockNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
         let mut val = Value::Null;
         for node in block.block {
             val = self.evaluate_node(node);
@@ -53,6 +62,10 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn evalute_variable(&mut self, variable: node::VariableNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
         match self.scope.try_get_value(&variable.ident) {
             Some(v) => v.clone(),
             None => todo!("Error"),
@@ -60,6 +73,10 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn evalute_if(&mut self, node: node::IfNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
         if self.evaluate_node(*node.cond).into() {
             self.evalute_block(node.if_block)
         } else {
@@ -71,6 +88,10 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn evalute_loop(&mut self, node: node::LoopNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
         let mut val = Value::Null;
         loop {
             for node in node.block.iter() {
@@ -93,12 +114,20 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn evaluate_assignment(&mut self, node: node::AssignmentNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
         let value = self.evaluate_node(*node.value);
         self.scope.insert(node.ident, value.clone());
         value
     }
 
     fn evaluate_binary(&mut self, node: node::BinaryNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
         let left = self.evaluate_node(*node.left);
         let right = self.evaluate_node(*node.right);
 
@@ -130,6 +159,10 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn evalute_unary(&mut self, node: node::UnaryNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
         let res = match node.operator {
             TokenKind::PlusPlusOperator => match *node.child {
                 SyntaxNode::VariableNode(v) => {
