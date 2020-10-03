@@ -58,7 +58,7 @@ impl fmt::Display for SyntaxNode {
 }
 
 impl SyntaxNode {
-    fn span(&self) -> &TextSpan {
+    pub fn span(&self) -> &TextSpan {
         match self {
             SyntaxNode::AssignmentNode(ref n) => n.span(),
             SyntaxNode::BinaryNode(ref n) => n.span(),
@@ -73,7 +73,7 @@ impl SyntaxNode {
         }
     }
 
-    fn prt(&self, indent: String, is_last: bool) {
+    pub fn prt(&self, indent: String, is_last: bool) {
         match self {
             SyntaxNode::AssignmentNode(ref n) => n.prt(indent, is_last),
             SyntaxNode::BinaryNode(ref n) => n.prt(indent, is_last),
