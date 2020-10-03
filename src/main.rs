@@ -41,5 +41,7 @@ x
 
     root.prt(String::new(), true);
     let value = evaluator::Evaluator::evaluate(root, &mut error_bag);
-    println!("{}", value);
+    if value != value::Value::Null && !error_bag.any() {
+        println!("{}", value);
+    }
 }
