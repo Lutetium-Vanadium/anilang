@@ -100,12 +100,12 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         loop {
             for node in node.block.iter() {
                 val = self.evaluate_node(node.clone());
-                if self.should_break {
+                if self.should_break || self.should_exit() {
                     break;
                 }
             }
 
-            if self.should_break {
+            if self.should_break || self.should_exit() {
                 self.should_break = false;
                 break;
             }
