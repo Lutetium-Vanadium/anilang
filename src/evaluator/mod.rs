@@ -1,8 +1,9 @@
 use crate::error::ErrorBag;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
+use crate::types::Type;
 use crate::value::{ErrorKind, Value};
-use node::SyntaxNode;
+use node::{Node, SyntaxNode};
 
 mod scope;
 
@@ -68,7 +69,10 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
 
         match self.scope.try_get_value(&variable.ident) {
             Some(v) => v.clone(),
-            None => todo!("Error"),
+            None => {
+                self.error_bag.unknown_reference(&variable);
+                Value::Null
+            }
         }
     }
 
@@ -127,6 +131,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         if self.should_exit() {
             return Value::Null;
         }
+        let span = node.span().clone();
 
         let left = self.evaluate_node(*node.left);
         let right = self.evaluate_node(*node.right);
@@ -149,12 +154,15 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             TokenKind::LEOperator => Ok(left.le(right)),
             TokenKind::GEOperator => Ok(left.ge(right)),
 
-            _ => todo!("Illegal operator"),
+            _ => unreachable!(),
         };
 
         match res {
             Ok(v) => v,
-            Err(e) => todo!("Report error {:?}", e),
+            Err(e) => {
+                self.error_bag.from_value_error(e, span);
+                Value::Null
+            }
         }
     }
 
@@ -162,6 +170,8 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         if self.should_exit() {
             return Value::Null;
         }
+
+        let span = node.span().clone();
 
         let res = match node.operator {
             TokenKind::PlusPlusOperator => match *node.child {
@@ -173,10 +183,20 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                             self.scope.insert(ident, Value::Int(i + 1));
                             Ok(val)
                         }
-                        _ => Err(ErrorKind::IncorrectType),
+                        Value::Float(j) => {
+                            self.scope.insert(ident, Value::Float(j + 1.0));
+                            Ok(val)
+                        }
+                        _ => Err(ErrorKind::IncorrectType {
+                            got: val.type_(),
+                            expected: Type::Int | Type::Float,
+                        }),
                     }
                 }
-                _ => todo!("Error expected variable"),
+                _ => {
+                    self.error_bag.expected_variable(&*node.child);
+                    Ok(Value::Null)
+                }
             },
             TokenKind::PlusOperator => self.evaluate_node(*node.child).plus(),
 
@@ -189,20 +209,33 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                             self.scope.insert(ident, Value::Int(i - 1));
                             Ok(val)
                         }
-                        _ => Err(ErrorKind::IncorrectType),
+                        Value::Float(f) => {
+                            self.scope.insert(ident, Value::Float(f - 1.0));
+                            Ok(val)
+                        }
+                        _ => Err(ErrorKind::IncorrectType {
+                            got: val.type_(),
+                            expected: Type::Int | Type::Float,
+                        }),
                     }
                 }
-                _ => todo!("Error expected variable"),
+                _ => {
+                    self.error_bag.expected_variable(&*node.child);
+                    Ok(Value::Null)
+                }
             },
             TokenKind::MinusOperator => self.evaluate_node(*node.child).minus(),
 
             TokenKind::NotOperator => Ok(self.evaluate_node(*node.child).not()),
-            _ => todo!("Error because unknown unary operator"),
+            _ => unreachable!(),
         };
 
         match res {
             Ok(v) => v,
-            Err(_) => todo!("Report error"),
+            Err(e) => {
+                self.error_bag.from_value_error(e, span);
+                Value::Null
+            }
         }
     }
 }
