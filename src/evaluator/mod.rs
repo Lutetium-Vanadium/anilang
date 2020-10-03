@@ -24,7 +24,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn should_exit(&self) -> bool {
-        !self.error_bag.any()
+        self.error_bag.any()
     }
 
     fn evaluate_node(&mut self, node: SyntaxNode) -> Value {

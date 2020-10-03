@@ -237,7 +237,12 @@ impl<'bag, 'src> Parser<'bag, 'src> {
                     node::LiteralNode::new::<i64>(token.text_span.clone(), self.src)
                 }
             }
-            TokenKind::DotOperator => todo!(),
+            TokenKind::DotOperator => {
+                let number = self.match_token(TokenKind::Number);
+                let span = TextSpan::from_spans(&token.text_span, &number.text_span);
+
+                node::LiteralNode::new::<f64>(span, self.src)
+            }
             TokenKind::Boolean => node::LiteralNode::new::<bool>(token.text_span.clone(), self.src),
             _ => unreachable!(),
         };

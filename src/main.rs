@@ -16,11 +16,11 @@ fn main() {
     let source_code = r#"
 x = 10
 if x == 10 {
-    x = x + 1
+    x = x + 1.
 }
 
 if x > 10 {
-    x += 2.2
+    x += .22
 }
 
 while x < 100 {
