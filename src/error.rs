@@ -1,8 +1,13 @@
 use crate::colour;
 use crate::source_text::SourceText;
+use crate::syntax_node as node;
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
+use crate::types::ToString;
+use crate::value;
+use node::{Node, SyntaxNode};
 
+#[derive(Debug)]
 struct Error {
     message: String,
     span: TextSpan,
@@ -154,5 +159,49 @@ impl<'a> ErrorBag<'a> {
                 unexpected.text_span.clone(),
             );
         }
+    }
+
+    pub fn unknown_reference(&mut self, variable: &node::VariableNode) {
+        self.report(
+            format!("UnknownReference: Variable {} not found", variable.ident),
+            variable.span().clone(),
+        )
+    }
+
+    pub fn expected_variable(&mut self, got: &SyntaxNode) {
+        self.report(
+            format!(
+                "ExpectedVariable: `++` and `--` can only be performed on variables, got {}",
+                got
+            ),
+            got.span().clone(),
+        )
+    }
+
+    pub fn from_value_error(&mut self, err: value::ErrorKind, span: TextSpan) {
+        let msg = match err {
+            value::ErrorKind::DivideByZero => String::from("DivideByZero: Cannot divide by zero"),
+            value::ErrorKind::OutOfBounds { got, start, end } => format!(
+                "OutOfBounds: Value {} is out of the bounds {} <= x < {}",
+                got, start, end
+            ),
+            value::ErrorKind::IncorrectType { got, expected } => format!(
+                "IncorrectType: Expected {}, got {}",
+                expected.to_string(),
+                got
+            ),
+            value::ErrorKind::IncorrectLeftType { got, expected } => format!(
+                "IncorrectLeftType: Expected {}, got {}",
+                expected.to_string(),
+                got
+            ),
+            value::ErrorKind::IncorrectRightType { got, expected } => format!(
+                "IncorrectRightType: Expected {}, got {}",
+                expected.to_string(),
+                got
+            ),
+        };
+
+        self.report(msg, span)
     }
 }
