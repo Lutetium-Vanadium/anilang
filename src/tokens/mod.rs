@@ -28,6 +28,10 @@ impl Token {
         self.kind.binary_precedence()
     }
 
+    pub fn is_calc_assign(&self) -> bool {
+        self.kind.is_calc_assign()
+    }
+
     pub fn prt(&self, src: &SourceText) {
         print!(
             "{:?} - ({}, {}) = '{}'",

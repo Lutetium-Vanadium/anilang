@@ -12,7 +12,7 @@ pub enum TokenKind {
     CommaOperator,
     AssignmentOperator,
 
-    // Arithemtic operator
+    // Arithemtic operators
     PlusOperator,
     MinusOperator,
     StarOperator,
@@ -20,10 +20,11 @@ pub enum TokenKind {
     ModOperator,
     CaretOperator,
 
+    // Unary operators
     PlusPlusOperator,
     MinusMinusOperator,
 
-    // Boolean operator
+    // Boolean operators
     OrOperator,
     AndOperator,
     NotOperator,
@@ -72,6 +73,13 @@ impl TokenKind {
             AndOperator => 2,
             OrOperator => 1,
             _ => 0,
+        }
+    }
+
+    pub fn is_calc_assign(&self) -> bool {
+        match self {
+            PlusOperator | MinusOperator | StarOperator | SlashOperator | ModOperator => true,
+            _ => false,
         }
     }
 }

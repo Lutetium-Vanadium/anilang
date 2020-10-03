@@ -88,12 +88,16 @@ impl<'bag, 'src> Parser<'bag, 'src> {
     }
 
     fn parse_statement(&mut self) -> SyntaxNode {
-        if self.cur().kind == TokenKind::Ident && self.peek(1).kind == TokenKind::AssignmentOperator
-        {
-            return self.parse_assignment_expression();
-        }
-
         match self.cur().kind {
+            TokenKind::Ident if self.peek(1).kind == TokenKind::AssignmentOperator => {
+                self.parse_assignment_expression()
+            }
+            TokenKind::Ident
+                if self.peek(1).is_calc_assign()
+                    && self.peek(2).kind == TokenKind::AssignmentOperator =>
+            {
+                self.parse_calc_assignment_expression()
+            }
             TokenKind::IfKeyword => self.parse_if_statement(),
             TokenKind::BreakKeyword => {
                 SyntaxNode::BreakNode(node::BreakNode::new(self.next().text_span.clone()))
@@ -108,6 +112,16 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         let ident = self.next().clone();
         self.next();
         let value = self.parse_statement();
+        SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
+    }
+
+    fn parse_calc_assignment_expression(&mut self) -> SyntaxNode {
+        let ident = self.next().clone();
+        let op = self.next().clone();
+        self.next();
+        let left = SyntaxNode::VariableNode(node::VariableNode::new(ident.clone(), self.src));
+        let right = self.parse_statement();
+        let value = SyntaxNode::BinaryNode(node::BinaryNode::new(op, left, right));
         SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
     }
 
