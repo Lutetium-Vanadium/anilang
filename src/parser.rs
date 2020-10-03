@@ -118,10 +118,10 @@ impl<'bag, 'src> Parser<'bag, 'src> {
     fn parse_calc_assignment_expression(&mut self) -> SyntaxNode {
         let ident = self.next().clone();
         let op = self.next().clone();
-        self.next();
+        let span = TextSpan::from_spans(&op.text_span, &self.next().text_span);
         let left = SyntaxNode::VariableNode(node::VariableNode::new(ident.clone(), self.src));
         let right = self.parse_statement();
-        let value = SyntaxNode::BinaryNode(node::BinaryNode::new(op, left, right));
+        let value = SyntaxNode::BinaryNode(node::BinaryNode::with_span(op, left, right, span));
         SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
     }
 

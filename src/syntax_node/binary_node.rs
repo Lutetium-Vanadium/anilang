@@ -19,6 +19,15 @@ impl BinaryNode {
             right: Box::new(right),
         }
     }
+
+    pub fn with_span(operator: Token, left: SyntaxNode, right: SyntaxNode, span: TextSpan) -> Self {
+        Self {
+            operator: operator.kind,
+            span,
+            left: Box::new(left),
+            right: Box::new(right),
+        }
+    }
 }
 
 use std::fmt;
