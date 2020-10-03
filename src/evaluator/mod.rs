@@ -125,7 +125,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
 
         match res {
             Ok(v) => v,
-            Err(_) => todo!("Report error"),
+            Err(e) => todo!("Report error {:?}", e),
         }
     }
 

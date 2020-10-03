@@ -175,37 +175,65 @@ impl<'bag, 'src> Parser<'bag, 'src> {
     }
 
     fn parse_general_expression(&mut self) -> SyntaxNode {
-        let cur = self.next().clone();
-        match cur.kind {
-            TokenKind::String => self.parse_literal_expression::<String>(cur),
-            TokenKind::Number => self.parse_literal_expression::<i64>(cur),
-            TokenKind::Boolean => self.parse_literal_expression::<bool>(cur),
-            TokenKind::Ident => SyntaxNode::VariableNode(node::VariableNode::new(cur, self.src)),
+        match self.cur().kind {
+            TokenKind::DotOperator if self.peek(1).kind == TokenKind::Number => {
+                self.parse_literal_expression()
+            }
+            TokenKind::String | TokenKind::Number | TokenKind::Boolean => {
+                self.parse_literal_expression()
+            }
+            TokenKind::Ident => {
+                SyntaxNode::VariableNode(node::VariableNode::new(self.next().clone(), self.src))
+            }
             TokenKind::OpenParan => self.parse_paran_expression(),
             _ => {
-                self.error_bag.unexpected_token(&cur);
+                self.error_bag.unexpected_token(&self.next().clone());
                 SyntaxNode::BadNode
             }
         }
     }
 
     fn parse_paran_expression(&mut self) -> SyntaxNode {
+        self.match_token(TokenKind::OpenParan);
         let expression = self.parse_statement();
         self.match_token(TokenKind::CloseParan);
         expression
     }
 
-    fn parse_literal_expression<T>(&mut self, token: Token) -> SyntaxNode
-    where
-        T: node::Parse,
-    {
-        let node = match node::LiteralNode::new::<T>(&token, self.src) {
+    fn parse_literal_expression(&mut self) -> SyntaxNode {
+        let token = self.next().clone();
+        let res = match token.kind {
+            TokenKind::String => {
+                node::LiteralNode::new::<String>(token.text_span.clone(), self.src)
+            }
+            TokenKind::Number => {
+                if self.cur().kind == TokenKind::DotOperator {
+                    let dot = self.next();
+                    let span = TextSpan::from_spans(
+                        &token.text_span,
+                        if self.cur().kind == TokenKind::Number {
+                            &self.next().text_span
+                        } else {
+                            &dot.text_span
+                        },
+                    );
+
+                    node::LiteralNode::new::<f64>(span, self.src)
+                } else {
+                    node::LiteralNode::new::<i64>(token.text_span.clone(), self.src)
+                }
+            }
+            TokenKind::DotOperator => todo!(),
+            TokenKind::Boolean => node::LiteralNode::new::<bool>(token.text_span.clone(), self.src),
+            _ => unreachable!(),
+        };
+
+        match res {
             Ok(node) => SyntaxNode::LiteralNode(node),
             Err(_) => {
                 self.error_bag.failed_parse(&token);
                 SyntaxNode::BadNode
             }
-        };
-        node
+        }
     }
 }

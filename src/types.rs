@@ -1,10 +1,10 @@
 #[derive(Debug, PartialEq, Eq)]
 pub enum Cast {
-    Implicit,
+    Implicit(Type),
     Explicit, // NOTE: there is no way to explicitly convert as of now
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Type {
     Int,
     Float,
@@ -15,14 +15,13 @@ pub enum Type {
 
 impl Type {
     fn cast_type(&self, other: &Type) -> Cast {
-        if self == other || other == &Type::Bool {
-            return Cast::Implicit;
+        if self == other {
+            return Cast::Implicit(*self);
         }
 
         match self {
-            Type::Int if other == &Type::Float => Cast::Implicit,
-            Type::Float if other == &Type::Int => Cast::Implicit,
-            Type::Bool => Cast::Implicit,
+            Type::Int if other == &Type::Float => Cast::Implicit(Type::Float),
+            Type::Float if other == &Type::Int => Cast::Implicit(Type::Float),
             _ => Cast::Explicit,
         }
     }
@@ -36,6 +35,7 @@ impl Value {
         match self {
             Value::Bool(_) => Type::Bool,
             Value::Int(_) => Type::Int,
+            Value::Float(_) => Type::Float,
             Value::String(_) => Type::String,
             Value::Null => Type::Null,
         }
@@ -43,13 +43,13 @@ impl Value {
 
     /// Handles converting implicit casting, should only be called through try_cast()
     fn implicit_cast(&self, to_type: Type) -> Value {
-        match self.type_() {
-            Type::Int if to_type == Type::Float => {
-                unimplemented!("Float is currently unimplemented in Value")
+        match to_type {
+            Type::Float if self.type_() == Type::Int => {
+                Value::Float(self.into())
             }
-            Type::Bool => Value::Bool(bool::from(self)),
             _ => panic!(
-                "Unexpected explicit cast, for possible explicit casts call try_cast() instead"
+                "Unexpected explicit cast from {:?} to {:?}, for possible explicit casts call try_cast() instead",
+                self, to_type
             ),
         }
     }
@@ -57,11 +57,16 @@ impl Value {
     /// Performs implicit cast if available or else returns the cast type
     /// For now there is only implicit & explicit, so it will always error `Explicit`.
     /// If in the future, no more cast types are added, it will error `()`
-    pub fn try_cast(self, to_type: Type) -> Result<Value, Cast> {
+    pub fn try_cast(&self, to_type: Type) -> Result<Value, Cast> {
         let self_type = self.type_();
         match self_type.cast_type(&to_type) {
-            Cast::Implicit if self_type == to_type => Ok(self),
-            Cast::Implicit => Ok(self.implicit_cast(to_type)),
+            Cast::Implicit(to_type) => {
+                if self_type == to_type {
+                    Ok(self.clone())
+                } else {
+                    Ok(self.implicit_cast(to_type))
+                }
+            }
             Cast::Explicit => Err(Cast::Explicit),
         }
     }

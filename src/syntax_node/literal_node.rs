@@ -1,7 +1,6 @@
 use super::Node;
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
-use crate::tokens::{Token, TokenKind};
 use crate::value::Value;
 
 type Result<T> = std::result::Result<T, ()>;
@@ -14,6 +13,15 @@ impl Parse for i64 {
     fn parse(src: &str) -> Result<Value> {
         match src.parse() {
             Ok(v) => Ok(Value::Int(v)),
+            Err(_) => Err(()),
+        }
+    }
+}
+
+impl Parse for f64 {
+    fn parse(src: &str) -> Result<Value> {
+        match src.parse() {
+            Ok(v) => Ok(Value::Float(v)),
             Err(_) => Err(()),
         }
     }
@@ -37,17 +45,15 @@ impl Parse for bool {
 
 #[derive(Debug, Clone)]
 pub struct LiteralNode {
-    token_kind: TokenKind,
     pub value: Value,
     span: TextSpan,
 }
 
 impl LiteralNode {
-    pub fn new<T: Parse>(token: &Token, src: &SourceText) -> Result<Self> {
+    pub fn new<T: Parse>(span: TextSpan, src: &SourceText) -> Result<Self> {
         Ok(Self {
-            value: T::parse(&src[&token.text_span])?,
-            token_kind: token.kind.clone(),
-            span: token.text_span.clone(),
+            value: T::parse(&src[&span])?,
+            span,
         })
     }
 }
@@ -55,7 +61,7 @@ impl LiteralNode {
 use std::fmt;
 impl fmt::Display for LiteralNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} <{:?}>", self.value, self.token_kind)
+        write!(f, "{:?} <{:?}>", self.value, self.value.type_())
     }
 }
 
