@@ -14,7 +14,7 @@ use syntax_node::Node;
 
 fn main() {
     let source_code = r#"
-x = 10
+let x = 10
 if x == 10 {
     x = x + 1.
 }

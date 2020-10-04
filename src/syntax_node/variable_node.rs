@@ -16,6 +16,10 @@ impl VariableNode {
             span: token.text_span,
         }
     }
+
+    pub fn raw(ident: String, span: TextSpan) -> Self {
+        Self { ident, span }
+    }
 }
 
 use std::fmt;

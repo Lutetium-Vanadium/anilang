@@ -1,5 +1,6 @@
 use crate::error::Diagnostics;
 use crate::syntax_node as node;
+use crate::text_span::TextSpan;
 use crate::tokens::TokenKind;
 use crate::types::Type;
 use crate::value::{ErrorKind, Value};
@@ -40,6 +41,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             SyntaxNode::IfNode(node) => self.evalute_if(node),
             SyntaxNode::LoopNode(node) => self.evalute_loop(node),
             SyntaxNode::AssignmentNode(node) => self.evaluate_assignment(node),
+            SyntaxNode::DeclarationNode(node) => self.evaluate_declaration(node),
             SyntaxNode::BinaryNode(node) => self.evaluate_binary(node),
             SyntaxNode::UnaryNode(node) => self.evalute_unary(node),
             SyntaxNode::BreakNode(_) => {
@@ -89,7 +91,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         Value::Null
     }
 
-    fn insert_literal(&mut self, ident: String, value: Value) {
+    fn insert_literal(&mut self, ident: String, value: Value, span: TextSpan) {
         let mut i = self.scopes.len() - 1;
         loop {
             if let Some(_) = self.scopes[i].try_get_value(&ident) {
@@ -105,8 +107,8 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             }
         }
 
-        // No scope containing variable found, insert in the top most scope
-        self.scopes.last_mut().unwrap().insert(ident, value);
+        self.diagnostics
+            .unknown_reference(&node::VariableNode::raw(ident, span));
     }
 
     fn evalute_if(&mut self, node: node::IfNode) -> Value {
@@ -156,7 +158,20 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         }
 
         let value = self.evaluate_node(*node.value);
-        self.insert_literal(node.ident, value.clone());
+        self.insert_literal(node.ident, value.clone(), node.span);
+        value
+    }
+
+    fn evaluate_declaration(&mut self, node: node::DeclarationNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
+        let value = self.evaluate_node(*node.value);
+        self.scopes
+            .last_mut()
+            .unwrap()
+            .insert(node.ident, value.clone());
         value
     }
 
@@ -213,11 +228,11 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     let val = self.evalute_variable(v);
                     match val {
                         Value::Int(i) => {
-                            self.insert_literal(ident, Value::Int(i + 1));
+                            self.insert_literal(ident, Value::Int(i + 1), node.span);
                             Ok(val)
                         }
                         Value::Float(j) => {
-                            self.insert_literal(ident, Value::Float(j + 1.0));
+                            self.insert_literal(ident, Value::Float(j + 1.0), node.span);
                             Ok(val)
                         }
                         _ => Err(ErrorKind::IncorrectType {
@@ -239,11 +254,11 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     let val = self.evalute_variable(v);
                     match val {
                         Value::Int(i) => {
-                            self.insert_literal(ident, Value::Int(i - 1));
+                            self.insert_literal(ident, Value::Int(i - 1), node.span);
                             Ok(val)
                         }
                         Value::Float(f) => {
-                            self.insert_literal(ident, Value::Float(f - 1.0));
+                            self.insert_literal(ident, Value::Float(f - 1.0), node.span);
                             Ok(val)
                         }
                         _ => Err(ErrorKind::IncorrectType {

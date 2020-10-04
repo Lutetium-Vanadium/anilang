@@ -2,6 +2,7 @@ mod assignment_node;
 mod binary_node;
 mod block_node;
 mod break_node;
+mod declaration_node;
 mod if_node;
 mod literal_node;
 mod loop_node;
@@ -14,6 +15,7 @@ pub use assignment_node::*;
 pub use binary_node::*;
 pub use block_node::*;
 pub use break_node::*;
+pub use declaration_node::*;
 pub use if_node::*;
 pub use literal_node::*;
 pub use loop_node::*;
@@ -31,6 +33,7 @@ pub enum SyntaxNode {
     BinaryNode(binary_node::BinaryNode),
     BlockNode(block_node::BlockNode),
     BreakNode(break_node::BreakNode),
+    DeclarationNode(declaration_node::DeclarationNode),
     IfNode(if_node::IfNode),
     LiteralNode(literal_node::LiteralNode),
     LoopNode(loop_node::LoopNode),
@@ -47,6 +50,7 @@ impl fmt::Display for SyntaxNode {
             SyntaxNode::BinaryNode(ref n) => write!(f, "{}", n),
             SyntaxNode::BlockNode(ref n) => write!(f, "{}", n),
             SyntaxNode::BreakNode(ref n) => write!(f, "{}", n),
+            SyntaxNode::DeclarationNode(ref n) => write!(f, "{}", n),
             SyntaxNode::IfNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LiteralNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LoopNode(ref n) => write!(f, "{}", n),
@@ -64,6 +68,7 @@ impl SyntaxNode {
             SyntaxNode::BinaryNode(ref n) => n.span(),
             SyntaxNode::BlockNode(ref n) => n.span(),
             SyntaxNode::BreakNode(ref n) => n.span(),
+            SyntaxNode::DeclarationNode(ref n) => n.span(),
             SyntaxNode::IfNode(ref n) => n.span(),
             SyntaxNode::LiteralNode(ref n) => n.span(),
             SyntaxNode::LoopNode(ref n) => n.span(),
@@ -79,6 +84,7 @@ impl SyntaxNode {
             SyntaxNode::BinaryNode(ref n) => n.prt(indent, is_last),
             SyntaxNode::BlockNode(ref n) => n.prt(indent, is_last),
             SyntaxNode::BreakNode(ref n) => n.prt(indent, is_last),
+            SyntaxNode::DeclarationNode(ref n) => n.prt(indent, is_last),
             SyntaxNode::IfNode(ref n) => n.prt(indent, is_last),
             SyntaxNode::LiteralNode(ref n) => n.prt(indent, is_last),
             SyntaxNode::LoopNode(ref n) => n.prt(indent, is_last),

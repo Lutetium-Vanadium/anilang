@@ -4,30 +4,35 @@ use crate::text_span::TextSpan;
 use crate::tokens::Token;
 
 #[derive(Debug, Clone)]
-pub struct AssignmentNode {
-    pub span: TextSpan,
+pub struct DeclarationNode {
+    span: TextSpan,
     pub ident: String,
     pub value: Box<SyntaxNode>,
 }
 
-impl AssignmentNode {
-    pub fn new(ident_token: Token, value: SyntaxNode, src: &SourceText) -> Self {
+impl DeclarationNode {
+    pub fn new(
+        declaration_token: Token,
+        ident_token: Token,
+        value: SyntaxNode,
+        src: &SourceText,
+    ) -> Self {
         Self {
             ident: src[&ident_token.text_span].to_owned(),
-            span: TextSpan::from_spans(&ident_token.text_span, value.span()),
+            span: TextSpan::from_spans(&declaration_token.text_span, value.span()),
             value: Box::new(value),
         }
     }
 }
 
 use std::fmt;
-impl fmt::Display for AssignmentNode {
+impl fmt::Display for DeclarationNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "AssignmentOperator")
+        write!(f, "DeclarationOperator")
     }
 }
 
-impl Node for AssignmentNode {
+impl Node for DeclarationNode {
     fn span(&self) -> &TextSpan {
         &self.span
     }

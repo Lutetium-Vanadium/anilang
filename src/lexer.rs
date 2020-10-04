@@ -172,6 +172,7 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
                 "break" => TokenKind::BreakKeyword,
                 "loop" => TokenKind::LoopKeyword,
                 "while" => TokenKind::WhileKeyword,
+                "let" => TokenKind::LetKeyword,
                 _ => TokenKind::Ident,
             },
             start => e - start

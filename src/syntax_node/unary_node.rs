@@ -5,7 +5,7 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct UnaryNode {
-    span: TextSpan,
+    pub span: TextSpan,
     pub operator: TokenKind,
     pub child: Box<SyntaxNode>,
 }

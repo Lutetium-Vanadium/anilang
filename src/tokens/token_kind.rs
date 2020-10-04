@@ -49,6 +49,7 @@ pub enum TokenKind {
     BreakKeyword,
     WhileKeyword,
     LoopKeyword,
+    LetKeyword,
 
     Bad,
 }

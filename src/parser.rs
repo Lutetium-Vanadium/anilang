@@ -89,6 +89,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
 
     fn parse_statement(&mut self) -> SyntaxNode {
         match self.cur().kind {
+            TokenKind::LetKeyword => self.parse_declaration_expression(),
             TokenKind::Ident if self.peek(1).kind == TokenKind::AssignmentOperator => {
                 self.parse_assignment_expression()
             }
@@ -106,6 +107,19 @@ impl<'bag, 'src> Parser<'bag, 'src> {
             TokenKind::WhileKeyword => self.parse_while_statement(),
             _ => self.parse_binary_expression(0),
         }
+    }
+
+    fn parse_declaration_expression(&mut self) -> SyntaxNode {
+        let declaration_token = self.next().clone();
+        let ident = self.match_token(TokenKind::Ident);
+        self.match_token(TokenKind::AssignmentOperator);
+        let value = self.parse_statement();
+        SyntaxNode::DeclarationNode(node::DeclarationNode::new(
+            declaration_token,
+            ident,
+            value,
+            self.src,
+        ))
     }
 
     fn parse_assignment_expression(&mut self) -> SyntaxNode {
