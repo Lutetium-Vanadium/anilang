@@ -1,4 +1,4 @@
-use crate::error::ErrorBag;
+use crate::error::Diagnostics;
 use crate::source_text::SourceText;
 use crate::syntax_node as node;
 use crate::text_span::TextSpan;
@@ -7,7 +7,7 @@ use node::SyntaxNode;
 use std::cell::Cell;
 
 pub struct Parser<'bag, 'src> {
-    error_bag: &'bag mut ErrorBag<'src>,
+    diagnostics: &'bag mut Diagnostics<'src>,
     src: &'src SourceText<'src>,
     tokens: Vec<Token>,
     index: Cell<usize>,
@@ -17,14 +17,14 @@ impl<'bag, 'src> Parser<'bag, 'src> {
     pub fn parse(
         mut tokens: Vec<Token>,
         src: &'src SourceText<'src>,
-        error_bag: &'bag mut ErrorBag<'src>,
+        diagnostics: &'bag mut Diagnostics<'src>,
     ) -> node::BlockNode {
         assert_ne!(tokens.len(), 0);
 
         tokens.retain(|val| val.kind != TokenKind::Whitespace);
 
         let mut parser = Parser {
-            error_bag,
+            diagnostics,
             src,
             tokens,
             index: Cell::new(0),
@@ -58,7 +58,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
     fn match_token(&mut self, expected: TokenKind) -> Token {
         let cur = self.next().clone();
         if cur.kind != expected {
-            self.error_bag.incorrect_token(&cur, expected);
+            self.diagnostics.incorrect_token(&cur, expected);
         };
         cur
     }
@@ -201,7 +201,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
             }
             TokenKind::OpenParan => self.parse_paran_expression(),
             _ => {
-                self.error_bag.unexpected_token(&self.next().clone());
+                self.diagnostics.unexpected_token(&self.next().clone());
                 SyntaxNode::BadNode
             }
         }
@@ -250,7 +250,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         match res {
             Ok(node) => SyntaxNode::LiteralNode(node),
             Err(_) => {
-                self.error_bag.failed_parse(&token);
+                self.diagnostics.failed_parse(&token);
                 SyntaxNode::BadNode
             }
         }

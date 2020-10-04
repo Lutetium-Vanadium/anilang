@@ -1,4 +1,4 @@
-use crate::error::ErrorBag;
+use crate::error::Diagnostics;
 use crate::source_text::SourceText;
 use crate::tokens::{Token, TokenKind};
 
@@ -9,16 +9,19 @@ macro_rules! add {
 }
 
 pub struct Lexer<'bag, 'src> {
-    error_bag: &'bag mut ErrorBag<'src>,
+    diagnostics: &'bag mut Diagnostics<'src>,
     pub tokens: Vec<Token>,
     src: &'src SourceText<'src>,
     chars: std::iter::Peekable<std::str::CharIndices<'src>>,
 }
 
 impl<'bag, 'src> Lexer<'bag, 'src> {
-    pub fn lex(src: &'src SourceText<'src>, error_bag: &'bag mut ErrorBag<'src>) -> Vec<Token> {
+    pub fn lex(
+        src: &'src SourceText<'src>,
+        diagnostics: &'bag mut Diagnostics<'src>,
+    ) -> Vec<Token> {
         let mut lexer = Lexer {
-            error_bag,
+            diagnostics,
             chars: src.text.char_indices().peekable(),
             src,
             tokens: Vec::new(),
@@ -122,7 +125,7 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
                     '{' => add!(self, TokenKind::OpenBrace, i => 1),
                     '}' => add!(self, TokenKind::CloseBrace, i => 1),
                     _ => {
-                        self.error_bag.bad_char(i);
+                        self.diagnostics.bad_char(i);
                         add!(self, TokenKind::Bad, i => 1);
                     }
                 }

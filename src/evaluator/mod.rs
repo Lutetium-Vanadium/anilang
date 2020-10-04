@@ -1,4 +1,4 @@
-use crate::error::ErrorBag;
+use crate::error::Diagnostics;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
 use crate::types::Type;
@@ -8,15 +8,15 @@ use node::{Node, SyntaxNode};
 mod scope;
 
 pub struct Evaluator<'bag, 'src> {
-    error_bag: &'bag mut ErrorBag<'src>,
+    diagnostics: &'bag mut Diagnostics<'src>,
     scope: scope::Scope,
     should_break: bool,
 }
 
 impl<'bag, 'src> Evaluator<'bag, 'src> {
-    pub fn evaluate(root: node::BlockNode, error_bag: &'bag mut ErrorBag<'src>) -> Value {
+    pub fn evaluate(root: node::BlockNode, diagnostics: &'bag mut Diagnostics<'src>) -> Value {
         let mut evaluator = Self {
-            error_bag,
+            diagnostics,
             scope: scope::Scope::root(),
             should_break: false,
         };
@@ -25,7 +25,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     }
 
     fn should_exit(&self) -> bool {
-        self.error_bag.any()
+        self.diagnostics.any()
     }
 
     fn evaluate_node(&mut self, node: SyntaxNode) -> Value {
@@ -70,7 +70,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         match self.scope.try_get_value(&variable.ident) {
             Some(v) => v.clone(),
             None => {
-                self.error_bag.unknown_reference(&variable);
+                self.diagnostics.unknown_reference(&variable);
                 Value::Null
             }
         }
@@ -160,7 +160,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         match res {
             Ok(v) => v,
             Err(e) => {
-                self.error_bag.from_value_error(e, span);
+                self.diagnostics.from_value_error(e, span);
                 Value::Null
             }
         }
@@ -194,7 +194,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     }
                 }
                 _ => {
-                    self.error_bag.expected_variable(&*node.child);
+                    self.diagnostics.expected_variable(&*node.child);
                     Ok(Value::Null)
                 }
             },
@@ -220,7 +220,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     }
                 }
                 _ => {
-                    self.error_bag.expected_variable(&*node.child);
+                    self.diagnostics.expected_variable(&*node.child);
                     Ok(Value::Null)
                 }
             },
@@ -233,7 +233,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         match res {
             Ok(v) => v,
             Err(e) => {
-                self.error_bag.from_value_error(e, span);
+                self.diagnostics.from_value_error(e, span);
                 Value::Null
             }
         }

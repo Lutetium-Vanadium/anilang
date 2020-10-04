@@ -30,18 +30,18 @@ x
 "#;
 
     let src = source_text::SourceText::new(source_code);
-    let mut error_bag = error::ErrorBag::new(&src);
+    let mut diagnostics = error::Diagnostics::new(&src);
 
-    let tokens = lexer::Lexer::lex(&src, &mut error_bag);
-    let root = parser::Parser::parse(tokens, &src, &mut error_bag);
+    let tokens = lexer::Lexer::lex(&src, &mut diagnostics);
+    let root = parser::Parser::parse(tokens, &src, &mut diagnostics);
 
-    if error_bag.any() {
+    if diagnostics.any() {
         return;
     }
 
     root.prt(String::new(), true);
-    let value = evaluator::Evaluator::evaluate(root, &mut error_bag);
-    if value != value::Value::Null && !error_bag.any() {
+    let value = evaluator::Evaluator::evaluate(root, &mut diagnostics);
+    if value != value::Value::Null && !diagnostics.any() {
         println!("{}", value);
     }
 }

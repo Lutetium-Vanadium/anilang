@@ -89,14 +89,14 @@ impl Error {
     }
 }
 
-pub struct ErrorBag<'a> {
+pub struct Diagnostics<'a> {
     src: &'a SourceText<'a>,
     num_errors: usize,
 }
 
-impl<'a> ErrorBag<'a> {
-    pub fn new(src: &'a SourceText) -> ErrorBag<'a> {
-        ErrorBag { src, num_errors: 0 }
+impl<'a> Diagnostics<'a> {
+    pub fn new(src: &'a SourceText) -> Diagnostics<'a> {
+        Diagnostics { src, num_errors: 0 }
     }
 
     pub fn any(&self) -> bool {
@@ -109,7 +109,7 @@ impl<'a> ErrorBag<'a> {
     }
 }
 
-impl<'a> ErrorBag<'a> {
+impl<'a> Diagnostics<'a> {
     fn report(&mut self, message: String, span: TextSpan) {
         self.num_errors += 1;
         Error::new(message, span).prt(self.src);
