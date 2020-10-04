@@ -9,7 +9,7 @@ mod scope;
 
 pub struct Evaluator<'bag, 'src> {
     diagnostics: &'bag mut Diagnostics<'src>,
-    scope: scope::Scope,
+    scopes: Vec<scope::Scope>,
     should_break: bool,
 }
 
@@ -17,7 +17,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     pub fn evaluate(root: node::BlockNode, diagnostics: &'bag mut Diagnostics<'src>) -> Value {
         let mut evaluator = Self {
             diagnostics,
-            scope: scope::Scope::root(),
+            scopes: vec![scope::Scope::new()],
             should_break: false,
         };
 
@@ -55,10 +55,15 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             return Value::Null;
         }
 
+        self.scopes.push(scope::Scope::new());
+
         let mut val = Value::Null;
         for node in block.block {
             val = self.evaluate_node(node);
         }
+
+        self.scopes.pop();
+
         val
     }
 
@@ -67,13 +72,41 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             return Value::Null;
         }
 
-        match self.scope.try_get_value(&variable.ident) {
-            Some(v) => v.clone(),
-            None => {
-                self.diagnostics.unknown_reference(&variable);
-                Value::Null
+        let mut i = self.scopes.len() - 1;
+        loop {
+            if let Some(v) = self.scopes[i].try_get_value(&variable.ident) {
+                return v.clone();
+            }
+
+            if i == 0 {
+                break;
+            } else {
+                i -= 1;
             }
         }
+
+        self.diagnostics.unknown_reference(&variable);
+        Value::Null
+    }
+
+    fn insert_literal(&mut self, ident: String, value: Value) {
+        let mut i = self.scopes.len() - 1;
+        loop {
+            if let Some(_) = self.scopes[i].try_get_value(&ident) {
+                // Found the variable already declared in some parent scope
+                self.scopes[i].insert(ident, value);
+                return;
+            }
+
+            if i == 0 {
+                break;
+            } else {
+                i -= 1;
+            }
+        }
+
+        // No scope containing variable found, insert in the top most scope
+        self.scopes.last_mut().unwrap().insert(ident, value);
     }
 
     fn evalute_if(&mut self, node: node::IfNode) -> Value {
@@ -113,7 +146,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         val
     }
 
-    fn evalute_literal(&mut self, literal: node::LiteralNode) -> Value {
+    fn evalute_literal(&self, literal: node::LiteralNode) -> Value {
         literal.value
     }
 
@@ -123,7 +156,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         }
 
         let value = self.evaluate_node(*node.value);
-        self.scope.insert(node.ident, value.clone());
+        self.insert_literal(node.ident, value.clone());
         value
     }
 
@@ -180,11 +213,11 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     let val = self.evalute_variable(v);
                     match val {
                         Value::Int(i) => {
-                            self.scope.insert(ident, Value::Int(i + 1));
+                            self.insert_literal(ident, Value::Int(i + 1));
                             Ok(val)
                         }
                         Value::Float(j) => {
-                            self.scope.insert(ident, Value::Float(j + 1.0));
+                            self.insert_literal(ident, Value::Float(j + 1.0));
                             Ok(val)
                         }
                         _ => Err(ErrorKind::IncorrectType {
@@ -206,11 +239,11 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     let val = self.evalute_variable(v);
                     match val {
                         Value::Int(i) => {
-                            self.scope.insert(ident, Value::Int(i - 1));
+                            self.insert_literal(ident, Value::Int(i - 1));
                             Ok(val)
                         }
                         Value::Float(f) => {
-                            self.scope.insert(ident, Value::Float(f - 1.0));
+                            self.insert_literal(ident, Value::Float(f - 1.0));
                             Ok(val)
                         }
                         _ => Err(ErrorKind::IncorrectType {

@@ -30,6 +30,7 @@ impl Error {
             None => return,
         };
 
+        // get the width of the largest line number so all the '|' line up
         let mut e2 = e;
         let mut w = 0;
         while e2 > 0 {
