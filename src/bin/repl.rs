@@ -1,16 +1,4 @@
-mod colour;
-mod error;
-mod evaluator;
-mod lexer;
-mod parser;
-mod source_text;
-mod syntax_node;
-mod text_span;
-mod tokens;
-mod types;
-mod value;
-
-use syntax_node::Node;
+use anilang::{error, evaluator, lexer, parser, source_text, value, Node};
 
 fn main() {
     let source_code = r#"
