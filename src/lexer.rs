@@ -142,13 +142,14 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             e = *i;
 
             if !chr.is_whitespace() {
+                e -= 1;
                 break;
             } else {
                 self.chars.next();
             }
         }
 
-        add!(self, TokenKind::Whitespace, start => e - start);
+        add!(self, TokenKind::Whitespace, start => e + 1 - start);
     }
 
     fn lex_ident(&mut self, start: usize) {
@@ -157,6 +158,7 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             e = *i;
 
             if !chr.is_alphanumeric() {
+                e -= 1;
                 break;
             } else {
                 self.chars.next();
@@ -175,7 +177,7 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
                 "let" => TokenKind::LetKeyword,
                 _ => TokenKind::Ident,
             },
-            start => e - start
+            start => e + 1 - start
         );
     }
 
@@ -185,12 +187,13 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             e = *i;
 
             if !chr.is_numeric() {
+                e -= 1;
                 break;
             } else {
                 self.chars.next();
             }
         }
-        add!(self, TokenKind::Number, start => e-start);
+        add!(self, TokenKind::Number, start => e + 1 - start);
     }
 
     fn lex_string(&mut self, start: usize, delim: char) {
@@ -205,11 +208,12 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             } else if chr == '\\' {
                 is_escaped = true;
             } else if chr == delim {
+                e -= 1;
                 break;
             }
         }
 
-        add!(self, TokenKind::String, start => e - start + 1);
+        add!(self, TokenKind::String, start => e + 2 - start);
     }
 }
 
