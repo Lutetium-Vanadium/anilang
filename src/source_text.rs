@@ -3,11 +3,16 @@ use std::ops::Index;
 
 pub struct SourceText<'a> {
     pub text: &'a str,
-    pub lines: Vec<(usize, usize)>,
+    lines: Vec<(usize, usize)>,
+    offset: usize,
 }
 
 impl<'a> SourceText<'a> {
     pub fn new(text: &'a str) -> SourceText<'a> {
+        SourceText::with_offset(text, 0)
+    }
+
+    pub fn with_offset(text: &'a str, offset: usize) -> SourceText<'a> {
         let mut lines = Vec::new();
 
         let mut ignore = false;
@@ -25,7 +30,11 @@ impl<'a> SourceText<'a> {
         }
         lines.push((start, text.len()));
 
-        SourceText { text, lines }
+        SourceText {
+            text,
+            lines,
+            offset,
+        }
     }
 
     pub fn lineno(&self, index: usize) -> Option<usize> {
@@ -39,7 +48,7 @@ impl<'a> SourceText<'a> {
         while s <= e {
             let m = (s + e) / 2;
             if self.lines[m].0 <= index && index < self.lines[m].1 {
-                return Some(m);
+                return Some(self.offset + m);
             } else if self.lines[m].0 > index {
                 e = m - 1;
             } else {
@@ -51,6 +60,10 @@ impl<'a> SourceText<'a> {
 
     pub fn len(&self) -> usize {
         self.text.len()
+    }
+
+    pub fn line(&self, index: usize) -> (usize, usize) {
+        self.lines[index - self.offset]
     }
 }
 

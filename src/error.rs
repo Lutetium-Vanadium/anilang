@@ -47,11 +47,11 @@ impl Error {
                 colour::BLUE,
                 s,
                 colour::RESET,
-                &src.text[src.lines[s].0..self.span.start()],
+                &src.text[src.line(s).0..self.span.start()],
                 colour::RED,
                 &src[&self.span],
                 colour::RESET,
-                &src.text[self.span.end()..src.lines[s].1],
+                &src.text[self.span.end()..src.line(s).1],
             );
         } else {
             println!(
@@ -59,9 +59,9 @@ impl Error {
                 colour::BLUE,
                 s,
                 colour::RESET,
-                &src.text[src.lines[s].0..self.span.start()],
+                &src.text[src.line(s).0..self.span.start()],
                 colour::RED,
-                &src.text[self.span.start()..src.lines[s].1],
+                &src.text[self.span.start()..src.line(s).1],
                 w = w
             );
 
@@ -71,7 +71,7 @@ impl Error {
                     colour::BLUE,
                     i,
                     colour::RESET,
-                    &src.text[src.lines[i].0..src.lines[i].1],
+                    &src.text[src.line(i).0..src.line(i).1],
                 );
             }
 
@@ -80,9 +80,9 @@ impl Error {
                 colour::BLUE,
                 e,
                 colour::RESET,
-                &src.text[src.lines[e].1..self.span.end()],
+                &src.text[src.line(e).1..self.span.end()],
                 colour::RESET,
-                &src.text[self.span.end()..src.lines[e].1]
+                &src.text[self.span.end()..src.line(e).1]
             );
         }
 
