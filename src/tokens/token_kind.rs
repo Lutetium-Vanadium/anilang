@@ -4,7 +4,7 @@ pub enum TokenKind {
     Whitespace,
     Number,
     Boolean,
-    String,
+    String(char),
     Ident,
     EOF,
 

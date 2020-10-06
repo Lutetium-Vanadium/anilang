@@ -213,7 +213,7 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             }
         }
 
-        add!(self, TokenKind::String, start => e + 2 - start);
+        add!(self, TokenKind::String(delim), start => e + 2 - start);
     }
 }
 

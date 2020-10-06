@@ -207,7 +207,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
             TokenKind::DotOperator if self.peek(1).kind == TokenKind::Number => {
                 self.parse_literal_expression()
             }
-            TokenKind::String | TokenKind::Number | TokenKind::Boolean => {
+            TokenKind::String(_) | TokenKind::Number | TokenKind::Boolean => {
                 self.parse_literal_expression()
             }
             TokenKind::Ident => {
@@ -231,7 +231,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
     fn parse_literal_expression(&mut self) -> SyntaxNode {
         let token = self.next().clone();
         let res = match token.kind {
-            TokenKind::String => {
+            TokenKind::String(_) => {
                 node::LiteralNode::new::<String>(token.text_span.clone(), self.src)
             }
             TokenKind::Number => {

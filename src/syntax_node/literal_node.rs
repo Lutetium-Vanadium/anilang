@@ -29,7 +29,21 @@ impl Parse for f64 {
 
 impl Parse for String {
     fn parse(src: &str) -> Result<Value> {
-        Ok(Value::String(src.to_owned()))
+        let mut string = String::new();
+        let mut is_escaped = false;
+
+        for chr in src[1..(src.len() - 1)].chars() {
+            if is_escaped {
+                is_escaped = !is_escaped;
+            } else if chr == '\\' {
+                is_escaped = true;
+                continue;
+            }
+
+            string.push(chr);
+        }
+
+        Ok(Value::String(string))
     }
 }
 
