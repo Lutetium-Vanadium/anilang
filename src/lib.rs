@@ -2,6 +2,7 @@ mod diagnostics;
 mod evaluator;
 mod lexer;
 mod parser;
+mod repl;
 mod source_text;
 mod types;
 mod value;
@@ -12,6 +13,7 @@ mod text_span;
 mod tokens;
 
 pub use evaluator::scope::Scope;
+pub use repl::Repl;
 pub use syntax_node::Node;
 
 pub use diagnostics::*;

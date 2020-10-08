@@ -1,35 +1,28 @@
-use anilang::{error, evaluator, lexer, parser, source_text, value, Node};
+use crossterm::Result;
 
-fn main() {
-    let source_code = r#"
-let x = 10
-if x == 10 {
-    x = x + 1.
-}
+fn main() -> Result<()> {
+    let mut repl = anilang::Repl::new();
 
-if x > 10 {
-    x += .22
-}
+    let mut global_scope = anilang::Scope::new();
 
-while x < 100 {
-    x = x + 10
-}
-x
-"#;
+    loop {
+        let line = repl.next("» ", crossterm::style::Color::Green)?;
 
-    let src = source_text::SourceText::new(source_code);
-    let mut diagnostics = error::Diagnostics::new(&src);
+        let src = anilang::SourceText::new(&line);
+        let mut diagnostics = anilang::Diagnostics::new(&src);
 
-    let tokens = lexer::Lexer::lex(&src, &mut diagnostics);
-    let root = parser::Parser::parse(tokens, &src, &mut diagnostics);
+        let tokens = anilang::Lexer::lex(&src, &mut diagnostics);
+        let root = anilang::Parser::parse(tokens, &src, &mut diagnostics);
 
-    if diagnostics.any() {
-        return;
-    }
+        if !diagnostics.any() {
+            // root.prt(String::new(), true);
+            let value =
+                anilang::Evaluator::evaluate_with_global(root, &mut diagnostics, &mut global_scope);
+            if value != anilang::Value::Null && !diagnostics.any() {
+                println!("{}", value);
+            }
+        }
 
-    root.prt(String::new(), true);
-    let value = evaluator::Evaluator::evaluate(root, &mut diagnostics);
-    if value != value::Value::Null && !diagnostics.any() {
-        println!("{}", value);
+        repl.push(line);
     }
 }

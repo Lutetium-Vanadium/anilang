@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 enumflags2 = "0.6.4"
+crossterm = "0.17.7"
