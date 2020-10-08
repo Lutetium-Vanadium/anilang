@@ -1,4 +1,4 @@
-use crate::error::Diagnostics;
+use crate::diagnostics::Diagnostics;
 use crate::source_text::SourceText;
 use crate::syntax_node as node;
 use crate::text_span::TextSpan;

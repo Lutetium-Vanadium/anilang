@@ -31,12 +31,18 @@ impl Error {
         };
 
         // get the width of the largest line number so all the '|' line up
-        let mut e2 = e;
-        let mut w = 0;
-        while e2 > 0 {
-            w += 1;
-            e2 /= 10;
-        }
+
+        let w = if e > 0 {
+            let mut e2 = std::cmp::min(e, 1);
+            let mut w = 0;
+            while e2 > 0 {
+                w += 1;
+                e2 /= 10;
+            }
+            w
+        } else {
+            1
+        };
 
         println!("{}{}{}", colour::WHITE, self.message, colour::RESET);
         println!("{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET);
@@ -165,6 +171,16 @@ impl<'a> Diagnostics<'a> {
     pub fn unknown_reference(&mut self, variable: &node::VariableNode) {
         self.report(
             format!("UnknownReference: Variable `{}` not found", variable.ident),
+            variable.span().clone(),
+        )
+    }
+
+    pub fn already_declared(&mut self, variable: &node::DeclarationNode) {
+        self.report(
+            format!(
+                "SyntaxError: Variable `{}` was already declared",
+                variable.ident
+            ),
             variable.span().clone(),
         )
     }

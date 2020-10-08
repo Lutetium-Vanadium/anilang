@@ -1,4 +1,4 @@
-mod error;
+mod diagnostics;
 mod evaluator;
 mod lexer;
 mod parser;
@@ -13,7 +13,7 @@ mod tokens;
 
 pub use syntax_node::Node;
 
-pub use error::*;
+pub use diagnostics::*;
 pub use evaluator::*;
 pub use lexer::*;
 pub use parser::*;

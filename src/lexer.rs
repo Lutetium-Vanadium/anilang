@@ -1,4 +1,4 @@
-use crate::error::Diagnostics;
+use crate::diagnostics::Diagnostics;
 use crate::source_text::SourceText;
 use crate::tokens::{Token, TokenKind};
 

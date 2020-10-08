@@ -1,4 +1,4 @@
-use crate::error::Diagnostics;
+use crate::diagnostics::Diagnostics;
 use crate::syntax_node as node;
 use crate::text_span::TextSpan;
 use crate::tokens::TokenKind;
@@ -6,7 +6,7 @@ use crate::types::Type;
 use crate::value::{ErrorKind, Value};
 use node::{Node, SyntaxNode};
 
-mod scope;
+pub mod scope;
 
 pub struct Evaluator<'bag, 'src> {
     diagnostics: &'bag mut Diagnostics<'src>,
