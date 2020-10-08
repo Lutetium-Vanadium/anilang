@@ -18,15 +18,79 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
     pub fn evaluate(root: node::BlockNode, diagnostics: &'bag mut Diagnostics<'src>) -> Value {
         let mut evaluator = Self {
             diagnostics,
-            scopes: vec![scope::Scope::new()],
+            // since evaluato_block is called, root scope should be taken care of
+            scopes: Vec::new(),
             should_break: false,
         };
 
         evaluator.evalute_block(root)
     }
 
+    pub fn evaluate_with_global(
+        root: node::BlockNode,
+        diagnostics: &'bag mut Diagnostics<'src>,
+        global_scope: &mut scope::Scope,
+    ) -> Value {
+        let mut evaluator = Self {
+            diagnostics,
+            scopes: vec![global_scope.clone()],
+            should_break: false,
+        };
+
+        // since there is a global_scope, this just needs to execute the statements and not
+        // generate a new scope
+        let mut val = Value::Null;
+        for node in root.block {
+            val = evaluator.evaluate_node(node);
+        }
+
+        // Since scopes starts with a global scope, there should be only the global scope remaining
+        // since all the other scopes should have been popped of
+        assert_eq!(evaluator.scopes.len(), 1);
+        global_scope.replace(evaluator.scopes.pop().unwrap());
+
+        val
+    }
+
     fn should_exit(&self) -> bool {
         self.diagnostics.any()
+    }
+
+    fn insert_var(&mut self, ident: String, value: Value, span: TextSpan) {
+        let mut i = self.scopes.len() - 1;
+        loop {
+            if let Some(_) = self.scopes[i].try_get_value(&ident) {
+                // Found the variable already declared in some parent scope
+                self.scopes[i].insert(ident, value);
+                return;
+            }
+
+            if i == 0 {
+                break;
+            } else {
+                i -= 1;
+            }
+        }
+
+        self.diagnostics
+            .unknown_reference(&node::VariableNode::raw(ident, span));
+    }
+
+    fn get_var(&mut self, ident: &str) -> Option<&Value> {
+        let mut i = self.scopes.len() - 1;
+        loop {
+            if let Some(v) = self.scopes[i].try_get_value(ident) {
+                return Some(v);
+            }
+
+            if i == 0 {
+                break;
+            } else {
+                i -= 1;
+            }
+        }
+
+        None
     }
 
     fn evaluate_node(&mut self, node: SyntaxNode) -> Value {
@@ -74,41 +138,13 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             return Value::Null;
         }
 
-        let mut i = self.scopes.len() - 1;
-        loop {
-            if let Some(v) = self.scopes[i].try_get_value(&variable.ident) {
-                return v.clone();
-            }
-
-            if i == 0 {
-                break;
-            } else {
-                i -= 1;
+        match self.get_var(&variable.ident) {
+            Some(v) => v.clone(),
+            None => {
+                self.diagnostics.unknown_reference(&variable);
+                Value::Null
             }
         }
-
-        self.diagnostics.unknown_reference(&variable);
-        Value::Null
-    }
-
-    fn insert_literal(&mut self, ident: String, value: Value, span: TextSpan) {
-        let mut i = self.scopes.len() - 1;
-        loop {
-            if let Some(_) = self.scopes[i].try_get_value(&ident) {
-                // Found the variable already declared in some parent scope
-                self.scopes[i].insert(ident, value);
-                return;
-            }
-
-            if i == 0 {
-                break;
-            } else {
-                i -= 1;
-            }
-        }
-
-        self.diagnostics
-            .unknown_reference(&node::VariableNode::raw(ident, span));
     }
 
     fn evalute_if(&mut self, node: node::IfNode) -> Value {
@@ -158,7 +194,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         }
 
         let value = self.evaluate_node(*node.value);
-        self.insert_literal(node.ident, value.clone(), node.span);
+        self.insert_var(node.ident, value.clone(), node.span);
         value
     }
 
@@ -167,11 +203,17 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             return Value::Null;
         }
 
+        if let Some(_) = self.scopes.last().unwrap().try_get_value(&node.ident) {
+            self.diagnostics.already_declared(&node);
+            return Value::Null;
+        }
+
         let value = self.evaluate_node(*node.value);
         self.scopes
             .last_mut()
             .unwrap()
             .insert(node.ident, value.clone());
+
         value
     }
 
@@ -228,11 +270,11 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     let val = self.evalute_variable(v);
                     match val {
                         Value::Int(i) => {
-                            self.insert_literal(ident, Value::Int(i + 1), node.span);
+                            self.insert_var(ident, Value::Int(i + 1), node.span);
                             Ok(val)
                         }
                         Value::Float(j) => {
-                            self.insert_literal(ident, Value::Float(j + 1.0), node.span);
+                            self.insert_var(ident, Value::Float(j + 1.0), node.span);
                             Ok(val)
                         }
                         _ => Err(ErrorKind::IncorrectType {
@@ -254,11 +296,11 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
                     let val = self.evalute_variable(v);
                     match val {
                         Value::Int(i) => {
-                            self.insert_literal(ident, Value::Int(i - 1), node.span);
+                            self.insert_var(ident, Value::Int(i - 1), node.span);
                             Ok(val)
                         }
                         Value::Float(f) => {
-                            self.insert_literal(ident, Value::Float(f - 1.0), node.span);
+                            self.insert_var(ident, Value::Float(f - 1.0), node.span);
                             Ok(val)
                         }
                         _ => Err(ErrorKind::IncorrectType {

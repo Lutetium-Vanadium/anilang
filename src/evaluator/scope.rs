@@ -1,6 +1,7 @@
 use crate::value;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct Scope {
     vars: HashMap<String, value::Value>,
 }
@@ -19,5 +20,9 @@ impl Scope {
 
     pub fn try_get_value(&self, key: &str) -> Option<&value::Value> {
         self.vars.get(key)
+    }
+
+    pub fn replace(&mut self, scope: Scope) {
+        self.vars = scope.vars;
     }
 }

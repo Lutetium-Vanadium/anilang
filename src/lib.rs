@@ -11,6 +11,7 @@ mod syntax_node;
 mod text_span;
 mod tokens;
 
+pub use evaluator::scope::Scope;
 pub use syntax_node::Node;
 
 pub use diagnostics::*;
