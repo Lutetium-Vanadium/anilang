@@ -23,7 +23,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             should_break: false,
         };
 
-        evaluator.evalute_block(root)
+        evaluator.evaluate_block(root)
     }
 
     pub fn evaluate_with_global(
@@ -99,15 +99,15 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         }
 
         match node {
-            SyntaxNode::BlockNode(block) => self.evalute_block(block),
-            SyntaxNode::LiteralNode(literal) => self.evalute_literal(literal),
-            SyntaxNode::VariableNode(variable) => self.evalute_variable(variable),
-            SyntaxNode::IfNode(node) => self.evalute_if(node),
-            SyntaxNode::LoopNode(node) => self.evalute_loop(node),
+            SyntaxNode::BlockNode(block) => self.evaluate_block(block),
+            SyntaxNode::LiteralNode(literal) => self.evaluate_literal(literal),
+            SyntaxNode::VariableNode(variable) => self.evaluate_variable(variable),
+            SyntaxNode::IfNode(node) => self.evaluate_if(node),
+            SyntaxNode::LoopNode(node) => self.evaluate_loop(node),
             SyntaxNode::AssignmentNode(node) => self.evaluate_assignment(node),
             SyntaxNode::DeclarationNode(node) => self.evaluate_declaration(node),
             SyntaxNode::BinaryNode(node) => self.evaluate_binary(node),
-            SyntaxNode::UnaryNode(node) => self.evalute_unary(node),
+            SyntaxNode::UnaryNode(node) => self.evaluate_unary(node),
             SyntaxNode::BreakNode(_) => {
                 self.should_break = true;
                 Value::Null
@@ -116,7 +116,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         }
     }
 
-    fn evalute_block(&mut self, block: node::BlockNode) -> Value {
+    fn evaluate_block(&mut self, block: node::BlockNode) -> Value {
         if self.should_exit() {
             return Value::Null;
         }
@@ -133,7 +133,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         val
     }
 
-    fn evalute_variable(&mut self, variable: node::VariableNode) -> Value {
+    fn evaluate_variable(&mut self, variable: node::VariableNode) -> Value {
         if self.should_exit() {
             return Value::Null;
         }
@@ -147,22 +147,22 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         }
     }
 
-    fn evalute_if(&mut self, node: node::IfNode) -> Value {
+    fn evaluate_if(&mut self, node: node::IfNode) -> Value {
         if self.should_exit() {
             return Value::Null;
         }
 
         if self.evaluate_node(*node.cond).into() {
-            self.evalute_block(node.if_block)
+            self.evaluate_block(node.if_block)
         } else {
             match node.else_block {
-                Some(else_block) => self.evalute_block(else_block),
+                Some(else_block) => self.evaluate_block(else_block),
                 None => Value::Null,
             }
         }
     }
 
-    fn evalute_loop(&mut self, node: node::LoopNode) -> Value {
+    fn evaluate_loop(&mut self, node: node::LoopNode) -> Value {
         if self.should_exit() {
             return Value::Null;
         }
@@ -184,7 +184,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         val
     }
 
-    fn evalute_literal(&self, literal: node::LiteralNode) -> Value {
+    fn evaluate_literal(&self, literal: node::LiteralNode) -> Value {
         literal.value
     }
 
@@ -256,7 +256,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
         }
     }
 
-    fn evalute_unary(&mut self, node: node::UnaryNode) -> Value {
+    fn evaluate_unary(&mut self, node: node::UnaryNode) -> Value {
         if self.should_exit() {
             return Value::Null;
         }
@@ -267,7 +267,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             TokenKind::PlusPlusOperator => match *node.child {
                 SyntaxNode::VariableNode(v) => {
                     let ident = v.ident.clone();
-                    let val = self.evalute_variable(v);
+                    let val = self.evaluate_variable(v);
                     match val {
                         Value::Int(i) => {
                             self.insert_var(ident, Value::Int(i + 1), node.span);
@@ -293,7 +293,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
             TokenKind::MinusMinusOperator => match *node.child {
                 SyntaxNode::VariableNode(v) => {
                     let ident = v.ident.clone();
-                    let val = self.evalute_variable(v);
+                    let val = self.evaluate_variable(v);
                     match val {
                         Value::Int(i) => {
                             self.insert_var(ident, Value::Int(i - 1), node.span);
