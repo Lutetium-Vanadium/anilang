@@ -167,6 +167,12 @@ impl<'a> Diagnostics<'a> {
             );
         }
     }
+    pub fn unexpected_eof(&mut self) {
+        self.report(
+            format!("UnexpectedEOF"),
+            TextSpan::new(self.src.text.len() - 1, 1),
+        );
+    }
 
     pub fn unknown_reference(&mut self, variable: &node::VariableNode) {
         self.report(

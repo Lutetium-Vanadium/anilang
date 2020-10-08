@@ -70,7 +70,7 @@ impl<'bag, 'src> Parser<'bag, 'src> {
         while self.cur().kind != delim {
             match self.cur().kind {
                 TokenKind::EOF => {
-                    // report EOF
+                    self.diagnostics.unexpected_eof();
                     break;
                 }
                 TokenKind::OpenBrace => {
