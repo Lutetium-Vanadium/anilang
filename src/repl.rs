@@ -1,6 +1,4 @@
-mod history;
-
-use history::History;
+use crate::history::History;
 
 use crossterm::{cursor, event, execute, style, terminal};
 use std::io::prelude::*;

@@ -4,14 +4,7 @@
 name = "anilang"
 version = "0.1.0"
 dependencies = [
- "anilang-core",
  "crossterm",
-]
-
-[[package]]
-name = "anilang-core"
-version = "0.1.0"
-dependencies = [
  "enumflags2",
 ]
 
@@ -119,9 +112,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "0.7.3"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e53a6ea5f38c0a48ca42159868c6d8e1bd56c0451238856cc08d58563643bdc3"
+checksum = "6d5fc35678fa91ff960494e4bd72a0e1f8e72e035460887a2005de51915993cd"
 dependencies = [
  "libc",
  "log",

@@ -1,7 +1,10 @@
 use crossterm::Result;
 
+mod history;
+mod repl;
+
 fn main() -> Result<()> {
-    let mut repl = anilang::Repl::new();
+    let mut repl = repl::Repl::new();
 
     let mut global_scope = anilang::Scope::new();
 
