@@ -128,7 +128,7 @@ impl<'a> Diagnostics<'a> {
         if token.kind != TokenKind::Bad {
             self.report(
                 format!(
-                    "FailedParse: Couldn't parse the value into a {}",
+                    "FailedParse: Couldn't parse the value into a '{}'",
                     match token.kind {
                         TokenKind::String(_) => "string",
                         TokenKind::Number => "number",
@@ -164,7 +164,7 @@ impl<'a> Diagnostics<'a> {
 
     pub fn unknown_reference(&mut self, variable: &node::VariableNode) {
         self.report(
-            format!("UnknownReference: Variable {} not found", variable.ident),
+            format!("UnknownReference: Variable `{}` not found", variable.ident),
             variable.span().clone(),
         )
     }
@@ -172,7 +172,7 @@ impl<'a> Diagnostics<'a> {
     pub fn expected_variable(&mut self, got: &SyntaxNode) {
         self.report(
             format!(
-                "ExpectedVariable: `++` and `--` can only be performed on variables, got {}",
+                "ExpectedVariable: `++` and `--` can only be performed on variables, got `{}`",
                 got
             ),
             got.span().clone(),
@@ -187,17 +187,17 @@ impl<'a> Diagnostics<'a> {
                 got, start, end
             ),
             value::ErrorKind::IncorrectType { got, expected } => format!(
-                "IncorrectType: Expected {}, got {}",
+                "IncorrectType: Expected <{}>, got <{}>",
                 expected.to_string(),
                 got
             ),
             value::ErrorKind::IncorrectLeftType { got, expected } => format!(
-                "IncorrectLeftType: Expected {}, got {}",
+                "IncorrectLeftType: Expected <{}>, got <{}>",
                 expected.to_string(),
                 got
             ),
             value::ErrorKind::IncorrectRightType { got, expected } => format!(
-                "IncorrectRightType: Expected {}, got {}",
+                "IncorrectRightType: Expected <{}>, got <{}>",
                 expected.to_string(),
                 got
             ),
