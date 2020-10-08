@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 pub struct History {
-    history: VecDeque<String>,
+    history: VecDeque<Vec<String>>,
     pub capacity: usize,
     iter_i: usize,
 }
@@ -23,20 +23,20 @@ impl History {
         self.history.len() == self.capacity
     }
 
-    pub fn push(&mut self, string: String) {
+    pub fn push(&mut self, lines: Vec<String>) {
         if self.at_capacity() {
             self.history.pop_back();
         }
 
         self.reset_iter();
-        self.history.push_front(string);
+        self.history.push_front(lines);
     }
 
     pub fn len(&self) -> usize {
         self.history.len()
     }
 
-    pub fn cur(&self) -> Option<&str> {
+    pub fn cur(&self) -> Option<&Vec<String>> {
         if self.len() > 0 {
             Some(&self[self.iter_i])
         } else {
@@ -44,7 +44,7 @@ impl History {
         }
     }
 
-    pub fn prev(&mut self) -> Option<&str> {
+    pub fn prev(&mut self) -> Option<&Vec<String>> {
         if self.iter_i + 1 < self.len() {
             self.iter_i += 1;
             Some(&self.history[self.iter_i])
@@ -53,7 +53,7 @@ impl History {
         }
     }
 
-    pub fn next(&mut self) -> Option<&str> {
+    pub fn next(&mut self) -> Option<&Vec<String>> {
         if self.iter_i > 0 {
             self.iter_i -= 1;
             Some(&self.history[self.iter_i])
@@ -73,7 +73,7 @@ impl History {
 }
 
 impl std::ops::Index<usize> for History {
-    type Output = str;
+    type Output = Vec<String>;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.history[index]

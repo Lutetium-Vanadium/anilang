@@ -1,15 +1,14 @@
 use crossterm::Result;
 
-mod history;
 mod repl;
 
 fn main() -> Result<()> {
-    let mut repl = repl::Repl::new();
+    let mut repl = repl::Repl::new("» ", "· ");
 
     let mut global_scope = anilang::Scope::new();
 
     loop {
-        let line = repl.next("» ", crossterm::style::Color::Green)?;
+        let line = repl.next(crossterm::style::Color::Green)?;
 
         let src = anilang::SourceText::new(&line);
         let mut diagnostics = anilang::Diagnostics::new(&src);
@@ -25,7 +24,5 @@ fn main() -> Result<()> {
                 println!("{}", value);
             }
         }
-
-        repl.push(line);
     }
 }
