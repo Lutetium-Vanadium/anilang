@@ -165,6 +165,7 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             }
         }
 
+        e += 1;
         add!(
             self,
             match &self.src.text[start..e] {
@@ -177,7 +178,7 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
                 "let" => TokenKind::LetKeyword,
                 _ => TokenKind::Ident,
             },
-            start => e + 1 - start
+            start => e - start
         );
     }
 
