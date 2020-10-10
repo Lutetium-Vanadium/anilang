@@ -164,6 +164,15 @@ impl Repl {
                         &lines[c.lineno]
                     }
 
+                    event::KeyCode::Home => {
+                        c.charno = 0;
+                        self.cur_str(&c, &lines)
+                    }
+                    event::KeyCode::End => {
+                        let s = self.cur_str(&c, &lines);
+                        c.charno = s.len();
+                        s
+                    }
                     event::KeyCode::Left if c.charno > 0 => {
                         c.charno -= 1;
                         self.cur_str(&c, &lines)
