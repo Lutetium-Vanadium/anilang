@@ -5,7 +5,7 @@ pub fn should_execute(lines: &Vec<String>) -> bool {
 
     for line in lines {
         let src = anilang::SourceText::new(line);
-        let mut diagnostics = anilang::Diagnostics::new(&src);
+        let mut diagnostics = anilang::Diagnostics::new(&src).no_print();
         let tokens = anilang::Lexer::lex(&src, &mut diagnostics);
         for i in tokens {
             match i.kind {
