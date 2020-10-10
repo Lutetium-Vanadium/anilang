@@ -49,24 +49,26 @@ impl Error {
 
         if s == e {
             println!(
-                "{}{} |{} {}{}{}{}{}",
+                "{}{} |{} {}{}{}{}{}{}",
                 colour::BLUE,
                 s,
                 colour::RESET,
                 &src.text[src.line(s).0..self.span.start()],
                 colour::RED,
+                colour::UNDERLINE,
                 &src[&self.span],
                 colour::RESET,
                 &src.text[self.span.end()..src.line(s).1],
             );
         } else {
             println!(
-                "{}{:0w$} |{} {}{}{}",
+                "{}{:0w$} |{} {}{}{}{}",
                 colour::BLUE,
                 s,
                 colour::RESET,
                 &src.text[src.line(s).0..self.span.start()],
                 colour::RED,
+                colour::UNDERLINE,
                 &src.text[self.span.start()..src.line(s).1],
                 w = w
             );

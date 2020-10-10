@@ -35,3 +35,5 @@ pub static BRIGHT_CYAN: &'static str = "\x1b[38;5;14m";
 pub static WHITE: &'static str = "\x1b[38;5;15m";
 #[allow(dead_code)]
 pub static RESET: &'static str = "\x1b[0m";
+#[allow(dead_code)]
+pub static UNDERLINE: &'static str = "\x1b[4m";
