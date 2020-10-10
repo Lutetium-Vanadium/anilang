@@ -267,7 +267,7 @@ impl Repl {
                     }
 
                     event::KeyCode::Enter => {
-                        if lines.len() == 1 {
+                        if !c.use_history && lines.len() == 1 {
                             match &lines[0] as &str {
                                 "exit" => {
                                     terminal::disable_raw_mode()?;
@@ -292,14 +292,23 @@ impl Repl {
                                 _ => {}
                             }
                         }
-                        if should_execute(&lines) {
+
+                        if (c.lineno + 1) == self.cur(&c, &lines).len()
+                            && (c.use_history || should_execute(&lines))
+                        {
                             break;
                         } else {
+                            if c.use_history {
+                                self.replace_with_history(&mut lines);
+                                c.use_history = false;
+                            }
+
                             c.lineno += 1;
                             c.charno =
                                 lines[c.lineno - 1].len() - lines[c.lineno - 1].trim_start().len();
                             lines.insert(c.lineno, " ".repeat(c.charno));
                             execute!(stdout, style::Print("\n"))?;
+                            self.print_lines(&mut stdout, &mut c, &lines, colour)?;
                             ""
                         }
                     }
