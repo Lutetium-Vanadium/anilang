@@ -101,11 +101,21 @@ impl Error {
 pub struct Diagnostics<'a> {
     src: &'a SourceText<'a>,
     num_errors: usize,
+    no_print: bool,
 }
 
 impl<'a> Diagnostics<'a> {
-    pub fn new(src: &'a SourceText) -> Diagnostics<'a> {
-        Diagnostics { src, num_errors: 0 }
+    pub fn new(src: &'a SourceText) -> Self {
+        Diagnostics {
+            src,
+            num_errors: 0,
+            no_print: false,
+        }
+    }
+
+    pub fn no_print(mut self) -> Self {
+        self.no_print = true;
+        self
     }
 
     pub fn any(&self) -> bool {
@@ -121,7 +131,10 @@ impl<'a> Diagnostics<'a> {
 impl<'a> Diagnostics<'a> {
     fn report(&mut self, message: String, span: TextSpan) {
         self.num_errors += 1;
-        Error::new(message, span).prt(self.src);
+
+        if !self.no_print {
+            Error::new(message, span).prt(self.src);
+        }
     }
 
     pub fn bad_char(&mut self, index: usize) {
