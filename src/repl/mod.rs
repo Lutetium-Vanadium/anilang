@@ -253,16 +253,44 @@ impl Repl {
                         lines[c.lineno].remove(c.charno);
                         &lines[c.lineno]
                     }
-                    event::KeyCode::Delete => {
-                        let s = self.cur_str(&c, &lines);
-                        if c.charno < s.chars().count() {
-                            if c.use_history {
-                                self.replace_with_history(&mut lines);
-                                c.use_history = false;
-                            };
+                    event::KeyCode::Backspace if c.lineno > 1 => {
+                        if c.use_history {
+                            self.replace_with_history(&mut lines);
+                            c.use_history = false;
+                        };
 
-                            lines[c.lineno].remove(c.charno);
-                        }
+                        c.lineno -= 1;
+                        c.charno = lines[c.lineno].len();
+                        let line = lines.remove(c.lineno + 1);
+                        lines[c.lineno] += &line;
+
+                        execute!(stdout, cursor::MoveUp(1))?;
+                        self.print_lines(&mut stdout, &mut c, &lines, colour)?;
+
+                        &lines[c.lineno]
+                    }
+                    event::KeyCode::Delete
+                        if c.charno < self.cur_str(&c, &lines).chars().count() =>
+                    {
+                        if c.use_history {
+                            self.replace_with_history(&mut lines);
+                            c.use_history = false;
+                        };
+
+                        lines[c.lineno].remove(c.charno);
+                        &lines[c.lineno]
+                    }
+                    event::KeyCode::Delete if (c.lineno + 1) < self.cur(&c, &lines).len() => {
+                        if c.use_history {
+                            self.replace_with_history(&mut lines);
+                            c.use_history = false;
+                        };
+
+                        let line = lines.remove(c.lineno + 1);
+                        lines[c.lineno] += &line;
+
+                        self.print_lines(&mut stdout, &mut c, &lines, colour)?;
+
                         &lines[c.lineno]
                     }
 
