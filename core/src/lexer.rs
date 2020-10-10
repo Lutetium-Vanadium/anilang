@@ -209,12 +209,11 @@ impl<'bag, 'src> Lexer<'bag, 'src> {
             } else if chr == '\\' {
                 is_escaped = true;
             } else if chr == delim {
-                e -= 1;
                 break;
             }
         }
 
-        add!(self, TokenKind::String(delim), start => e + 2 - start);
+        add!(self, TokenKind::String(delim), start => e + 1 - start);
     }
 }
 
