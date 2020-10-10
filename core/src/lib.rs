@@ -12,6 +12,7 @@ mod value;
 
 pub use evaluator::scope::Scope;
 pub use syntax_node::Node;
+pub use tokens::TokenKind;
 
 pub use diagnostics::*;
 pub use evaluator::*;
