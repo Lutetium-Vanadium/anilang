@@ -1,4 +1,5 @@
 mod history;
+mod linter;
 mod should_execute;
 
 use history::History;
@@ -27,6 +28,7 @@ impl Repl {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_history_capacity(
         leader: &'static str,
         continued_leader: &'static str,
@@ -93,10 +95,9 @@ impl Repl {
                 cursor::MoveToColumn(0),
                 style::SetForegroundColor(colour),
                 style::Print(leader),
-                style::ResetColor,
-                style::Print(line),
-                style::Print("\n"),
             )?;
+            linter::print_linted(stdout, line)?;
+            queue!(stdout, style::Print("\n"))?;
         }
 
         let leader_len = if c.lineno == 0 {
@@ -319,11 +320,10 @@ impl Repl {
                 (self.continued_leader, self.continued_leader_len)
             };
 
+            queue!(stdout, style::Print(leader))?;
+            linter::print_linted(&mut stdout, s)?;
             execute!(
                 stdout,
-                style::Print(leader),
-                style::ResetColor,
-                style::Print(s),
                 cursor::MoveToColumn((leader_len + c.charno + 1) as u16)
             )?;
         }
