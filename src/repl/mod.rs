@@ -152,6 +152,17 @@ impl Repl {
 
                         &lines[c.lineno] as &str
                     }
+                    event::KeyCode::Tab => {
+                        if c.use_history {
+                            self.replace_with_history(&mut lines);
+                            c.use_history = false;
+                        };
+
+                        lines[c.lineno].insert_str(c.charno, "    ");
+                        c.charno += 4;
+
+                        &lines[c.lineno]
+                    }
 
                     event::KeyCode::Left if c.charno > 0 => {
                         c.charno -= 1;
