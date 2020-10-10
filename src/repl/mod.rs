@@ -1,9 +1,9 @@
+mod get_indent;
 mod history;
 mod linter;
-mod should_execute;
 
+use get_indent::get_indent;
 use history::History;
-use should_execute::should_execute;
 
 use crossterm::{cursor, event, execute, queue, style, terminal};
 use std::cmp::min;
@@ -332,9 +332,12 @@ impl Repl {
                             }
                         }
 
-                        if (c.lineno + 1) == self.cur(&c, &lines).len()
-                            && (c.use_history || should_execute(&lines))
-                        {
+                        if c.use_history && (c.lineno + 1) == self.history.cur().unwrap().len() {
+                            break;
+                        }
+                        let indent = get_indent(&self.cur(&c, &lines)[0..(c.lineno + 1)]);
+
+                        if !c.use_history && (c.lineno + 1) == lines.len() && indent == 0 {
                             break;
                         } else {
                             if c.use_history {
@@ -343,8 +346,7 @@ impl Repl {
                             }
 
                             c.lineno += 1;
-                            c.charno =
-                                lines[c.lineno - 1].len() - lines[c.lineno - 1].trim_start().len();
+                            c.charno = (indent * 4) as usize;
                             lines.insert(c.lineno, " ".repeat(c.charno));
                             execute!(stdout, style::Print("\n"))?;
                             self.print_lines(&mut stdout, &mut c, &lines, colour)?;

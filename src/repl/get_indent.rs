@@ -1,4 +1,4 @@
-pub fn should_execute(lines: &Vec<String>) -> bool {
+pub fn get_indent(lines: &[String]) -> u32 {
     let mut brace = 0;
     let mut bracket = 0;
     let mut paran = 0;
@@ -20,5 +20,5 @@ pub fn should_execute(lines: &Vec<String>) -> bool {
         }
     }
 
-    brace == 0 && bracket == 0 && paran == 0
+    brace + bracket + paran
 }
