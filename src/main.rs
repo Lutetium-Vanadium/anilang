@@ -20,8 +20,10 @@ fn main() -> Result<()> {
             // root.prt(String::new(), true);
             let value =
                 anilang::Evaluator::evaluate_with_global(root, &mut diagnostics, &mut global_scope);
-            if value != anilang::Value::Null && !diagnostics.any() {
-                println!("{}", value);
+            match value {
+                value if !diagnostics.any() => println!("{}", value),
+                anilang::Value::Null => {}
+                _ => {}
             }
         }
     }
