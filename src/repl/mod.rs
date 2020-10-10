@@ -296,8 +296,9 @@ impl Repl {
                             break;
                         } else {
                             c.lineno += 1;
-                            c.charno = 0;
-                            lines.insert(c.lineno, String::new());
+                            c.charno =
+                                lines[c.lineno - 1].len() - lines[c.lineno - 1].trim_start().len();
+                            lines.insert(c.lineno, " ".repeat(c.charno));
                             execute!(stdout, style::Print("\n"))?;
                             ""
                         }

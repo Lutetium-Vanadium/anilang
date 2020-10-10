@@ -106,6 +106,7 @@ impl History {
         self.iter_i.set(-1);
     }
 
+    #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.buffer.clear();
         self.reset_iter();
