@@ -5,6 +5,7 @@ use history::History;
 use should_execute::should_execute;
 
 use crossterm::{cursor, event, execute, queue, style, terminal};
+use std::cmp::min;
 use std::io::prelude::*;
 
 pub struct Repl {
@@ -40,17 +41,22 @@ impl Repl {
         }
     }
 
-    fn cur_str<'a>(&'a self, cursor: &Cursor, lines: &'a Vec<String>) -> &'a str {
-        &(if cursor.use_history {
+    fn cur<'a>(&'a self, c: &Cursor, lines: &'a Vec<String>) -> &'a Vec<String> {
+        if c.use_history {
             // unwrap because if use_history is enabled, there must be at least one element in
             // history
             self.history.cur().unwrap()
         } else {
             lines
-        })[cursor.lineno]
+        }
+    }
+
+    fn cur_str<'a>(&'a self, c: &Cursor, lines: &'a Vec<String>) -> &'a str {
+        &self.cur(c, lines)[c.lineno]
     }
 
     fn replace_with_history(&self, lines: &mut Vec<String>) {
+        // TODO check if history iter should be reset
         let cur = self.history.cur().unwrap();
         lines.resize(cur.len(), String::new());
 
@@ -65,28 +71,31 @@ impl Repl {
         stdout: &mut std::io::Stdout,
         c: &mut Cursor,
         lines: &Vec<String>,
+        colour: style::Color,
     ) -> crossterm::Result<()> {
-        queue!(
-            stdout,
-            cursor::MoveUp(c.lineno as u16),
-            terminal::Clear(terminal::ClearType::FromCursorDown),
-        )?;
+        if c.lineno > 0 {
+            queue!(stdout, cursor::MoveUp(c.lineno as u16))?;
+        }
+
+        queue!(stdout, terminal::Clear(terminal::ClearType::FromCursorDown),)?;
         let mut is_first = true;
 
         for line in lines {
-            let (leader, leader_len) = if is_first {
+            let leader = if is_first {
                 is_first = false;
-                (self.leader, self.leader_len)
+                self.leader
             } else {
-                (self.continued_leader, self.continued_leader_len)
+                self.continued_leader
             };
 
             queue!(
                 stdout,
+                cursor::MoveToColumn(0),
+                style::SetForegroundColor(colour),
                 style::Print(leader),
                 style::ResetColor,
                 style::Print(line),
-                cursor::MoveToColumn((leader_len + c.charno + 1) as u16)
+                style::Print("\n"),
             )?;
         }
 
@@ -96,7 +105,7 @@ impl Repl {
             self.continued_leader_len
         };
 
-        c.charno = std::cmp::min(c.charno, lines[c.lineno].len());
+        c.charno = min(c.charno, lines[c.lineno].len());
 
         execute!(
             stdout,
@@ -156,15 +165,63 @@ impl Repl {
 
                         s
                     }
-                    event::KeyCode::Down => {
-                        let s = match self.history.next() {
-                            Some(s) => &s[c.lineno],
+
+                    // At the top of the current block, go to previous history block
+                    event::KeyCode::Up if c.lineno == 0 => {
+                        c.use_history = true;
+
+                        let lines = match self.history.prev() {
+                            Some(s) => {
+                                self.print_lines(&mut stdout, &mut c, &s, colour)?;
+                                c.lineno = s.len() - 1;
+                                queue!(stdout, cursor::MoveDown(c.lineno as u16))?;
+                                s
+                            }
+                            None => match self.history.cur() {
+                                Some(s) => s,
+                                None => {
+                                    c.use_history = false;
+                                    &lines
+                                }
+                            },
+                        };
+
+                        let s = &lines[c.lineno];
+                        let s_len = s.chars().count();
+
+                        if c.charno == 0 || c.charno > s_len {
+                            c.charno = s_len;
+                        }
+                        s
+                    }
+                    // In the middle of a block, go up one line
+                    event::KeyCode::Up => {
+                        c.lineno -= 1;
+                        queue!(stdout, cursor::MoveUp(1))?;
+                        let s = self.cur_str(&c, &lines);
+                        c.charno = min(s.len(), c.charno);
+                        s
+                    }
+
+                    // At the bottom of the block, and in history. This means that there are more
+                    // blocks down, either further down the history or when history is over, the
+                    // editable lines itself
+                    event::KeyCode::Down
+                        if c.use_history && (c.lineno + 1) == self.history.cur().unwrap().len() =>
+                    {
+                        let lines = match self.history.next() {
+                            Some(s) => s,
                             None => {
                                 c.use_history = false;
-                                &lines[c.lineno]
+                                &lines
                             }
                         };
 
+                        queue!(stdout, cursor::MoveUp(c.lineno as u16))?;
+                        c.lineno = 0;
+                        self.print_lines(&mut stdout, &mut c, lines, colour)?;
+
+                        let s = &lines[c.lineno];
                         let s_len = s.chars().count();
 
                         if c.charno == 0 || c.charno > s_len {
@@ -172,25 +229,16 @@ impl Repl {
                         }
                         s
                     }
-                    event::KeyCode::Up => {
-                        c.use_history = true;
-
-                        let s = match self.history.prev() {
-                            Some(s) => &s[c.lineno],
-                            None => match self.history.cur() {
-                                Some(s) => &s[c.lineno],
-                                None => {
-                                    c.use_history = false;
-                                    &lines[c.lineno]
-                                }
-                            },
-                        };
-
-                        let s_len = s.chars().count();
-
-                        if c.charno == 0 || c.charno > s_len {
-                            c.charno = s_len;
-                        }
+                    // When in the end of editable lines, nothing should be done
+                    event::KeyCode::Down if !c.use_history && (c.lineno + 1) == lines.len() => {
+                        &lines[c.lineno]
+                    }
+                    // Somewhere in the block, go to next line
+                    event::KeyCode::Down => {
+                        c.lineno += 1;
+                        queue!(stdout, cursor::MoveDown(1))?;
+                        let s = self.cur_str(&c, &lines);
+                        c.charno = min(s.len(), c.charno);
                         s
                     }
 
@@ -249,7 +297,7 @@ impl Repl {
                             c.lineno += 1;
                             c.charno = 0;
                             lines.insert(c.lineno, String::new());
-                            execute!(stdout, cursor::MoveToNextLine(1))?;
+                            execute!(stdout, style::Print("\n"))?;
                             ""
                         }
                     }
@@ -283,19 +331,15 @@ impl Repl {
         terminal::disable_raw_mode()?;
         println!();
 
-        let src = if c.use_history {
-            Ok(self.history.cur().unwrap().join("\n"))
-        } else {
-            Ok(lines.join("\n"))
-        };
+        let src = self.cur(&c, &lines).join("\n");
 
         self.history.push(lines);
 
-        src
+        Ok(src)
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Cursor {
     use_history: bool,
     lineno: usize,
