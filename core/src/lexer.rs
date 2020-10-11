@@ -9,7 +9,7 @@ macro_rules! add {
 }
 
 pub struct Lexer<'diagnostics, 'src> {
-    diagnostics: &'diagnostics mut Diagnostics<'src>,
+    diagnostics: &'diagnostics Diagnostics<'src>,
     pub tokens: Vec<Token>,
     src: &'src SourceText<'src>,
     chars: std::iter::Peekable<std::str::CharIndices<'src>>,
@@ -18,7 +18,7 @@ pub struct Lexer<'diagnostics, 'src> {
 impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
     pub fn lex(
         src: &'src SourceText<'src>,
-        diagnostics: &'diagnostics mut Diagnostics<'src>,
+        diagnostics: &'diagnostics Diagnostics<'src>,
     ) -> Vec<Token> {
         let mut lexer = Lexer {
             diagnostics,
