@@ -189,6 +189,7 @@ impl Repl {
                         s
                     }
 
+                    event::KeyCode::PageUp => history_up!(retain self, stdout, c, lines, colour),
                     // At the top of the current block, go to previous history block
                     event::KeyCode::Up if c.lineno == 0 => {
                         history_up!(self, stdout, c, lines, colour)
@@ -202,6 +203,9 @@ impl Repl {
                         s
                     }
 
+                    event::KeyCode::PageDown => {
+                        history_down!(retain self, stdout, c, lines, colour)
+                    }
                     // At the bottom of the block, and in history. This means that there are more
                     // blocks down, either further down the history or when history is over, the
                     // editable lines itself

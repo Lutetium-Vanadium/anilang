@@ -27,6 +27,21 @@ macro_rules! history_up {
         }
         s
     }};
+
+    (retain $self:ident, $stdout:ident, $c:ident, $lines:ident, $colour:ident) => {{
+        let lineno = $c.lineno;
+        if lineno > 0 {
+            queue!($stdout, cursor::MoveUp(lineno as u16))?;
+            $c.lineno = 0;
+        }
+
+        history_up!($self, $stdout, $c, $lines, $colour);
+        if lineno < $c.lineno {
+            queue!($stdout, cursor::MoveUp(($c.lineno - lineno) as u16))?;
+            $c.lineno = lineno;
+        };
+        $self.cur_str(&$c, &$lines)
+    }};
 }
 
 #[macro_export]
@@ -51,5 +66,16 @@ macro_rules! history_down {
             $c.charno = s.chars().count();
         }
         s
+    }};
+
+    (retain $self:ident, $stdout:ident, $c:ident, $lines:ident, $colour:ident) => {{
+        let lineno = $c.lineno;
+        history_down!($self, $stdout, $c, $lines, $colour);
+        let lineno = min(lineno, $self.cur(&$c, &$lines).len() - 1);
+        if lineno > 0 {
+            queue!($stdout, cursor::MoveDown(lineno as u16))?;
+            $c.lineno = lineno;
+        };
+        $self.cur_str(&$c, &$lines)
     }};
 }
