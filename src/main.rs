@@ -1,3 +1,4 @@
+use anilang::Node;
 use crossterm::Result;
 
 mod repl;
@@ -17,7 +18,9 @@ fn main() -> Result<()> {
         let root = anilang::Parser::parse(tokens, &src, &mut diagnostics);
 
         if !diagnostics.any() {
-            // root.prt(String::new(), true);
+            if repl.show_tree {
+                root.prt(String::new(), true);
+            }
             let value =
                 anilang::Evaluator::evaluate_with_global(root, &mut diagnostics, &mut global_scope);
             match value {

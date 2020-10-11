@@ -17,6 +17,7 @@ pub struct Repl {
     leader_len: usize,
     continued_leader: &'static str,
     continued_leader_len: usize,
+    pub show_tree: bool,
 }
 
 impl Repl {
@@ -27,6 +28,7 @@ impl Repl {
             leader_len: leader.chars().count(),
             continued_leader,
             continued_leader_len: leader.chars().count(),
+            show_tree: false,
         }
     }
 
@@ -42,6 +44,7 @@ impl Repl {
             leader_len: leader.chars().count(),
             continued_leader,
             continued_leader_len: leader.chars().count(),
+            show_tree: false,
         }
     }
 
@@ -283,30 +286,58 @@ impl Repl {
                     }
 
                     event::KeyCode::Enter => {
-                        if !c.use_history && lines.len() == 1 {
+                        let is_command = if !c.use_history && lines.len() == 1 {
                             match &lines[0] as &str {
                                 "exit" => {
                                     terminal::disable_raw_mode()?;
                                     println!();
                                     std::process::exit(0);
                                 }
+                                ".tree" => {
+                                    self.show_tree = !self.show_tree;
+                                    queue!(
+                                        stdout,
+                                        style::Print("\n"),
+                                        cursor::MoveToColumn(0),
+                                        if self.show_tree {
+                                            style::Print("Showing tree")
+                                        } else {
+                                            style::Print("Hiding tree")
+                                        },
+                                        style::Print("\n"),
+                                        cursor::MoveToColumn(0),
+                                    )?;
+                                    true
+                                }
                                 "clear" => {
                                     c.charno = 0;
                                     lines[0].clear();
 
-                                    execute!(
+                                    queue!(
                                         stdout,
                                         terminal::Clear(terminal::ClearType::All),
                                         cursor::MoveTo(0, 0),
-                                        style::SetForegroundColor(colour),
-                                        style::Print(self.leader),
-                                        style::ResetColor,
                                     )?;
 
-                                    continue;
+                                    true
                                 }
-                                _ => {}
+                                _ => false,
                             }
+                        } else {
+                            false
+                        };
+
+                        if is_command {
+                            c.charno = 0;
+                            lines[0].clear();
+                            execute!(
+                                stdout,
+                                style::SetForegroundColor(colour),
+                                style::Print(self.leader),
+                                style::ResetColor,
+                            )?;
+
+                            continue;
                         }
 
                         if c.use_history && (c.lineno + 1) == self.history.cur().unwrap().len() {
