@@ -6,18 +6,18 @@ use crate::tokens::{Token, TokenKind};
 use node::SyntaxNode;
 use std::cell::Cell;
 
-pub struct Parser<'bag, 'src> {
-    diagnostics: &'bag mut Diagnostics<'src>,
+pub struct Parser<'diagnostics, 'src> {
+    diagnostics: &'diagnostics mut Diagnostics<'src>,
     src: &'src SourceText<'src>,
     tokens: Vec<Token>,
     index: Cell<usize>,
 }
 
-impl<'bag, 'src> Parser<'bag, 'src> {
+impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     pub fn parse(
         mut tokens: Vec<Token>,
         src: &'src SourceText<'src>,
-        diagnostics: &'bag mut Diagnostics<'src>,
+        diagnostics: &'diagnostics mut Diagnostics<'src>,
     ) -> node::BlockNode {
         assert_ne!(tokens.len(), 0);
 

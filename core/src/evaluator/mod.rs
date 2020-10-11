@@ -8,14 +8,17 @@ use node::{Node, SyntaxNode};
 
 pub mod scope;
 
-pub struct Evaluator<'bag, 'src> {
-    diagnostics: &'bag mut Diagnostics<'src>,
+pub struct Evaluator<'diagnostics, 'src> {
+    diagnostics: &'diagnostics mut Diagnostics<'src>,
     scopes: Vec<scope::Scope>,
     should_break: bool,
 }
 
-impl<'bag, 'src> Evaluator<'bag, 'src> {
-    pub fn evaluate(root: node::BlockNode, diagnostics: &'bag mut Diagnostics<'src>) -> Value {
+impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
+    pub fn evaluate(
+        root: node::BlockNode,
+        diagnostics: &'diagnostics mut Diagnostics<'src>,
+    ) -> Value {
         let mut evaluator = Self {
             diagnostics,
             // since evaluato_block is called, root scope should be taken care of
@@ -28,7 +31,7 @@ impl<'bag, 'src> Evaluator<'bag, 'src> {
 
     pub fn evaluate_with_global(
         root: node::BlockNode,
-        diagnostics: &'bag mut Diagnostics<'src>,
+        diagnostics: &'diagnostics mut Diagnostics<'src>,
         global_scope: &mut scope::Scope,
     ) -> Value {
         let mut evaluator = Self {

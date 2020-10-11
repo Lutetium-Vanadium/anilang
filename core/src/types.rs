@@ -48,7 +48,7 @@ impl fmt::Display for Type {
 }
 
 /// For whatever reason, it won't allow implementing `std::fmt::Display` for library structs
-/// This is a workaround to give to_string, so the error bag can print easily
+/// This is a workaround to give to_string, so the diagnostics can print easily
 pub trait ToString {
     fn to_string(&self) -> String;
 }
