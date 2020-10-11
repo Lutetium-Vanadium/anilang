@@ -6,6 +6,7 @@ use crate::tokens::{Token, TokenKind};
 use crate::types::ToString;
 use crate::value;
 use node::{Node, SyntaxNode};
+use std::cell::Cell;
 
 #[derive(Debug)]
 struct Error {
@@ -100,7 +101,7 @@ impl Error {
 
 pub struct Diagnostics<'a> {
     src: &'a SourceText<'a>,
-    num_errors: usize,
+    num_errors: Cell<usize>,
     no_print: bool,
 }
 
@@ -108,7 +109,7 @@ impl<'a> Diagnostics<'a> {
     pub fn new(src: &'a SourceText) -> Self {
         Diagnostics {
             src,
-            num_errors: 0,
+            num_errors: Cell::new(0),
             no_print: false,
         }
     }
@@ -119,25 +120,25 @@ impl<'a> Diagnostics<'a> {
     }
 
     pub fn any(&self) -> bool {
-        self.num_errors > 0
+        self.num_errors() > 0
     }
 
     #[allow(dead_code)]
     pub fn num_errors(&self) -> usize {
-        self.num_errors
+        self.num_errors.get()
     }
 }
 
 impl<'a> Diagnostics<'a> {
-    fn report(&mut self, message: String, span: TextSpan) {
-        self.num_errors += 1;
+    fn report(&self, message: String, span: TextSpan) {
+        self.num_errors.set(self.num_errors.get() + 1);
 
         if !self.no_print {
             Error::new(message, span).prt(self.src);
         }
     }
 
-    pub fn bad_char(&mut self, index: usize) {
+    pub fn bad_char(&self, index: usize) {
         let span = TextSpan::new(index, 1);
         self.report(
             format!("BadCharError: Unknown character '{}'", &self.src[&span]),
@@ -145,7 +146,7 @@ impl<'a> Diagnostics<'a> {
         );
     }
 
-    pub fn failed_parse(&mut self, token: &Token) {
+    pub fn failed_parse(&self, token: &Token) {
         if token.kind != TokenKind::Bad {
             self.report(
                 format!(
@@ -162,7 +163,7 @@ impl<'a> Diagnostics<'a> {
         }
     }
 
-    pub fn incorrect_token(&mut self, incorrect: &Token, correct: TokenKind) {
+    pub fn incorrect_token(&self, incorrect: &Token, correct: TokenKind) {
         if incorrect.kind != TokenKind::Bad {
             self.report(
                 format!(
@@ -174,7 +175,7 @@ impl<'a> Diagnostics<'a> {
         }
     }
 
-    pub fn unexpected_token(&mut self, unexpected: &Token) {
+    pub fn unexpected_token(&self, unexpected: &Token) {
         if unexpected.kind != TokenKind::Bad {
             self.report(
                 format!("UnexpectedToken: {:?}", unexpected.kind),
@@ -182,21 +183,21 @@ impl<'a> Diagnostics<'a> {
             );
         }
     }
-    pub fn unexpected_eof(&mut self) {
+    pub fn unexpected_eof(&self) {
         self.report(
             format!("UnexpectedEOF"),
             TextSpan::new(self.src.text.len() - 1, 1),
         );
     }
 
-    pub fn unknown_reference(&mut self, variable: &node::VariableNode) {
+    pub fn unknown_reference(&self, variable: &node::VariableNode) {
         self.report(
             format!("UnknownReference: Variable `{}` not found", variable.ident),
             variable.span().clone(),
         )
     }
 
-    pub fn already_declared(&mut self, variable: &node::DeclarationNode) {
+    pub fn already_declared(&self, variable: &node::DeclarationNode) {
         self.report(
             format!(
                 "SyntaxError: Variable `{}` was already declared",
@@ -206,7 +207,7 @@ impl<'a> Diagnostics<'a> {
         )
     }
 
-    pub fn expected_variable(&mut self, got: &SyntaxNode) {
+    pub fn expected_variable(&self, got: &SyntaxNode) {
         self.report(
             format!(
                 "ExpectedVariable: `++` and `--` can only be performed on variables, got `{}`",
@@ -216,7 +217,7 @@ impl<'a> Diagnostics<'a> {
         )
     }
 
-    pub fn from_value_error(&mut self, err: value::ErrorKind, span: TextSpan) {
+    pub fn from_value_error(&self, err: value::ErrorKind, span: TextSpan) {
         let msg = match err {
             value::ErrorKind::DivideByZero => String::from("DivideByZero: Cannot divide by zero"),
             value::ErrorKind::OutOfBounds { got, start, end } => format!(
