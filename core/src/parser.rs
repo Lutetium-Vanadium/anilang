@@ -156,8 +156,23 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
         let else_block = if self.cur().kind == TokenKind::ElseKeyword {
             self.index.set(self.index() + 1);
-            self.match_token(TokenKind::OpenBrace);
-            Some(self.parse_block(TokenKind::CloseBrace))
+
+            match self.cur().kind {
+                TokenKind::IfKeyword => {
+                    let else_if = self.parse_if_statement();
+                    let span = else_if.span().clone();
+                    Some(node::BlockNode::new(vec![else_if], span))
+                }
+                TokenKind::OpenBrace => {
+                    self.index.set(self.index() + 1);
+                    Some(self.parse_block(TokenKind::CloseBrace))
+                }
+                _ => {
+                    self.diagnostics
+                        .incorrect_token(self.next(), TokenKind::OpenBrace);
+                    None
+                }
+            }
         } else {
             None
         };
