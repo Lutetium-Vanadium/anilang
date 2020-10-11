@@ -1,6 +1,8 @@
 mod get_indent;
 mod history;
 mod linter;
+#[macro_use]
+mod macros;
 
 use get_indent::get_indent;
 use history::History;
@@ -189,31 +191,7 @@ impl Repl {
 
                     // At the top of the current block, go to previous history block
                     event::KeyCode::Up if c.lineno == 0 => {
-                        c.use_history = true;
-
-                        let lines = match self.history.prev() {
-                            Some(s) => {
-                                self.print_lines(&mut stdout, &mut c, &s, colour)?;
-                                c.lineno = s.len() - 1;
-                                queue!(stdout, cursor::MoveDown(c.lineno as u16))?;
-                                s
-                            }
-                            None => match self.history.cur() {
-                                Some(s) => s,
-                                None => {
-                                    c.use_history = false;
-                                    &lines
-                                }
-                            },
-                        };
-
-                        let s = &lines[c.lineno];
-                        let s_len = s.chars().count();
-
-                        if c.charno == 0 || c.charno > s_len {
-                            c.charno = s_len;
-                        }
-                        s
+                        history_up!(self, stdout, c, lines, colour)
                     }
                     // In the middle of a block, go up one line
                     event::KeyCode::Up => {
@@ -230,25 +208,7 @@ impl Repl {
                     event::KeyCode::Down
                         if c.use_history && (c.lineno + 1) == self.history.cur().unwrap().len() =>
                     {
-                        let lines = match self.history.next() {
-                            Some(s) => s,
-                            None => {
-                                c.use_history = false;
-                                &lines
-                            }
-                        };
-
-                        queue!(stdout, cursor::MoveUp(c.lineno as u16))?;
-                        c.lineno = 0;
-                        self.print_lines(&mut stdout, &mut c, lines, colour)?;
-
-                        let s = &lines[c.lineno];
-                        let s_len = s.chars().count();
-
-                        if c.charno == 0 || c.charno > s_len {
-                            c.charno = s.chars().count();
-                        }
-                        s
+                        history_down!(self, stdout, c, lines, colour)
                     }
                     // When in the end of editable lines, nothing should be done
                     event::KeyCode::Down if !c.use_history && (c.lineno + 1) == lines.len() => {
