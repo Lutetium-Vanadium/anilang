@@ -81,7 +81,11 @@ impl Repl {
             queue!(stdout, cursor::MoveUp(c.lineno as u16))?;
         }
 
-        queue!(stdout, terminal::Clear(terminal::ClearType::FromCursorDown),)?;
+        queue!(
+            stdout,
+            terminal::Clear(terminal::ClearType::CurrentLine),
+            terminal::Clear(terminal::ClearType::FromCursorDown),
+        )?;
         let mut is_first = true;
 
         for line in lines {
