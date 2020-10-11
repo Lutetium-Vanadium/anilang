@@ -10,10 +10,10 @@ pub struct VariableNode {
 }
 
 impl VariableNode {
-    pub fn new(token: Token, src: &SourceText) -> Self {
+    pub fn new(token: &Token, src: &SourceText) -> Self {
         Self {
             ident: src[&token.text_span].to_owned(),
-            span: token.text_span,
+            span: token.text_span.clone(),
         }
     }
 

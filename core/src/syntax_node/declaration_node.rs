@@ -12,8 +12,8 @@ pub struct DeclarationNode {
 
 impl DeclarationNode {
     pub fn new(
-        declaration_token: Token,
-        ident_token: Token,
+        declaration_token: &Token,
+        ident_token: &Token,
         value: SyntaxNode,
         src: &SourceText,
     ) -> Self {

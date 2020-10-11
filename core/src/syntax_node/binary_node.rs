@@ -11,18 +11,23 @@ pub struct BinaryNode {
 }
 
 impl BinaryNode {
-    pub fn new(operator: Token, left: SyntaxNode, right: SyntaxNode) -> Self {
+    pub fn new(operator: &Token, left: SyntaxNode, right: SyntaxNode) -> Self {
         Self {
-            operator: operator.kind,
-            span: operator.text_span,
+            operator: operator.kind.clone(),
+            span: operator.text_span.clone(),
             left: Box::new(left),
             right: Box::new(right),
         }
     }
 
-    pub fn with_span(operator: Token, left: SyntaxNode, right: SyntaxNode, span: TextSpan) -> Self {
+    pub fn with_span(
+        operator: TokenKind,
+        left: SyntaxNode,
+        right: SyntaxNode,
+        span: TextSpan,
+    ) -> Self {
         Self {
-            operator: operator.kind,
+            operator,
             span,
             left: Box::new(left),
             right: Box::new(right),

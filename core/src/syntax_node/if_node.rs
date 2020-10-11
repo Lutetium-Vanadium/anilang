@@ -12,7 +12,7 @@ pub struct IfNode {
 
 impl IfNode {
     pub fn new(
-        if_token: Token,
+        if_token: &Token,
         cond: SyntaxNode,
         if_block: BlockNode,
         else_block: Option<BlockNode>,

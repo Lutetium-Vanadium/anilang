@@ -7,7 +7,7 @@ use node::SyntaxNode;
 use std::cell::Cell;
 
 pub struct Parser<'diagnostics, 'src> {
-    diagnostics: &'diagnostics mut Diagnostics<'src>,
+    diagnostics: &'diagnostics Diagnostics<'src>,
     src: &'src SourceText<'src>,
     tokens: Vec<Token>,
     index: Cell<usize>,
@@ -17,13 +17,13 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     pub fn parse(
         mut tokens: Vec<Token>,
         src: &'src SourceText<'src>,
-        diagnostics: &'diagnostics mut Diagnostics<'src>,
+        diagnostics: &'diagnostics Diagnostics<'src>,
     ) -> node::BlockNode {
         assert_ne!(tokens.len(), 0);
 
         tokens.retain(|val| val.kind != TokenKind::Whitespace);
 
-        let mut parser = Parser {
+        let parser = Parser {
             diagnostics,
             src,
             tokens,
@@ -55,15 +55,15 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         self.peek(-1)
     }
 
-    fn match_token(&mut self, expected: TokenKind) -> Token {
-        let cur = self.next().clone();
+    fn match_token(&self, expected: TokenKind) -> &Token {
+        let cur = self.next();
         if cur.kind != expected {
             self.diagnostics.incorrect_token(&cur, expected);
         };
         cur
     }
 
-    fn parse_block(&mut self, delim: TokenKind) -> node::BlockNode {
+    fn parse_block(&self, delim: TokenKind) -> node::BlockNode {
         let s = self.cur().text_span.start();
         let mut block: Vec<SyntaxNode> = Vec::new();
 
@@ -87,7 +87,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         node::BlockNode::new(block, TextSpan::new(s, e - s))
     }
 
-    fn parse_statement(&mut self) -> SyntaxNode {
+    fn parse_statement(&self) -> SyntaxNode {
         match self.cur().kind {
             TokenKind::LetKeyword => self.parse_declaration_expression(),
             TokenKind::Ident if self.peek(1).kind == TokenKind::AssignmentOperator => {
@@ -109,8 +109,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         }
     }
 
-    fn parse_declaration_expression(&mut self) -> SyntaxNode {
-        let declaration_token = self.next().clone();
+    fn parse_declaration_expression(&self) -> SyntaxNode {
+        let declaration_token = self.next();
         let ident = self.match_token(TokenKind::Ident);
         self.match_token(TokenKind::AssignmentOperator);
         let value = self.parse_statement();
@@ -122,24 +122,32 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         ))
     }
 
-    fn parse_assignment_expression(&mut self) -> SyntaxNode {
-        let ident = self.next().clone();
+    fn parse_assignment_expression(&self) -> SyntaxNode {
+        let ident = self.next();
         self.next();
         let value = self.parse_statement();
         SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
     }
 
-    fn parse_calc_assignment_expression(&mut self) -> SyntaxNode {
-        let ident = self.next().clone();
-        let op = self.next().clone();
+    fn parse_calc_assignment_expression(&self) -> SyntaxNode {
+        let ident = self.next();
+        let op = self.next();
         let span = TextSpan::from_spans(&op.text_span, &self.next().text_span);
-        let left = SyntaxNode::VariableNode(node::VariableNode::new(ident.clone(), self.src));
+
+        let left = SyntaxNode::VariableNode(node::VariableNode::new(ident, self.src));
         let right = self.parse_statement();
-        let value = SyntaxNode::BinaryNode(node::BinaryNode::with_span(op, left, right, span));
+
+        let value = SyntaxNode::BinaryNode(node::BinaryNode::with_span(
+            op.kind.clone(),
+            left,
+            right,
+            span,
+        ));
+
         SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
     }
 
-    fn parse_if_statement(&mut self) -> SyntaxNode {
+    fn parse_if_statement(&self) -> SyntaxNode {
         let if_token = self.match_token(TokenKind::IfKeyword);
         let cond = self.parse_statement();
 
@@ -157,7 +165,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         SyntaxNode::IfNode(node::IfNode::new(if_token, cond, if_block, else_block))
     }
 
-    fn parse_loop_statement(&mut self) -> SyntaxNode {
+    fn parse_loop_statement(&self) -> SyntaxNode {
         let loop_token = self.match_token(TokenKind::LoopKeyword);
 
         self.match_token(TokenKind::OpenBrace);
@@ -166,7 +174,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         SyntaxNode::LoopNode(node::LoopNode::new(&loop_token, block))
     }
 
-    fn parse_while_statement(&mut self) -> SyntaxNode {
+    fn parse_while_statement(&self) -> SyntaxNode {
         let while_token = self.match_token(TokenKind::WhileKeyword);
         let cond = self.parse_statement();
 
@@ -176,12 +184,12 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         SyntaxNode::LoopNode(node::LoopNode::construct_while(&while_token, cond, block))
     }
 
-    fn parse_binary_expression(&mut self, parent_precedence: u8) -> SyntaxNode {
+    fn parse_binary_expression(&self, parent_precedence: u8) -> SyntaxNode {
         let unary_precedence = self.cur().unary_precedence();
         let mut left = if unary_precedence != 0 && unary_precedence >= parent_precedence {
             // is a unary operator and has more precedence than the previous node, so must be
             // inserted as a child node
-            let op = self.next().clone();
+            let op = self.next();
             let operand = self.parse_binary_expression(unary_precedence);
             SyntaxNode::UnaryNode(node::UnaryNode::new(op, operand))
         } else {
@@ -194,7 +202,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 break;
             }
 
-            let op = self.next().clone();
+            let op = self.next();
             let right = self.parse_binary_expression(precedence);
             left = SyntaxNode::BinaryNode(node::BinaryNode::new(op, left, right));
         }
@@ -202,7 +210,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         left
     }
 
-    fn parse_general_expression(&mut self) -> SyntaxNode {
+    fn parse_general_expression(&self) -> SyntaxNode {
         match self.cur().kind {
             TokenKind::DotOperator if self.peek(1).kind == TokenKind::Number => {
                 self.parse_literal_expression()
@@ -211,25 +219,25 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 self.parse_literal_expression()
             }
             TokenKind::Ident => {
-                SyntaxNode::VariableNode(node::VariableNode::new(self.next().clone(), self.src))
+                SyntaxNode::VariableNode(node::VariableNode::new(self.next(), self.src))
             }
             TokenKind::OpenParan => self.parse_paran_expression(),
             _ => {
-                self.diagnostics.unexpected_token(&self.next().clone());
+                self.diagnostics.unexpected_token(&self.next());
                 SyntaxNode::BadNode
             }
         }
     }
 
-    fn parse_paran_expression(&mut self) -> SyntaxNode {
+    fn parse_paran_expression(&self) -> SyntaxNode {
         self.match_token(TokenKind::OpenParan);
         let expression = self.parse_statement();
         self.match_token(TokenKind::CloseParan);
         expression
     }
 
-    fn parse_literal_expression(&mut self) -> SyntaxNode {
-        let token = self.next().clone();
+    fn parse_literal_expression(&self) -> SyntaxNode {
+        let token = self.next();
         let res = match token.kind {
             TokenKind::String(_) => {
                 node::LiteralNode::new::<String>(token.text_span.clone(), self.src)

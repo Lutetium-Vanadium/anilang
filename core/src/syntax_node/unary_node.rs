@@ -11,10 +11,10 @@ pub struct UnaryNode {
 }
 
 impl UnaryNode {
-    pub fn new(operator: Token, child: SyntaxNode) -> Self {
+    pub fn new(operator: &Token, child: SyntaxNode) -> Self {
         Self {
-            operator: operator.kind,
-            span: operator.text_span,
+            operator: operator.kind.clone(),
+            span: operator.text_span.clone(),
             child: Box::new(child),
         }
     }
