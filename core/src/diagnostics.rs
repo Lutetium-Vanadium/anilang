@@ -163,26 +163,25 @@ impl<'a> Diagnostics<'a> {
         }
     }
 
-    pub fn incorrect_token(&self, incorrect: &Token, correct: TokenKind) {
-        if incorrect.kind != TokenKind::Bad {
-            self.report(
-                format!(
-                    "IncorrectToken: {:?}, expected {:?}",
-                    incorrect.kind, correct,
-                ),
-                incorrect.text_span.clone(),
-            );
+    pub fn unexpected_token(&self, unexpected: &Token, expected: Option<&TokenKind>) {
+        if unexpected.kind != TokenKind::Bad {
+            if let Some(correct) = expected {
+                self.report(
+                    format!(
+                        "IncorrectToken: {:?}, expected {:?}",
+                        unexpected.kind, correct,
+                    ),
+                    unexpected.text_span.clone(),
+                );
+            } else {
+                self.report(
+                    format!("UnexpectedToken: {:?}", unexpected.kind),
+                    unexpected.text_span.clone(),
+                );
+            }
         }
     }
 
-    pub fn unexpected_token(&self, unexpected: &Token) {
-        if unexpected.kind != TokenKind::Bad {
-            self.report(
-                format!("UnexpectedToken: {:?}", unexpected.kind),
-                unexpected.text_span.clone(),
-            );
-        }
-    }
     pub fn unexpected_eof(&self) {
         self.report(
             format!("UnexpectedEOF"),

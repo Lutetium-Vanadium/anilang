@@ -58,7 +58,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     fn match_token(&self, expected: TokenKind) -> &Token {
         let cur = self.next();
         if cur.kind != expected {
-            self.diagnostics.incorrect_token(&cur, expected);
+            self.diagnostics.unexpected_token(&cur, Some(&expected));
         };
         cur
     }
@@ -169,7 +169,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 }
                 _ => {
                     self.diagnostics
-                        .incorrect_token(self.next(), TokenKind::OpenBrace);
+                        .unexpected_token(self.next(), Some(&TokenKind::OpenBrace));
                     None
                 }
             }
@@ -238,7 +238,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             }
             TokenKind::OpenParan => self.parse_paran_expression(),
             _ => {
-                self.diagnostics.unexpected_token(&self.next());
+                self.diagnostics.unexpected_token(&self.next(), None);
                 SyntaxNode::BadNode
             }
         }
