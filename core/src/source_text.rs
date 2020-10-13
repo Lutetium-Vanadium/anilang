@@ -1,6 +1,35 @@
 use crate::text_span::TextSpan;
 use std::ops::Index;
 
+/// The source text used by the rest of the interpreter.
+///
+/// # Examples
+///
+/// Creating a new `SourceText`
+/// ```
+/// use anilang::SourceText;
+/// let text = "let a = 1 + 2\na + 3";
+/// let src = SourceText::new(text);
+/// assert_eq!(src.text, text);
+/// ```
+///
+/// In the above example the source is essentially:
+///   |
+/// 0 | let a = 1 + 2
+/// 1 | a + 3
+///   |
+/// But if this is part of a program at a different line number, it can be made like this:
+/// ```
+/// use anilang::SourceText;
+/// let text = "let a = 1 + 2\na + 3";
+/// let src = SourceText::with_offset(text, 4);
+/// assert_eq!(src.text, text);
+/// ```
+/// Here the source is:
+///   |
+/// 4 | let a = 1 + 2
+/// 5 | a + 3
+///   |
 pub struct SourceText<'a> {
     pub text: &'a str,
     /// The start and end indices of each line, used for getting line number of an index

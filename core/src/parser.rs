@@ -6,6 +6,29 @@ use crate::tokens::{Token, TokenKind};
 use node::SyntaxNode;
 use std::cell::Cell;
 
+/// Converts given a stream of tokens into a parsed AST. The root node returned is a `BlockNode`
+/// defined in `core/src/syntax_node/block_node.rs`
+///
+/// # Examples
+/// ```
+/// use anilang::{SourceText, Diagnostics, Lexer, Parser};
+///
+/// let src = SourceText::new("1 * 2 + 3");
+/// let diagnostics = Diagnostics::new(&src);
+///
+/// let tokens = Lexer::lex(&src, &diagnostics);
+/// let root = Parser::parse(tokens, &src, &diagnostics);
+///
+/// assert_eq!(root.block.len(), 1);
+/// ```
+/// The AST so formed is
+/// Block -> [
+///         +
+///        / \
+///       *   3
+///      / \
+///     1   2
+/// ]
 pub struct Parser<'diagnostics, 'src> {
     diagnostics: &'diagnostics Diagnostics<'src>,
     /// Source text is used for parsing, idents and values

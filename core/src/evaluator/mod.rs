@@ -8,6 +8,39 @@ use node::SyntaxNode;
 
 pub mod scope;
 
+/// Evaluates an AST from the root node.
+///
+/// # Examples
+/// Evaluate from a node
+/// ```
+/// use anilang::{SourceText, Diagnostics, Lexer, Parser, Evaluator, Value};
+///
+/// let src = SourceText::new("1 + 2 + 3");
+/// let diagnostics = Diagnostics::new(&src);
+///
+/// let tokens = Lexer::lex(&src, &diagnostics);
+/// let root_node = Parser::parse(tokens, &src, &diagnostics);
+/// let value = Evaluator::evaluate(root_node, &diagnostics);
+///
+/// assert_eq!(value, Value::Int(6));
+/// ```
+///
+/// If there is a required global scope
+/// ```
+/// use anilang::{SourceText, Scope, Diagnostics, Lexer, Parser, Evaluator, Value};
+///
+/// let mut scope = Scope::new();
+/// scope.insert("var".to_owned(), Value::Int(1));
+///
+/// let src = SourceText::new("var + 2 + 3");
+/// let diagnostics = Diagnostics::new(&src);
+///
+/// let tokens = Lexer::lex(&src, &diagnostics);
+/// let root_node = Parser::parse(tokens, &src, &diagnostics);
+/// let value = Evaluator::evaluate_with_global(root_node, &diagnostics, &mut scope);
+///
+/// assert_eq!(value, Value::Int(6));
+/// ```
 pub struct Evaluator<'diagnostics, 'src> {
     diagnostics: &'diagnostics Diagnostics<'src>,
     /// This are the variable scopes, the root scope is at index 0, and subsequent scopes can check

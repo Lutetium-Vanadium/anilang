@@ -8,6 +8,31 @@ macro_rules! add {
     };
 }
 
+/// Converts given `SourceText` into a `Vec` of `Token`s.
+///
+/// # Examples
+/// ```
+/// use anilang::{SourceText, Diagnostics, Lexer};
+///
+/// let src = SourceText::new("1 + 2 + 3");
+/// let diagnostics = Diagnostics::new(&src);
+///
+/// let tokens = Lexer::lex(&src, &diagnostics);
+///
+/// assert_eq!(tokens.len(), 10);
+/// ```
+/// here the tokens are [
+///  0  Number -> 1
+///  1  Whitespace
+///  2  PlusOperator
+///  3  Whitespace
+///  4  Number -> 2
+///  5  Whitespace
+///  6  PlusOperator
+///  7  Whitespace
+///  8  Number -> 3
+///  9  EOF
+/// ]
 pub struct Lexer<'diagnostics, 'src> {
     diagnostics: &'diagnostics Diagnostics<'src>,
     /// The lexed tokens get added to this `Vec`

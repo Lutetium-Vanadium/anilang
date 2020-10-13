@@ -6,11 +6,15 @@ pub enum Cast {
     Explicit, // NOTE: there is no way to explicitly convert as of now
 }
 
+/// The different types of values that can exist
+///
 /// Derives from BitFlags, to allow for multiple types in the same byte for errors
 ///
 /// For example for some arithmetic between to numbers, if a different type is found, this expected
 /// type can be set as `expected` given below.
 /// ```
+/// use anilang::Type;
+///
 /// let expected = Type::Int | Type::Float;
 /// assert!(expected.contains(Type::Int));
 /// assert!(expected.contains(Type::Float));

@@ -114,6 +114,24 @@ impl Error {
     }
 }
 
+/// An error reporter which pretty prints errors for a given `SourceText`, while keeping track of
+/// number of errors are reported
+///
+/// # Examples
+///
+/// Regular diagnostics which will count and print
+/// ```
+/// use anilang::{SourceText, Diagnostics};
+/// let src = SourceText::new("1 + 2 + 3");
+/// let diagnostics = Diagnostics::new(&src);
+/// ```
+///
+/// If you need to mock diagnostics, without printing the errors
+/// ```
+/// use anilang::{SourceText, Diagnostics};
+/// let src = SourceText::new("1 + 2 + 3");
+/// let diagnostics = Diagnostics::new(&src).no_print();
+/// ```
 pub struct Diagnostics<'a> {
     /// The source from which text spans are taken
     src: &'a SourceText<'a>,

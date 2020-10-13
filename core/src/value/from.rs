@@ -3,7 +3,7 @@
 /// NOTE: it intentionaly crashes when wrong type is trying to be converted. This is only meant for
 /// easy conversion between determined types. For example if you know a value is a Value::Int, it
 /// is annoying to get the int value using:
-/// ```
+/// ```compile_fail
 /// match value {
 ///     Value::Int(i) => i,
 ///     _ => unreachable!()

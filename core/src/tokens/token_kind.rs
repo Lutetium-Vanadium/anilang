@@ -1,3 +1,4 @@
+/// Different kind of tokens which can be lexed by the `core/src/lexer.rs`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[repr(u8)]
 pub enum TokenKind {
