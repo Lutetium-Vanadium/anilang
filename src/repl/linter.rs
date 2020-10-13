@@ -49,7 +49,7 @@ fn print_token(
 ) -> crossterm::Result<()> {
     let colour = match token_kind {
         TokenKind::Number | TokenKind::Boolean => PURPLE,
-        TokenKind::String(_) => YELLOW,
+        TokenKind::String => YELLOW,
 
         TokenKind::IfKeyword
         | TokenKind::ElseKeyword

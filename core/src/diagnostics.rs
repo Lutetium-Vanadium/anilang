@@ -193,7 +193,7 @@ impl<'a> Diagnostics<'a> {
                 format!(
                     "FailedParse: Couldn't parse the value into a '{}'",
                     match token.kind {
-                        TokenKind::String(_) => "string",
+                        TokenKind::String => "string",
                         TokenKind::Number => "number",
                         TokenKind::Boolean => "boolean",
                         _ => unreachable!(),

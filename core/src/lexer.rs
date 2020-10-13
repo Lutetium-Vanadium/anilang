@@ -220,6 +220,6 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
             }
         }
 
-        add!(self, TokenKind::String(delim), start => e + 1 - start);
+        add!(self, TokenKind::String, start => e + 1 - start);
     }
 }

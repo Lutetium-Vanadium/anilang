@@ -247,7 +247,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             }
             // Regular string, boolean or number
             // note number may be an int or a float
-            TokenKind::String(_) | TokenKind::Number | TokenKind::Boolean => {
+            TokenKind::String | TokenKind::Number | TokenKind::Boolean => {
                 self.parse_literal_expression()
             }
             TokenKind::Ident => {
@@ -271,7 +271,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     fn parse_literal_expression(&self) -> SyntaxNode {
         let token = self.next();
         let res = match token.kind {
-            TokenKind::String(_) => {
+            TokenKind::String => {
                 node::LiteralNode::new::<String>(token.text_span.clone(), self.src)
             }
             TokenKind::Number => {

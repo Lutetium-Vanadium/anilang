@@ -1,12 +1,13 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[repr(u8)]
 pub enum TokenKind {
     // Basic
-    Whitespace,   // ' '
-    Number,       // 213
-    Boolean,      // 'true' | 'false'
-    String(char), // '"string"' (char corresponds to the delim)
-    Ident,        // A variable
-    EOF,          // \0
+    Whitespace, // ' '
+    Number,     // 213
+    Boolean,    // 'true' | 'false'
+    String,     // '"string"'
+    Ident,      // A variable
+    EOF,        // \0
 
     DotOperator,        // '.'
     CommaOperator,      // ','
