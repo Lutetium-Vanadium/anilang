@@ -2,6 +2,9 @@ use crate::types::Type;
 use enumflags2::BitFlags;
 mod from;
 
+#[cfg(test)]
+mod tests;
+
 type Result<T> = std::result::Result<T, ErrorKind>;
 
 #[derive(Debug, PartialEq, Eq)]

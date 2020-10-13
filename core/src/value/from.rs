@@ -96,3 +96,42 @@ impl Value {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn val_to_int() {
+        assert_eq!(i64::from(Value::Int(10)), 10);
+    }
+
+    #[test]
+    fn val_to_float() {
+        assert_eq!(f64::from(Value::Int(10)), 10.0);
+        assert_eq!(f64::from(Value::Float(10.0)), 10.0);
+    }
+
+    #[test]
+    fn val_to_bool() {
+        assert_eq!(bool::from(Value::Int(10)), true);
+        assert_eq!(bool::from(Value::Int(0)), false);
+
+        assert_eq!(bool::from(Value::Float(10.0)), true);
+        assert_eq!(bool::from(Value::Float(0.0)), false);
+
+        assert_eq!(bool::from(Value::Bool(true)), true);
+        assert_eq!(bool::from(Value::Bool(false)), false);
+
+        assert_eq!(bool::from(Value::String("s".to_owned())), true);
+        assert_eq!(bool::from(Value::String("".to_owned())), false);
+
+        assert_eq!(bool::from(Value::Null), false);
+    }
+
+    #[test]
+    fn val_to_string() {
+        assert_eq!(String::from(Value::String("s".to_owned())), "s".to_owned());
+        assert_eq!(Value::String("s".to_owned()).as_str(), "s");
+    }
+}
