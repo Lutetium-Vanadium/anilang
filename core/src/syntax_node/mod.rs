@@ -4,10 +4,12 @@ mod block_node;
 mod break_node;
 mod declaration_node;
 mod if_node;
-mod literal_node;
 mod loop_node;
 mod unary_node;
 mod variable_node;
+
+// Public for access to `Parse` and `ErrorKind`
+pub mod literal_node;
 
 use crate::text_span::{self, TextSpan};
 

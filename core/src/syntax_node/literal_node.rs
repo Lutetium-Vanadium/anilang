@@ -2,7 +2,13 @@ use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::value::Value;
 
-type Result<T> = std::result::Result<T, ()>;
+#[repr(u8)]
+pub enum ErrorKind {
+    FailedParse,
+    NoDelim,
+}
+
+type Result<T> = std::result::Result<T, ErrorKind>;
 
 pub trait Parse {
     fn parse(src: &str) -> Result<Value>;
@@ -12,7 +18,7 @@ impl Parse for i64 {
     fn parse(src: &str) -> Result<Value> {
         match src.parse() {
             Ok(v) => Ok(Value::Int(v)),
-            Err(_) => Err(()),
+            Err(_) => Err(ErrorKind::FailedParse),
         }
     }
 }
@@ -21,7 +27,7 @@ impl Parse for f64 {
     fn parse(src: &str) -> Result<Value> {
         match src.parse() {
             Ok(v) => Ok(Value::Float(v)),
-            Err(_) => Err(()),
+            Err(_) => Err(ErrorKind::FailedParse),
         }
     }
 }
@@ -30,9 +36,16 @@ impl Parse for String {
     fn parse(src: &str) -> Result<Value> {
         let mut string = String::new();
         let mut is_escaped = false;
+        let mut chars = src.chars();
+        let start_delim = chars.next().ok_or(ErrorKind::FailedParse)?;
+        let end_delim = chars.next_back().ok_or(ErrorKind::FailedParse)?;
+
+        if start_delim != end_delim {
+            return Err(ErrorKind::NoDelim);
+        }
 
         // Ignore the delimiter
-        for chr in src[1..(src.len() - 1)].chars() {
+        for chr in chars {
             if is_escaped {
                 is_escaped = !is_escaped;
             } else if chr == '\\' {
@@ -53,7 +66,7 @@ impl Parse for bool {
         match src {
             "true" => Ok(Value::Bool(true)),
             "false" => Ok(Value::Bool(false)),
-            _ => Err(()),
+            _ => Err(ErrorKind::FailedParse),
         }
     }
 }
