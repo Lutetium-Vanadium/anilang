@@ -1,9 +1,9 @@
-use super::{Node, SyntaxNode};
+use super::SyntaxNode;
 use crate::text_span::TextSpan;
 
 #[derive(Default, Debug, Clone)]
 pub struct BlockNode {
-    span: TextSpan,
+    pub span: TextSpan,
     pub block: Vec<SyntaxNode>,
 }
 
@@ -15,21 +15,10 @@ impl BlockNode {
     pub fn consume(self) -> (TextSpan, Vec<SyntaxNode>) {
         (self.span, self.block)
     }
-}
 
-use std::fmt;
-impl fmt::Display for BlockNode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "BlockStatement")
-    }
-}
-
-impl Node for BlockNode {
-    fn span(&self) -> &TextSpan {
-        &self.span
-    }
-
-    fn prt(&self, mut indent: String, is_last: bool) {
+    /// Must be completely pub for `BlockNode` only, because parser returns a `BlockNode` directly,
+    /// and not a `SyntaxNode`
+    pub fn prt(&self, mut indent: String, is_last: bool) {
         let marker = if is_last { "└──" } else { "├──" };
 
         println!(
@@ -47,5 +36,12 @@ impl Node for BlockNode {
         for i in 0..self.block.len() {
             self.block[i].prt(indent.clone(), i == self.block.len() - 1);
         }
+    }
+}
+
+use std::fmt;
+impl fmt::Display for BlockNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "BlockStatement")
     }
 }

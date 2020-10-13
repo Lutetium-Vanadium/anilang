@@ -1,10 +1,10 @@
-use super::{BlockNode, BreakNode, IfNode, Node, SyntaxNode, UnaryNode};
+use super::{BlockNode, BreakNode, IfNode, SyntaxNode, UnaryNode};
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 
 #[derive(Default, Debug, Clone)]
 pub struct LoopNode {
-    span: TextSpan,
+    pub span: TextSpan,
     pub block: Vec<SyntaxNode>,
 }
 
@@ -45,21 +45,8 @@ impl LoopNode {
             block,
         }
     }
-}
 
-use std::fmt;
-impl fmt::Display for LoopNode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "LoopStatement")
-    }
-}
-
-impl Node for LoopNode {
-    fn span(&self) -> &TextSpan {
-        &self.span
-    }
-
-    fn prt(&self, mut indent: String, is_last: bool) {
+    pub(super) fn prt(&self, mut indent: String, is_last: bool) {
         let marker = if is_last { "└──" } else { "├──" };
 
         println!(
@@ -77,5 +64,12 @@ impl Node for LoopNode {
         for i in 0..self.block.len() {
             self.block[i].prt(indent.clone(), i == self.block.len() - 1);
         }
+    }
+}
+
+use std::fmt;
+impl fmt::Display for LoopNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "LoopStatement")
     }
 }

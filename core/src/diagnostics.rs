@@ -5,7 +5,7 @@ use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 use crate::types::ToString;
 use crate::value;
-use node::{Node, SyntaxNode};
+use node::SyntaxNode;
 use std::cell::Cell;
 
 /// A general Error struct for printing errors raised during the
@@ -255,7 +255,7 @@ impl<'a> Diagnostics<'a> {
     pub fn unknown_reference(&self, variable: &node::VariableNode) {
         self.report(
             format!("UnknownReference: Variable `{}` not found", variable.ident),
-            variable.span().clone(),
+            variable.span.clone(),
         )
     }
 
@@ -274,7 +274,7 @@ impl<'a> Diagnostics<'a> {
                 "SyntaxError: Variable `{}` was already declared",
                 variable.ident
             ),
-            variable.span().clone(),
+            variable.span.clone(),
         )
     }
 

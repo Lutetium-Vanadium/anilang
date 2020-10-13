@@ -4,7 +4,7 @@ use crate::text_span::TextSpan;
 use crate::tokens::TokenKind;
 use crate::types::Type;
 use crate::value::{ErrorKind, Value};
-use node::{Node, SyntaxNode};
+use node::SyntaxNode;
 
 pub mod scope;
 
@@ -230,7 +230,7 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         if self.should_exit() {
             return Value::Null;
         }
-        let span = node.span().clone();
+        let span = node.span.clone();
 
         let left = self.evaluate_node(*node.left);
         let right = self.evaluate_node(*node.right);
@@ -270,7 +270,7 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             return Value::Null;
         }
 
-        let span = node.span().clone();
+        let span = node.span.clone();
 
         let res = match node.operator {
             TokenKind::PlusPlusOperator => match *node.child {

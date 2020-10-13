@@ -16,7 +16,6 @@ pub use evaluator::Evaluator;
 pub use lexer::Lexer;
 pub use parser::Parser;
 pub use source_text::SourceText;
-pub use syntax_node::Node;
 pub use tokens::TokenKind;
 pub use types::Type;
 pub use value::Value;

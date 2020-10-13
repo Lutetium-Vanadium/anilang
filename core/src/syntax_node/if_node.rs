@@ -1,10 +1,10 @@
-use super::{BlockNode, Node, SyntaxNode};
+use super::{BlockNode, SyntaxNode};
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 
 #[derive(Debug, Clone)]
 pub struct IfNode {
-    span: TextSpan,
+    pub span: TextSpan,
     pub cond: Box<SyntaxNode>,
     pub if_block: BlockNode,
     pub else_block: Option<BlockNode>,
@@ -21,8 +21,8 @@ impl IfNode {
             span: TextSpan::from_spans(
                 &if_token.text_span,
                 match else_block {
-                    Some(ref else_block) => else_block.span(),
-                    None => if_block.span(),
+                    Some(ref else_block) => &else_block.span,
+                    None => &if_block.span,
                 },
             ),
             cond: Box::new(cond),
@@ -44,21 +44,8 @@ impl IfNode {
             span,
         }
     }
-}
 
-use std::fmt;
-impl fmt::Display for IfNode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "IfKeyword")
-    }
-}
-
-impl Node for IfNode {
-    fn span(&self) -> &TextSpan {
-        &self.span
-    }
-
-    fn prt(&self, mut indent: String, is_last: bool) {
+    pub(super) fn prt(&self, mut indent: String, is_last: bool) {
         let marker = if is_last { "└──" } else { "├──" };
 
         println!(
@@ -83,5 +70,12 @@ impl Node for IfNode {
                 self.if_block.prt(indent, true);
             }
         }
+    }
+}
+
+use std::fmt;
+impl fmt::Display for IfNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "IfKeyword")
     }
 }

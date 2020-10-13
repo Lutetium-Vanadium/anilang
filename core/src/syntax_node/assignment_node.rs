@@ -1,4 +1,4 @@
-use super::{Node, SyntaxNode};
+use super::SyntaxNode;
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
@@ -18,21 +18,8 @@ impl AssignmentNode {
             value: Box::new(value),
         }
     }
-}
 
-use std::fmt;
-impl fmt::Display for AssignmentNode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "AssignmentOperator")
-    }
-}
-
-impl Node for AssignmentNode {
-    fn span(&self) -> &TextSpan {
-        &self.span
-    }
-
-    fn prt(&self, mut indent: String, is_last: bool) {
+    pub(super) fn prt(&self, mut indent: String, is_last: bool) {
         let marker = if is_last { "└──" } else { "├──" };
 
         println!(
@@ -49,5 +36,12 @@ impl Node for AssignmentNode {
         indent += if is_last { "   " } else { "│  " };
 
         self.value.prt(indent, true);
+    }
+}
+
+use std::fmt;
+impl fmt::Display for AssignmentNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "AssignmentOperator")
     }
 }

@@ -1,11 +1,11 @@
-use super::{Node, SyntaxNode};
+use super::SyntaxNode;
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 
 #[derive(Debug, Clone)]
 pub struct DeclarationNode {
-    span: TextSpan,
+    pub span: TextSpan,
     pub ident: String,
     pub value: Box<SyntaxNode>,
 }
@@ -23,21 +23,8 @@ impl DeclarationNode {
             value: Box::new(value),
         }
     }
-}
 
-use std::fmt;
-impl fmt::Display for DeclarationNode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DeclarationOperator")
-    }
-}
-
-impl Node for DeclarationNode {
-    fn span(&self) -> &TextSpan {
-        &self.span
-    }
-
-    fn prt(&self, mut indent: String, is_last: bool) {
+    pub(super) fn prt(&self, mut indent: String, is_last: bool) {
         let marker = if is_last { "└──" } else { "├──" };
 
         println!(
@@ -54,5 +41,12 @@ impl Node for DeclarationNode {
         indent += if is_last { "   " } else { "│  " };
 
         self.value.prt(indent, true);
+    }
+}
+
+use std::fmt;
+impl fmt::Display for DeclarationNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "DeclarationOperator")
     }
 }

@@ -1,10 +1,10 @@
-use super::{Node, SyntaxNode};
+use super::SyntaxNode;
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 
 #[derive(Debug, Clone)]
 pub struct BinaryNode {
-    span: TextSpan,
+    pub span: TextSpan,
     pub operator: TokenKind,
     pub left: Box<SyntaxNode>,
     pub right: Box<SyntaxNode>,
@@ -33,21 +33,8 @@ impl BinaryNode {
             right: Box::new(right),
         }
     }
-}
 
-use std::fmt;
-impl fmt::Display for BinaryNode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.operator)
-    }
-}
-
-impl Node for BinaryNode {
-    fn span(&self) -> &TextSpan {
-        &self.span
-    }
-
-    fn prt(&self, mut indent: String, is_last: bool) {
+    pub(super) fn prt(&self, mut indent: String, is_last: bool) {
         let marker = if is_last { "└──" } else { "├──" };
 
         println!(
@@ -64,5 +51,12 @@ impl Node for BinaryNode {
 
         self.left.prt(indent.clone(), false);
         self.right.prt(indent, true);
+    }
+}
+
+use std::fmt;
+impl fmt::Display for BinaryNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.operator)
     }
 }

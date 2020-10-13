@@ -22,12 +22,6 @@ pub use loop_node::*;
 pub use unary_node::*;
 pub use variable_node::*;
 
-pub trait Node: std::fmt::Display {
-    fn span(&self) -> &TextSpan;
-    // Used for printing a tree like representation of the syntax tree
-    fn prt(&self, indent: String, is_last: bool);
-}
-
 #[derive(Debug, Clone)]
 pub enum SyntaxNode {
     AssignmentNode(assignment_node::AssignmentNode),
@@ -65,16 +59,16 @@ impl fmt::Display for SyntaxNode {
 impl SyntaxNode {
     pub fn span(&self) -> &TextSpan {
         match self {
-            SyntaxNode::AssignmentNode(ref n) => n.span(),
-            SyntaxNode::BinaryNode(ref n) => n.span(),
-            SyntaxNode::BlockNode(ref n) => n.span(),
-            SyntaxNode::BreakNode(ref n) => n.span(),
-            SyntaxNode::DeclarationNode(ref n) => n.span(),
-            SyntaxNode::IfNode(ref n) => n.span(),
-            SyntaxNode::LiteralNode(ref n) => n.span(),
-            SyntaxNode::LoopNode(ref n) => n.span(),
-            SyntaxNode::UnaryNode(ref n) => n.span(),
-            SyntaxNode::VariableNode(ref n) => n.span(),
+            SyntaxNode::AssignmentNode(ref n) => &n.span,
+            SyntaxNode::BinaryNode(ref n) => &n.span,
+            SyntaxNode::BlockNode(ref n) => &n.span,
+            SyntaxNode::BreakNode(ref n) => &n.span,
+            SyntaxNode::DeclarationNode(ref n) => &n.span,
+            SyntaxNode::IfNode(ref n) => &n.span,
+            SyntaxNode::LiteralNode(ref n) => &n.span,
+            SyntaxNode::LoopNode(ref n) => &n.span,
+            SyntaxNode::UnaryNode(ref n) => &n.span,
+            SyntaxNode::VariableNode(ref n) => &n.span,
             SyntaxNode::BadNode => &text_span::DEFAULT,
         }
     }
