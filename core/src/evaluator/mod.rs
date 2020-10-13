@@ -10,11 +10,16 @@ pub mod scope;
 
 pub struct Evaluator<'diagnostics, 'src> {
     diagnostics: &'diagnostics Diagnostics<'src>,
+    /// This are the variable scopes, the root scope is at index 0, and subsequent scopes can check
+    /// the scopes at a previous index, once a scope is over, it is popped of
     scopes: Vec<scope::Scope>,
+    /// This is set when a break statement is executed, the loop will check for this, and continue
+    /// accordingly
     should_break: bool,
 }
 
 impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
+    /// Given a root node and diagnostics to report to, this will execute the parsed AST
     pub fn evaluate(root: node::BlockNode, diagnostics: &'diagnostics Diagnostics<'src>) -> Value {
         let mut evaluator = Self {
             diagnostics,
@@ -26,6 +31,8 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         evaluator.evaluate_block(root)
     }
 
+    /// Given a root node and diagnostics to report to, this will execute the parsed AST, with a
+    /// given global scope changes to which will be reflected in the global scope
     pub fn evaluate_with_global(
         root: node::BlockNode,
         diagnostics: &'diagnostics Diagnostics<'src>,
@@ -52,6 +59,8 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         val
     }
 
+    /// If an error is reported during execution, execution should be stopped. This is checked in
+    /// every execution function
     fn should_exit(&self) -> bool {
         self.diagnostics.any()
     }

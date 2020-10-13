@@ -6,6 +6,17 @@ pub enum Cast {
     Explicit, // NOTE: there is no way to explicitly convert as of now
 }
 
+/// Derives from BitFlags, to allow for multiple types in the same byte for errors
+///
+/// For example for some arithmetic between to numbers, if a different type is found, this expected
+/// type can be set as `expected` given below.
+/// ```
+/// let expected = Type::Int | Type::Float;
+/// assert!(expected.contains(Type::Int));
+/// assert!(expected.contains(Type::Float));
+/// ```
+/// Also since Type is `#[repr(u8)]`, it is only one byte in size, therefore multiple types can be
+/// stored in just one byte, rather than storing multiple types in a `Vec` or array
 #[derive(Copy, Clone, Debug, PartialEq, Eq, BitFlags)]
 #[repr(u8)]
 pub enum Type {
@@ -47,8 +58,10 @@ impl fmt::Display for Type {
     }
 }
 
-/// For whatever reason, it won't allow implementing `std::fmt::Display` for library structs
+/// Rust doesn't allow implementing non user defined traits on non user defined structs
 /// This is a workaround to give to_string, so the diagnostics can print easily
+///
+/// `error[E0117]: only traits defined in the current crate can be implemented for arbitrary types`
 pub trait ToString {
     fn to_string(&self) -> String;
 }
@@ -77,13 +90,13 @@ impl Value {
         }
     }
 
-    /// Handles converting implicit casting, should only be called through try_cast()
+    /// Handles converting implicit casting otherwise panics, should only be called through try_cast()
     fn implicit_cast(&self, to_type: Type) -> Value {
         match to_type {
             Type::Float if self.type_() == Type::Int => {
                 Value::Float(self.into())
             }
-            _ => panic!(
+            _ => unreachable!(
                 "Unexpected explicit cast from {:?} to {:?}, for possible explicit casts call try_cast() instead",
                 self, to_type
             ),
@@ -92,7 +105,7 @@ impl Value {
 
     /// Performs implicit cast if available or else returns the cast type
     /// For now there is only implicit & explicit, so it will always error `Explicit`.
-    /// If in the future, no more cast types are added, it will error `()`
+    /// In the future, if no more cast types are added, it will error `()`
     pub fn try_cast(&self, to_type: Type) -> Result<Value, Cast> {
         let self_type = self.type_();
         match self_type.cast_type(&to_type) {

@@ -8,8 +8,11 @@ use std::cell::Cell;
 
 pub struct Parser<'diagnostics, 'src> {
     diagnostics: &'diagnostics Diagnostics<'src>,
+    /// Source text is used for parsing, idents and values
     src: &'src SourceText<'src>,
+    /// Tokens to parse
     tokens: Vec<Token>,
+    /// index of position in tokens
     index: Cell<usize>,
 }
 
@@ -21,6 +24,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     ) -> node::BlockNode {
         assert_ne!(tokens.len(), 0);
 
+        // whitespace should be ignored
         tokens.retain(|val| val.kind != TokenKind::Whitespace);
 
         let parser = Parser {
@@ -32,6 +36,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
         parser.parse_block(TokenKind::EOF)
     }
+
+    // ----- Iterator Methods -----
 
     fn index(&self) -> usize {
         self.index.get()
@@ -62,6 +68,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         };
         cur
     }
+
+    // ----- Parse Methods -----
 
     fn parse_block(&self, delim: TokenKind) -> node::BlockNode {
         let s = self.cur().text_span.start();
@@ -158,15 +166,18 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             self.index.set(self.index() + 1);
 
             match self.cur().kind {
+                // else if is present
                 TokenKind::IfKeyword => {
                     let else_if = self.parse_if_statement();
                     let span = else_if.span().clone();
                     Some(node::BlockNode::new(vec![else_if], span))
                 }
+                // else block is present
                 TokenKind::OpenBrace => {
                     self.index.set(self.index() + 1);
                     Some(self.parse_block(TokenKind::CloseBrace))
                 }
+                // else keyword written, but no `else if` or else block given
                 _ => {
                     self.diagnostics
                         .unexpected_token(self.next(), Some(&TokenKind::OpenBrace));
@@ -174,6 +185,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 }
             }
         } else {
+            // No else keyword, simple if statement
             None
         };
 
@@ -227,9 +239,14 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
     fn parse_general_expression(&self) -> SyntaxNode {
         match self.cur().kind {
+            // Float in the form of '.123'
+            //                       |^^^- Number
+            //                  Dot -^
             TokenKind::DotOperator if self.peek(1).kind == TokenKind::Number => {
                 self.parse_literal_expression()
             }
+            // Regular string, boolean or number
+            // note number may be an int or a float
             TokenKind::String(_) | TokenKind::Number | TokenKind::Boolean => {
                 self.parse_literal_expression()
             }
@@ -258,19 +275,28 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 node::LiteralNode::new::<String>(token.text_span.clone(), self.src)
             }
             TokenKind::Number => {
+                // It is a float
                 if self.cur().kind == TokenKind::DotOperator {
                     let dot = self.next();
                     let span = TextSpan::from_spans(
                         &token.text_span,
+                        // Number is in the form '12.3'
+                        //                Number -^^|^- Number
+                        //                     Dot -^
                         if self.cur().kind == TokenKind::Number {
                             &self.next().text_span
                         } else {
+                            // Number is in the form '123.'
+                            //                Number -^^^|
+                            //                      Dot -^
                             &dot.text_span
                         },
                     );
 
                     node::LiteralNode::new::<f64>(span, self.src)
                 } else {
+                    // It is an int in the form '123'
+                    //                   Number -^^^
                     node::LiteralNode::new::<i64>(token.text_span.clone(), self.src)
                 }
             }
@@ -278,6 +304,9 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 let number = self.match_token(TokenKind::Number);
                 let span = TextSpan::from_spans(&token.text_span, &number.text_span);
 
+                // Float in the form of '.123'
+                //                       |^^^- Number
+                //                  Dot -^
                 node::LiteralNode::new::<f64>(span, self.src)
             }
             TokenKind::Boolean => node::LiteralNode::new::<bool>(token.text_span.clone(), self.src),

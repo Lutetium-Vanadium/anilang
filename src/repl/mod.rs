@@ -12,11 +12,27 @@ use std::cmp::min;
 use std::io::prelude::*;
 
 pub struct Repl {
+    /// The history of commands run
     history: History,
+    /// What to print as the prompt
+    ///
+    /// > <some-code>
+    /// ^^- leader
     leader: &'static str,
+    /// The number of characters in the leader, it is stored here since getting number of characters
+    /// is an O(n) operation for a utf-8 encoded string
     leader_len: usize,
+    /// If the command is more than one line long, what to print on subsequent lines
+    ///
+    /// > <some-code>
+    /// . <some-code>
+    /// ^^- continued leader
     continued_leader: &'static str,
+    /// The number of characters in the continued leader, it is stored here since getting number of
+    /// characters is an O(n) operation for a utf-8 encoded string
     continued_leader_len: usize,
+    /// Whether to print the AST generated for the command.
+    /// See also `core/src/syntax_node/mod.rs``::SyntaxNode::prt`
     pub show_tree: bool,
 }
 
@@ -48,6 +64,7 @@ impl Repl {
         }
     }
 
+    /// Gives current command based on the cursor
     fn cur<'a>(&'a self, c: &Cursor, lines: &'a Vec<String>) -> &'a Vec<String> {
         if c.use_history {
             // unwrap because if use_history is enabled, there must be at least one element in
@@ -58,10 +75,12 @@ impl Repl {
         }
     }
 
+    /// Easy access to the current line
     fn cur_str<'a>(&'a self, c: &Cursor, lines: &'a Vec<String>) -> &'a str {
         &self.cur(c, lines)[c.lineno]
     }
 
+    /// Copy the lines from history into the lines buffer
     fn replace_with_history(&self, lines: &mut Vec<String>) {
         // TODO check if history iter should be reset
         let cur = self.history.cur().unwrap();
@@ -73,6 +92,7 @@ impl Repl {
         }
     }
 
+    /// Print a command
     fn print_lines(
         &self,
         stdout: &mut std::io::Stdout,
@@ -124,6 +144,7 @@ impl Repl {
         )
     }
 
+    /// The main function, gives the next command
     pub fn next(&mut self, colour: style::Color) -> crossterm::Result<String> {
         let mut stdout = std::io::stdout();
         let mut lines = Vec::new();

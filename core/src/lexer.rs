@@ -10,8 +10,11 @@ macro_rules! add {
 
 pub struct Lexer<'diagnostics, 'src> {
     diagnostics: &'diagnostics Diagnostics<'src>,
+    /// The lexed tokens get added to this `Vec`
     pub tokens: Vec<Token>,
+    /// The source text, used to detect keywords, and add EOF at the end
     src: &'src SourceText<'src>,
+    /// The iterator constructed from src, which is used to lex tokens
     chars: std::iter::Peekable<std::str::CharIndices<'src>>,
 }
 
@@ -142,6 +145,7 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
             e = *i;
 
             if !chr.is_whitespace() {
+                // Do not include the last character
                 e -= 1;
                 break;
             } else {
@@ -158,6 +162,7 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
             e = *i;
 
             if !chr.is_alphanumeric() {
+                // Do not include the last character
                 e -= 1;
                 break;
             } else {
@@ -188,6 +193,7 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
             e = *i;
 
             if !chr.is_numeric() {
+                // Do not include the last character
                 e -= 1;
                 break;
             } else {
@@ -209,25 +215,11 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
             } else if chr == '\\' {
                 is_escaped = true;
             } else if chr == delim {
+                // Do not subtract one since one needs to be added for delim anyway
                 break;
             }
         }
 
         add!(self, TokenKind::String(delim), start => e + 1 - start);
-    }
-}
-
-use fmt::Write;
-use std::fmt;
-
-impl fmt::Display for Lexer<'_, '_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[\n")?;
-        for token in &self.tokens {
-            f.write_char('\t')?;
-            token.fmt(f, self.src)?;
-            write!(f, ",\n")?;
-        }
-        write!(f, "]")
     }
 }

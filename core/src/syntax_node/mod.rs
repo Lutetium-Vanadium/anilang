@@ -24,6 +24,7 @@ pub use variable_node::*;
 
 pub trait Node: std::fmt::Display {
     fn span(&self) -> &TextSpan;
+    // Used for printing a tree like representation of the syntax tree
     fn prt(&self, indent: String, is_last: bool);
 }
 

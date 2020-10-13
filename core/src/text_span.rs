@@ -1,5 +1,6 @@
 #[derive(Clone, Debug, Default)]
 pub struct TextSpan {
+    /// index on the `SourceText` where span starts
     start: usize,
     len: usize,
 }
@@ -20,6 +21,7 @@ impl TextSpan {
         self.start
     }
 
+    /// End not included in the span
     pub fn end(&self) -> usize {
         self.start + self.len
     }

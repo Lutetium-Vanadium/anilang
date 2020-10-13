@@ -32,11 +32,13 @@ impl Parse for String {
         let mut string = String::new();
         let mut is_escaped = false;
 
+        // Ignore the delimiter
         for chr in src[1..(src.len() - 1)].chars() {
             if is_escaped {
                 is_escaped = !is_escaped;
             } else if chr == '\\' {
                 is_escaped = true;
+                // The escaping `\` should no be added to the string
                 continue;
             }
 

@@ -1,13 +1,13 @@
 use crate::value;
 use std::collections::HashMap;
 
+/// A wrapper around HashMap to store variables
 #[derive(Clone)]
 pub struct Scope {
     vars: HashMap<String, value::Value>,
 }
 
 impl Scope {
-    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             vars: HashMap::new(),
@@ -22,6 +22,7 @@ impl Scope {
         self.vars.get(key)
     }
 
+    /// Replaces the variables in this scope, with that of another scope
     pub fn replace(&mut self, scope: Scope) {
         self.vars = scope.vars;
     }

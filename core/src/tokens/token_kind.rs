@@ -1,56 +1,57 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind {
     // Basic
-    Whitespace,
-    Number,
-    Boolean,
-    String(char),
-    Ident,
-    EOF,
+    Whitespace,   // ' '
+    Number,       // 213
+    Boolean,      // 'true' | 'false'
+    String(char), // '"string"' (char corresponds to the delim)
+    Ident,        // A variable
+    EOF,          // \0
 
-    DotOperator,
-    CommaOperator,
-    AssignmentOperator,
+    DotOperator,        // '.'
+    CommaOperator,      // ','
+    AssignmentOperator, // '='
 
     // Arithemtic operators
-    PlusOperator,
-    MinusOperator,
-    StarOperator,
-    SlashOperator,
-    ModOperator,
-    CaretOperator,
+    PlusOperator,  // '+'
+    MinusOperator, // '-'
+    StarOperator,  // '*'
+    SlashOperator, // '/'
+    ModOperator,   // '%'
+    CaretOperator, // '*'
 
     // Unary operators
-    PlusPlusOperator,
-    MinusMinusOperator,
+    PlusPlusOperator,   // '++'
+    MinusMinusOperator, // '--'
 
     // Boolean operators
-    OrOperator,
-    AndOperator,
-    NotOperator,
-    NEOperator,
-    EqOperator,
-    LTOperator,
-    GTOperator,
-    LEOperator,
-    GEOperator,
+    OrOperator,  // '||'
+    AndOperator, // '&&'
+    NotOperator, // '!'
+    NEOperator,  // '!='
+    EqOperator,  // '=='
+    LTOperator,  // '<'
+    GTOperator,  // '>'
+    LEOperator,  // '<='
+    GEOperator,  // '>='
 
     // Delimiters
-    OpenParan,
-    CloseParan,
-    OpenBrace,
-    CloseBrace,
-    OpenBracket,
-    CloseBracket,
+    OpenParan,    // '('
+    CloseParan,   // ')'
+    OpenBrace,    // '{'
+    CloseBrace,   // '}'
+    OpenBracket,  // '['
+    CloseBracket, // ']'
 
     // Keywords
-    IfKeyword,
-    ElseKeyword,
-    BreakKeyword,
-    WhileKeyword,
-    LoopKeyword,
-    LetKeyword,
+    IfKeyword,    // 'if'
+    ElseKeyword,  // 'else'
+    BreakKeyword, // 'break'
+    WhileKeyword, // 'while'
+    LoopKeyword,  // 'loop'
+    LetKeyword,   // 'let'
 
+    // Unrecognised
     Bad,
 }
 

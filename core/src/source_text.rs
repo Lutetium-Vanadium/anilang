@@ -3,7 +3,13 @@ use std::ops::Index;
 
 pub struct SourceText<'a> {
     pub text: &'a str,
+    /// The start and end indices of each line, used for getting line number of an index
+    /// in O(log(number lines)) instead of O(length of source)
+    ///
+    /// note there is potential to generating lines `Vec` and instead using at as a memoized array,
+    /// and generating further when needed
     lines: Vec<(usize, usize)>,
+    /// The first line number is offset
     offset: usize,
 }
 
@@ -37,6 +43,7 @@ impl<'a> SourceText<'a> {
         }
     }
 
+    /// Binary search for index through the stored lines
     pub fn lineno(&self, index: usize) -> Option<usize> {
         if index >= self.text.len() {
             return None;

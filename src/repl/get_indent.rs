@@ -1,3 +1,4 @@
+/// Counts the number of open braces, brackets and parans
 pub fn get_indent(lines: &[String]) -> u32 {
     let mut brace = 0;
     let mut bracket = 0;

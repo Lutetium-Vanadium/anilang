@@ -3,6 +3,7 @@ use enumflags2::BitFlags;
 mod from;
 
 type Result<T> = std::result::Result<T, ErrorKind>;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum ErrorKind {
     IncorrectType { got: Type, expected: BitFlags<Type> },
@@ -12,7 +13,8 @@ pub enum ErrorKind {
     DivideByZero,
 }
 
-// Enum to store value of any type
+/// Enum to store value of any type, values which are tuple structs, contain the actual value in
+/// the element
 #[derive(Debug, Clone)]
 pub enum Value {
     String(String),
@@ -22,6 +24,8 @@ pub enum Value {
     Null,
 }
 
+/// Only `PartialEq` can be implemented, since `f32` does not support `Eq`, and Null is not equal
+/// to anything
 impl PartialEq for Value {
     fn eq(&self, other: &Value) -> bool {
         let l = match self.try_cast(other.type_()) {
@@ -44,6 +48,8 @@ impl PartialEq for Value {
     }
 }
 
+/// Only `PartialOrd` can be implemented, since `f32` does not support `Ord`, non implicitly
+/// castable type cannot be compared and Null is cannot be compared
 impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Value) -> Option<std::cmp::Ordering> {
         let l = match self.try_cast(other.type_()) {
@@ -66,14 +72,15 @@ impl PartialOrd for Value {
     }
 }
 
-// When printing we want to only show the inner value, which is what the user expects
-// for example for an integer 1, when printing, the user expects for it to be printed as
-// `1` and not Value::Int(1)
+/// When printing we want to only show the inner value, which is what the user expects
+/// for example for an integer 1, when printing, the user expects for it to be printed as
+/// `1` and not Value::Int(1)
 use std::fmt;
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(ref s) => {
+                // while printing quotes must be escaped to avoid confusion
                 if s.contains("'") && !s.contains("\"") {
                     write!(f, "\"{}\"", s)
                 } else {
@@ -96,8 +103,8 @@ impl fmt::Display for Value {
     }
 }
 
-// Also see `src/types.rs` for type impls &
-//          `src/value/from.rs` for to primitive impls
+// Also see `core/src/types.rs` for type impls &
+//          `core/src/value/from.rs` for to primitive impls
 
 /// impl for the various unary operations
 impl Value {

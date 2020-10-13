@@ -1,6 +1,7 @@
-/// The Ansi colour escape codes for foreground
-///
+/// The Ansi escape codes used in the project.
 /// See https://en.wikipedia.org/wiki/ANSI_escape_code for more detail
+///
+/// NOTE some of the colours may not be used
 #[allow(dead_code)]
 pub static BLACK: &'static str = "\x1b[38;5;0m";
 #[allow(dead_code)]

@@ -10,14 +10,13 @@ mod tokens;
 mod types;
 mod value;
 
+pub use diagnostics::Diagnostics;
 pub use evaluator::scope::Scope;
+pub use evaluator::Evaluator;
+pub use lexer::Lexer;
+pub use parser::Parser;
+pub use source_text::SourceText;
 pub use syntax_node::Node;
 pub use tokens::TokenKind;
-
-pub use diagnostics::*;
-pub use evaluator::*;
-pub use lexer::*;
-pub use parser::*;
-pub use source_text::*;
-pub use types::*;
-pub use value::*;
+pub use types::Type;
+pub use value::Value;
