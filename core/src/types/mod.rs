@@ -1,5 +1,8 @@
 use enumflags2::BitFlags;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Cast {
     Implicit(Type),
@@ -32,7 +35,7 @@ pub enum Type {
 }
 
 impl Type {
-    fn cast_type(&self, other: &Type) -> Cast {
+    pub fn cast_type(&self, other: &Type) -> Cast {
         if self == other {
             return Cast::Implicit(*self);
         }

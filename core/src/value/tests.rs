@@ -23,13 +23,6 @@ fn err_it(t: Type) -> Result<Value> {
     })
 }
 
-fn err_il(g: Type, e: BitFlags<Type>) -> Result<Value> {
-    Err(ErrorKind::IncorrectLeftType {
-        got: g,
-        expected: e,
-    })
-}
-
 fn err_ir(g: Type, e: BitFlags<Type>) -> Result<Value> {
     Err(ErrorKind::IncorrectRightType {
         got: g,
@@ -44,8 +37,9 @@ fn err_eb(got: i64) -> Result<Value> {
         end: u32::MAX as i64,
     })
 }
+
 impl Value {
-    fn is_null(&self) -> bool {
+    pub fn is_null(&self) -> bool {
         if let Type::Null = self.type_() {
             true
         } else {
