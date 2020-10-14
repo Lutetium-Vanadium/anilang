@@ -1,5 +1,8 @@
 mod token_kind;
 
+#[cfg(test)]
+mod tests;
+
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use std::fmt;
