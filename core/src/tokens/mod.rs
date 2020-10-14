@@ -9,7 +9,7 @@ use std::fmt;
 
 pub use token_kind::TokenKind;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
     pub kind: TokenKind,
     pub text_span: TextSpan,
