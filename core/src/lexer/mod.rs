@@ -2,6 +2,9 @@ use crate::diagnostics::Diagnostics;
 use crate::source_text::SourceText;
 use crate::tokens::{Token, TokenKind};
 
+#[cfg(test)]
+mod tests;
+
 macro_rules! add {
     ($self:ident, $token_kind:expr, $s:expr => $e: expr) => {
         $self.tokens.push(Token::new($token_kind, $s, $e));
@@ -231,6 +234,7 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
     fn lex_string(&mut self, start: usize, delim: char) {
         let mut is_escaped = false;
         let mut e = start;
+        let mut got_end_delim = false;
 
         while let Some((i, chr)) = self.chars.next() {
             e = i;
@@ -240,9 +244,14 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
             } else if chr == '\\' {
                 is_escaped = true;
             } else if chr == delim {
+                got_end_delim = true;
                 // Do not subtract one since one needs to be added for delim anyway
                 break;
             }
+        }
+
+        if !got_end_delim {
+            self.diagnostics.unexpected_eof();
         }
 
         add!(self, TokenKind::String, start => e + 1 - start);

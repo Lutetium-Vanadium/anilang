@@ -338,14 +338,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
         match res {
             Ok(node) => SyntaxNode::LiteralNode(node),
-            Err(node::literal_node::ErrorKind::FailedParse) => {
+            Err(_) => {
                 self.diagnostics.failed_parse(&token);
-                SyntaxNode::BadNode
-            }
-            Err(node::literal_node::ErrorKind::NoDelim) => {
-                // A delim wont be included only when the lexer reaches the end of the source while
-                // searching for end delim, therefore there is an EOF instead of the end delim
-                self.diagnostics.unexpected_eof();
                 SyntaxNode::BadNode
             }
         }
