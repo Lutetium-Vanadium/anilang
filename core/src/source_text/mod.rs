@@ -1,6 +1,9 @@
 use crate::text_span::TextSpan;
 use std::ops::Index;
 
+#[cfg(test)]
+mod tests;
+
 /// The source text used by the rest of the interpreter.
 ///
 /// # Examples
