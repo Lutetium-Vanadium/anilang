@@ -103,6 +103,8 @@ fn is_calc_assign() {
     assert_eq!(t(SlashOperator).is_calc_assign(), true);
     assert_eq!(t(PlusOperator).is_calc_assign(), true);
     assert_eq!(t(MinusOperator).is_calc_assign(), true);
+    assert_eq!(t(AndOperator).is_calc_assign(), true);
+    assert_eq!(t(OrOperator).is_calc_assign(), true);
 
     assert_eq!(t(CaretOperator).is_calc_assign(), false);
     assert_eq!(t(NEOperator).is_calc_assign(), false);
@@ -111,8 +113,6 @@ fn is_calc_assign() {
     assert_eq!(t(GTOperator).is_calc_assign(), false);
     assert_eq!(t(LEOperator).is_calc_assign(), false);
     assert_eq!(t(GEOperator).is_calc_assign(), false);
-    assert_eq!(t(AndOperator).is_calc_assign(), false);
-    assert_eq!(t(OrOperator).is_calc_assign(), false);
     assert_eq!(t(NotOperator).is_calc_assign(), false);
     assert_eq!(t(MinusMinusOperator).is_calc_assign(), false);
     assert_eq!(t(PlusPlusOperator).is_calc_assign(), false);
