@@ -32,7 +32,7 @@ impl Parse for String {
         let mut is_escaped = false;
 
         // Ignore the delimiter
-        for chr in src.chars() {
+        for chr in src[1..(src.len() - 1)].chars() {
             if is_escaped {
                 is_escaped = !is_escaped;
             } else if chr == '\\' {
