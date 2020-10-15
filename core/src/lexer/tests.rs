@@ -7,7 +7,7 @@ fn lex(text: &str) -> Vec<Token> {
 }
 
 fn lex_one(text: &str) -> Token {
-    let mut tokens = lex(text);
+    let tokens = lex(text);
     assert_eq!(tokens.len(), 2);
     tokens.into_iter().next().unwrap()
 }
