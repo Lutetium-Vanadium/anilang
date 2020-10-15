@@ -8,6 +8,9 @@ use node::SyntaxNode;
 
 pub mod scope;
 
+#[cfg(test)]
+mod tests;
+
 /// Evaluates an AST from the root node.
 ///
 /// # Examples
