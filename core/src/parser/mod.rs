@@ -6,6 +6,9 @@ use crate::tokens::{Token, TokenKind};
 use node::SyntaxNode;
 use std::cell::Cell;
 
+#[cfg(test)]
+mod tests;
+
 /// Converts given a stream of tokens into a parsed AST. The root node returned is a `BlockNode`
 /// defined in `core/src/syntax_node/block_node.rs`
 ///
