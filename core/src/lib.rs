@@ -1,4 +1,3 @@
-mod colour;
 mod diagnostics;
 mod evaluator;
 mod lexer;

@@ -1,6 +1,8 @@
 use super::{BlockNode, SyntaxNode};
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
+use crossterm::{queue, style};
+use std::io::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct IfNode {
@@ -45,29 +47,29 @@ impl IfNode {
         }
     }
 
-    pub(super) fn prt(&self, mut indent: String, is_last: bool) {
-        let marker = if is_last { "└──" } else { "├──" };
+    pub(super) fn _prt(&self, mut indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
+        let marker = if is_last { "└── " } else { "├── " };
 
-        println!(
-            "{}{}{} {}{}{}",
-            crate::colour::LIGHT_GRAY,
-            indent,
-            marker,
-            crate::colour::BRIGHT_BLUE,
-            self,
-            crate::colour::RESET,
+        let _ = queue!(
+            stdout,
+            style::SetForegroundColor(style::Color::Grey),
+            style::Print(&indent),
+            style::Print(marker),
+            style::SetForegroundColor(style::Color::Blue),
+            style::Print(format!("{}\n", self)),
+            style::ResetColor,
         );
 
         indent += if is_last { "   " } else { "│  " };
 
-        self.cond.prt(indent.clone(), false);
+        self.cond._prt(indent.clone(), false, stdout);
         match self.else_block {
             Some(ref else_block) => {
-                self.if_block.prt(indent.clone(), false);
-                else_block.prt(indent, true);
+                self.if_block._prt(indent.clone(), false, stdout);
+                else_block._prt(indent, true, stdout);
             }
             None => {
-                self.if_block.prt(indent, true);
+                self.if_block._prt(indent, true, stdout);
             }
         }
     }

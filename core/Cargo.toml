@@ -9,4 +9,5 @@ edition = "2018"
 name = "anilang"
 
 [dependencies]
+crossterm = "0.17.7"
 enumflags2 = "0.6.4"

@@ -12,6 +12,8 @@ mod variable_node;
 pub mod literal_node;
 
 use crate::text_span::{self, TextSpan};
+use crossterm::{queue, style};
+use std::io::prelude::*;
 
 pub use assignment_node::*;
 pub use binary_node::*;
@@ -75,29 +77,34 @@ impl SyntaxNode {
         }
     }
 
-    pub fn prt(&self, indent: String, is_last: bool) {
-        match self {
-            SyntaxNode::AssignmentNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::BinaryNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::BlockNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::BreakNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::DeclarationNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::IfNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::LiteralNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::LoopNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::UnaryNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::VariableNode(ref n) => n.prt(indent, is_last),
-            SyntaxNode::BadNode => {
-                let marker = if is_last { "└──" } else { "├──" };
+    pub fn prt(&self) {
+        let mut stdout = std::io::stdout();
+        self._prt(String::new(), true, &mut stdout);
+    }
 
-                println!(
-                    "{}{}{} {}{}{}",
-                    crate::colour::LIGHT_GRAY,
-                    indent,
-                    marker,
-                    crate::colour::BRIGHT_YELLOW,
-                    self,
-                    crate::colour::RESET,
+    fn _prt(&self, indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
+        match self {
+            SyntaxNode::AssignmentNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::BinaryNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::BlockNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::BreakNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::DeclarationNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::IfNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::LiteralNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::LoopNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::UnaryNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::VariableNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::BadNode => {
+                let marker = if is_last { "└── " } else { "├── " };
+
+                let _ = queue!(
+                    stdout,
+                    style::SetForegroundColor(style::Color::Grey),
+                    style::Print(&indent),
+                    style::Print(marker),
+                    style::SetForegroundColor(style::Color::Yellow),
+                    style::Print(format!("{}\n", self)),
+                    style::ResetColor,
                 );
             }
         }

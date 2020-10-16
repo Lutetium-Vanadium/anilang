@@ -1,5 +1,7 @@
 use crate::text_span::TextSpan;
+use crossterm::{queue, style};
 use std::fmt;
+use std::io::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct BreakNode {
@@ -11,17 +13,17 @@ impl BreakNode {
         Self { span }
     }
 
-    pub(super) fn prt(&self, indent: String, is_last: bool) {
-        let marker = if is_last { "└──" } else { "├──" };
+    pub(super) fn _prt(&self, indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
+        let marker = if is_last { "└── " } else { "├── " };
 
-        println!(
-            "{}{}{} {}{}{}",
-            crate::colour::LIGHT_GRAY,
-            indent,
-            marker,
-            crate::colour::BRIGHT_GREEN,
-            self,
-            crate::colour::RESET,
+        let _ = queue!(
+            stdout,
+            style::SetForegroundColor(style::Color::Grey),
+            style::Print(&indent),
+            style::Print(marker),
+            style::SetForegroundColor(style::Color::Green),
+            style::Print(format!("{}\n", self)),
+            style::ResetColor,
         );
     }
 }

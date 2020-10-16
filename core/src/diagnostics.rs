@@ -1,12 +1,13 @@
-use crate::colour;
 use crate::source_text::SourceText;
 use crate::syntax_node as node;
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 use crate::types::ToString;
 use crate::value;
+use crossterm::{queue, style};
 use node::SyntaxNode;
 use std::cell::Cell;
+use std::io::prelude::*;
 
 /// A general Error struct for printing errors raised during the
 #[derive(Debug)]
@@ -35,21 +36,21 @@ impl Error {
     /// 0 | let a = 234 + "sada"
     ///   |
     /// note the + is in red and underlined
-    fn prt(&self, src: &SourceText) {
+    fn prt(&self, src: &SourceText) -> crossterm::Result<()> {
         let s = match src.lineno(self.span.start()) {
             Some(s) => s,
-            None => return,
+            None => return Err(crossterm::ErrorKind::__Nonexhaustive),
         };
 
         // End is non inclusive
         let e = match src.lineno(self.span.end() - 1) {
             Some(e) => e,
-            None => return,
+            None => return Err(crossterm::ErrorKind::__Nonexhaustive),
         };
 
         // get the width of the largest line number so all the '|' line up
         let w = if e > 0 {
-            let mut e2 = std::cmp::min(e, 1);
+            let mut e2 = e;
             let mut w = 0;
             while e2 > 0 {
                 w += 1;
@@ -60,57 +61,83 @@ impl Error {
             1
         };
 
-        println!("{}{}{}", colour::WHITE, self.message, colour::RESET);
-        println!("{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET);
+        let mut stdout = std::io::stdout();
+
+        queue!(
+            stdout,
+            style::SetForegroundColor(style::Color::White),
+            style::Print(&self.message),
+            style::Print("\n"),
+            style::SetForegroundColor(style::Color::DarkBlue),
+            style::Print(" ".repeat(w)),
+            style::Print(" |\n"),
+        )?;
 
         if s == e {
-            println!(
-                "{}{} |{} {}{}{}{}{}{}",
-                colour::BLUE,
-                s,
-                colour::RESET,
-                &src.text[src.line(s).0..self.span.start()],
-                colour::RED,
-                colour::UNDERLINE,
-                &src[&self.span],
-                colour::RESET,
-                &src.text[self.span.end()..src.line(s).1],
-            );
+            queue!(
+                stdout,
+                style::Print(s),
+                style::Print(" | "),
+                style::ResetColor,
+                style::Print(&src.text[src.line(s).0..self.span.start()]),
+                style::SetForegroundColor(style::Color::DarkRed),
+                style::SetAttribute(style::Attribute::Underlined),
+                style::Print(&src[&self.span]),
+                style::ResetColor,
+                style::SetAttribute(style::Attribute::NoUnderline),
+                style::Print(&src.text[self.span.end()..src.line(s).1]),
+                style::Print("\n"),
+            )?;
         } else {
-            println!(
-                "{}{:0w$} |{} {}{}{}{}",
-                colour::BLUE,
-                s,
-                colour::RESET,
-                &src.text[src.line(s).0..self.span.start()],
-                colour::RED,
-                colour::UNDERLINE,
-                &src.text[self.span.start()..src.line(s).1],
-                w = w
-            );
+            queue!(
+                stdout,
+                style::SetForegroundColor(style::Color::DarkBlue),
+                style::Print(format!("{:0w$} | ", s, w = w)),
+                style::ResetColor,
+                style::Print(&src.text[src.line(s).0..self.span.start()]),
+                style::SetForegroundColor(style::Color::DarkRed),
+                style::SetAttribute(style::Attribute::Underlined),
+                style::Print(&src.text[self.span.start()..src.line(s).1]),
+                style::Print("\n"),
+            )?;
 
             for i in (s + 1)..e {
-                println!(
-                    "{}{} |{} {}",
-                    colour::BLUE,
-                    i,
-                    colour::RESET,
-                    &src.text[src.line(i).0..src.line(i).1],
-                );
+                queue!(
+                    stdout,
+                    style::SetForegroundColor(style::Color::DarkBlue),
+                    style::SetAttribute(style::Attribute::NoUnderline),
+                    style::Print(format!("{:0w$} | ", i, w = w)),
+                    style::SetForegroundColor(style::Color::DarkRed),
+                    style::SetAttribute(style::Attribute::Underlined),
+                    style::Print(&src.text[src.line(i).0..src.line(i).1]),
+                    style::Print("\n"),
+                )?;
             }
 
-            println!(
-                "{}{} |{} {}{}{}",
-                colour::BLUE,
-                e,
-                colour::RESET,
-                &src.text[src.line(e).1..self.span.end()],
-                colour::RESET,
-                &src.text[self.span.end()..src.line(e).1]
-            );
+            queue!(
+                stdout,
+                style::SetForegroundColor(style::Color::DarkBlue),
+                style::SetAttribute(style::Attribute::NoUnderline),
+                style::Print(e),
+                style::Print(" | "),
+                style::SetForegroundColor(style::Color::DarkRed),
+                style::SetAttribute(style::Attribute::Underlined),
+                style::Print(&src.text[src.line(e).1..self.span.end()]),
+                style::ResetColor,
+                style::SetAttribute(style::Attribute::NoUnderline),
+                style::Print(&src.text[self.span.end()..src.line(e).1]),
+                style::Print("\n"),
+            )?;
         }
 
-        println!("{}{} |{}", colour::BLUE, " ".repeat(w), colour::RESET);
+        queue!(
+            stdout,
+            style::SetForegroundColor(style::Color::DarkBlue),
+            style::Print(" ".repeat(w)),
+            style::Print(" |\n"),
+        )?;
+
+        stdout.flush().map_err(|e| crossterm::ErrorKind::IoError(e))
     }
 }
 
@@ -173,7 +200,7 @@ impl<'a> Diagnostics<'a> {
         self.num_errors.set(self.num_errors.get() + 1);
 
         if !self.no_print {
-            Error::new(message, span).prt(self.src);
+            let _ = Error::new(message, span).prt(self.src);
         }
     }
 

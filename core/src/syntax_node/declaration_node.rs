@@ -2,6 +2,8 @@ use super::SyntaxNode;
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
+use crossterm::{queue, style};
+use std::io::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct DeclarationNode {
@@ -24,23 +26,22 @@ impl DeclarationNode {
         }
     }
 
-    pub(super) fn prt(&self, mut indent: String, is_last: bool) {
-        let marker = if is_last { "└──" } else { "├──" };
+    pub(super) fn _prt(&self, mut indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
+        let marker = if is_last { "└── " } else { "├── " };
 
-        println!(
-            "{}{}{} {}{} => {}{}",
-            crate::colour::LIGHT_GRAY,
-            indent,
-            marker,
-            crate::colour::BRIGHT_BLUE,
-            self,
-            self.ident,
-            crate::colour::RESET,
+        let _ = queue!(
+            stdout,
+            style::SetForegroundColor(style::Color::Grey),
+            style::Print(&indent),
+            style::Print(marker),
+            style::SetForegroundColor(style::Color::Blue),
+            style::Print(format!("{}\n", self)),
+            style::ResetColor,
         );
 
         indent += if is_last { "   " } else { "│  " };
 
-        self.value.prt(indent, true);
+        self.value._prt(indent, true, stdout);
     }
 }
 

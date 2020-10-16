@@ -1,6 +1,8 @@
 use super::{BlockNode, BreakNode, IfNode, SyntaxNode, UnaryNode};
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
+use crossterm::{queue, style};
+use std::io::prelude::*;
 
 #[derive(Default, Debug, Clone)]
 pub struct LoopNode {
@@ -46,23 +48,23 @@ impl LoopNode {
         }
     }
 
-    pub(super) fn prt(&self, mut indent: String, is_last: bool) {
-        let marker = if is_last { "└──" } else { "├──" };
+    pub(super) fn _prt(&self, mut indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
+        let marker = if is_last { "└── " } else { "├── " };
 
-        println!(
-            "{}{}{} {}{}{}",
-            crate::colour::LIGHT_GRAY,
-            indent,
-            marker,
-            crate::colour::BRIGHT_BLUE,
-            self,
-            crate::colour::RESET,
+        let _ = queue!(
+            stdout,
+            style::SetForegroundColor(style::Color::Grey),
+            style::Print(&indent),
+            style::Print(marker),
+            style::SetForegroundColor(style::Color::Blue),
+            style::Print(format!("{}\n", self)),
+            style::ResetColor,
         );
 
         indent += if is_last { "   " } else { "│  " };
 
         for i in 0..self.block.len() {
-            self.block[i].prt(indent.clone(), i == self.block.len() - 1);
+            self.block[i]._prt(indent.clone(), i == self.block.len() - 1, stdout);
         }
     }
 }

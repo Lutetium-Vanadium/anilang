@@ -18,7 +18,7 @@ fn main() -> Result<()> {
 
         if !diagnostics.any() {
             if repl.show_tree {
-                root.prt(String::new(), true);
+                root.prt();
             }
             let value =
                 anilang::Evaluator::evaluate_with_global(root, &mut diagnostics, &mut global_scope);

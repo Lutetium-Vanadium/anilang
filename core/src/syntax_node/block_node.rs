@@ -1,5 +1,7 @@
 use super::SyntaxNode;
 use crate::text_span::TextSpan;
+use crossterm::{queue, style};
+use std::io::prelude::*;
 
 #[derive(Default, Debug, Clone)]
 pub struct BlockNode {
@@ -18,23 +20,27 @@ impl BlockNode {
 
     /// Must be completely pub for `BlockNode` only, because parser returns a `BlockNode` directly,
     /// and not a `SyntaxNode`
-    pub fn prt(&self, mut indent: String, is_last: bool) {
-        let marker = if is_last { "└──" } else { "├──" };
+    pub fn prt(&self) {
+        self._prt(String::new(), true, &mut std::io::stdout());
+    }
 
-        println!(
-            "{}{}{} {}{}{}",
-            crate::colour::LIGHT_GRAY,
-            indent,
-            marker,
-            crate::colour::BRIGHT_BLUE,
-            self,
-            crate::colour::RESET,
+    pub(crate) fn _prt(&self, mut indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
+        let marker = if is_last { "└── " } else { "├── " };
+
+        let _ = queue!(
+            stdout,
+            style::SetForegroundColor(style::Color::Grey),
+            style::Print(&indent),
+            style::Print(marker),
+            style::SetForegroundColor(style::Color::Blue),
+            style::Print(format!("{}\n", self)),
+            style::ResetColor,
         );
 
         indent += if is_last { "   " } else { "│  " };
 
         for i in 0..self.block.len() {
-            self.block[i].prt(indent.clone(), i == self.block.len() - 1);
+            self.block[i]._prt(indent.clone(), i == self.block.len() - 1, stdout);
         }
     }
 }
