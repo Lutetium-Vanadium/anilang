@@ -2,7 +2,9 @@ use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::value::Value;
 use crossterm::{queue, style};
+use std::cell::RefCell;
 use std::io::prelude::*;
+use std::rc::Rc;
 
 type Result<T> = std::result::Result<T, ()>;
 
@@ -46,7 +48,7 @@ impl Parse for String {
             string.push(chr);
         }
 
-        Ok(Value::String(string))
+        Ok(Value::String(Rc::new(RefCell::new(string))))
     }
 }
 

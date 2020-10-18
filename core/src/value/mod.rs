@@ -1,10 +1,13 @@
 use crate::types::Type;
 use enumflags2::BitFlags;
+use std::cell::RefCell;
+use std::rc::Rc;
 mod from;
 
 #[cfg(test)]
 mod tests;
 
+pub type Ref<T> = Rc<RefCell<T>>;
 type Result<T> = std::result::Result<T, ErrorKind>;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -20,7 +23,7 @@ pub enum ErrorKind {
 /// the element
 #[derive(Debug, Clone)]
 pub enum Value {
-    String(String),
+    String(Rc<RefCell<String>>),
     Int(i64),
     Float(f64),
     Bool(bool),
@@ -45,7 +48,7 @@ impl PartialEq for Value {
             Value::Int(l) => l == r.into(),
             Value::Float(l) => l == r.into(),
             Value::Bool(l) => l == r.into(),
-            Value::String(ref l) => l == r.as_str(),
+            Value::String(ref l) => l.borrow().as_str() == std::cell::Ref::from(&r).as_str(),
             Value::Null => false,
         }
     }
@@ -69,7 +72,10 @@ impl PartialOrd for Value {
             Value::Int(l) => l.partial_cmp(&r.into()),
             Value::Float(l) => l.partial_cmp(&r.into()),
             Value::Bool(l) => l.partial_cmp(&r.into()),
-            Value::String(ref l) => (l as &str).partial_cmp(r.as_str()),
+            Value::String(ref l) => l
+                .borrow()
+                .as_str()
+                .partial_cmp(std::cell::Ref::from(&r).as_str()),
             Value::Null => None,
         }
     }
@@ -83,6 +89,7 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(ref s) => {
+                let s = &s.borrow();
                 // while printing quotes must be escaped to avoid confusion
                 if s.contains("'") && !s.contains("\"") {
                     write!(f, "\"{}\"", s)
@@ -164,7 +171,23 @@ impl Value {
         match left {
             Value::Int(left) => Ok(Value::Int(left + i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left + f64::from(right))),
-            Value::String(left) => Ok(Value::String(left + right.as_str())),
+            Value::String(left) => {
+                let right: Ref<String> = Rc::from(right);
+                Ok(Value::String(if Rc::strong_count(&left) == 1 {
+                    left.borrow_mut().push_str(&right.borrow());
+                    left
+                } else if Rc::strong_count(&right) == 1 {
+                    right.borrow_mut().push_str(&left.borrow());
+                    right
+                } else {
+                    let l = left.borrow();
+                    let r = right.borrow();
+                    let mut s = String::with_capacity(l.len() + r.len());
+                    s += &l;
+                    s += &r;
+                    Rc::new(RefCell::new(s))
+                }))
+            }
             _ => Err(ErrorKind::IncorrectLeftType {
                 got: self.type_(),
                 expected: Type::Int | Type::Float | Type::String,

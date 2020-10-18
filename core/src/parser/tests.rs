@@ -455,14 +455,16 @@ fn parse_string_properly() {
     assert_eq!(root.block.len(), 1);
 
     assert_eq!(
-        &match &root.block[0] {
+        match &root.block[0] {
             SyntaxNode::LiteralNode(node::LiteralNode {
                 value: Value::String(s),
                 ..
             }) => s,
             n => panic!("expected Literal String, got {:?}", n),
-        },
-        &"str",
+        }
+        .borrow()
+        .as_str(),
+        "str",
     );
 
     let tokens = vec![
@@ -473,14 +475,16 @@ fn parse_string_properly() {
     assert_eq!(root.block.len(), 1);
 
     assert_eq!(
-        &match &root.block[0] {
+        match &root.block[0] {
             SyntaxNode::LiteralNode(node::LiteralNode {
                 value: Value::String(s),
                 ..
             }) => s,
             n => panic!("expected Literal String, got {:?}", n),
-        },
-        &"str"
+        }
+        .borrow()
+        .as_str(),
+        "str"
     );
 
     let tokens = vec![
@@ -491,14 +495,16 @@ fn parse_string_properly() {
     assert_eq!(root.block.len(), 1);
 
     assert_eq!(
-        &match &root.block[0] {
+        match &root.block[0] {
             SyntaxNode::LiteralNode(node::LiteralNode {
                 value: Value::String(s),
                 ..
             }) => s,
             n => panic!("expected Literal String, got {:?}", n),
-        },
-        &"str'"
+        }
+        .borrow()
+        .as_str(),
+        "str'"
     );
 
     let tokens = vec![
@@ -509,14 +515,16 @@ fn parse_string_properly() {
     assert_eq!(root.block.len(), 1);
 
     assert_eq!(
-        &match &root.block[0] {
+        match &root.block[0] {
             SyntaxNode::LiteralNode(node::LiteralNode {
                 value: Value::String(s),
                 ..
             }) => s,
             n => panic!("expected Literal String, got {:?}", n),
-        },
-        &r#"str""#
+        }
+        .borrow()
+        .as_str(),
+        r#"str""#
     );
 }
 

@@ -10,6 +10,8 @@
 /// }
 /// ```
 use super::Value;
+use std::cell::{Ref, RefCell};
+use std::rc::Rc;
 
 impl From<Value> for i64 {
     /// Should only be called for Value::Int
@@ -56,7 +58,7 @@ impl From<&Value> for f64 {
 impl From<Value> for bool {
     fn from(val: Value) -> bool {
         match val {
-            Value::String(ref s) => s.len() != 0,
+            Value::String(s) => s.borrow().len() != 0,
             Value::Int(i) => i != 0,
             Value::Float(f) => f != 0.0,
             Value::Bool(b) => b,
@@ -68,7 +70,7 @@ impl From<Value> for bool {
 impl From<&Value> for bool {
     fn from(val: &Value) -> bool {
         match val {
-            Value::String(ref s) => s.len() != 0,
+            Value::String(s) => s.borrow().len() != 0,
             Value::Int(i) => i != &0,
             Value::Float(f) => f != &0.0,
             Value::Bool(b) => *b,
@@ -77,21 +79,21 @@ impl From<&Value> for bool {
     }
 }
 
-impl From<Value> for String {
+impl From<Value> for Rc<RefCell<String>> {
     /// Should only be called for Value::String
-    fn from(val: Value) -> String {
+    fn from(val: Value) -> Rc<RefCell<String>> {
         match val {
-            Value::String(s) => s,
+            Value::String(r) => r,
             _ => unreachable!(),
         }
     }
 }
 
-impl Value {
+impl<'a> From<&'a Value> for Ref<'a, String> {
     /// Should only be called for &Value::String
-    pub fn as_str(&self) -> &str {
-        match self {
-            Value::String(ref s) => s,
+    fn from(val: &'a Value) -> Ref<'a, String> {
+        match val {
+            Value::String(ref s) => s.borrow(),
             _ => unreachable!(),
         }
     }
@@ -100,6 +102,10 @@ impl Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn s(s: &str) -> Value {
+        Value::String(Rc::new(RefCell::new(s.to_owned())))
+    }
 
     #[test]
     fn val_to_int() {
@@ -123,15 +129,15 @@ mod tests {
         assert_eq!(bool::from(Value::Bool(true)), true);
         assert_eq!(bool::from(Value::Bool(false)), false);
 
-        assert_eq!(bool::from(Value::String("s".to_owned())), true);
-        assert_eq!(bool::from(Value::String("".to_owned())), false);
+        assert_eq!(bool::from(s("s")), true);
+        assert_eq!(bool::from(s("")), false);
 
         assert_eq!(bool::from(Value::Null), false);
     }
 
     #[test]
-    fn val_to_string() {
-        assert_eq!(String::from(Value::String("s".to_owned())), "s".to_owned());
-        assert_eq!(Value::String("s".to_owned()).as_str(), "s");
+    fn val_to_ref_string() {
+        assert_eq!(Rc::<RefCell<String>>::from(s("s")).borrow().as_str(), "s");
+        assert_eq!(std::cell::Ref::from(&s("s")).as_str(), "s");
     }
 }

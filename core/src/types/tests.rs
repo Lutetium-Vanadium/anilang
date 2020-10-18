@@ -1,4 +1,6 @@
 use super::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[test]
 fn detect_implicit_cast() {
@@ -81,7 +83,7 @@ fn b(b: bool) -> Value {
     Value::Bool(b)
 }
 fn s(s: &str) -> Value {
-    Value::String(s.to_owned())
+    Value::String(Rc::new(RefCell::new(s.to_owned())))
 }
 fn n() -> Value {
     Value::Null

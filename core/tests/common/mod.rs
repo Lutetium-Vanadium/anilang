@@ -51,6 +51,8 @@ macro_rules! assert_almost_eq {
 
 pub mod v {
     use anilang::Value;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     /// Creates an `anilang::Value::Int()`
     #[allow(dead_code)]
@@ -73,7 +75,7 @@ pub mod v {
     /// Creates an `anilang::Value::String()`
     #[allow(dead_code)]
     pub fn s(s: &str) -> Value {
-        Value::String(s.to_owned())
+        Value::String(Rc::new(RefCell::new(s.to_owned())))
     }
 
     /// Creates an `anilang::Value::Null`

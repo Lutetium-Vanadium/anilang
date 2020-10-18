@@ -1,5 +1,7 @@
 use super::*;
 use crate::text_span::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 fn span() -> TextSpan {
     DEFAULT.clone()
@@ -15,7 +17,7 @@ fn b(b: bool) -> Value {
     Value::Bool(b)
 }
 fn s(s: &str) -> Value {
-    Value::String(s.to_owned())
+    Value::String(Rc::new(RefCell::new(s.to_owned())))
 }
 
 fn eval_b(root: node::BlockNode) -> Value {
