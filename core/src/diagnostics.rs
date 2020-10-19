@@ -313,13 +313,10 @@ impl<'a> Diagnostics<'a> {
     /// let a = a + 123
     /// ^^^^^^^^^^^^^^^
     /// `a` was already declared in the previous line
-    pub fn already_declared(&self, variable: &node::DeclarationNode) {
+    pub fn already_declared(&self, ident: &str, span: TextSpan) {
         self.report(
-            format!(
-                "SyntaxError: Variable `{}` was already declared",
-                variable.ident
-            ),
-            variable.span.clone(),
+            format!("SyntaxError: Variable `{}` was already declared", ident),
+            span,
         )
     }
 

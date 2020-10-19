@@ -25,13 +25,15 @@ pub enum Cast {
 /// Also since Type is `#[repr(u8)]`, it is only one byte in size, therefore multiple types can be
 /// stored in just one byte, rather than storing multiple types in a `Vec` or array
 #[derive(Copy, Clone, Debug, PartialEq, Eq, BitFlags)]
+#[rustfmt::skip]
 #[repr(u8)]
 pub enum Type {
-    Int = 0b00001,
-    Float = 0b00010,
-    String = 0b00100,
-    Bool = 0b01000,
-    Null = 0b10000,
+    Int      = 0b000001,
+    Float    = 0b000010,
+    String   = 0b000100,
+    Bool     = 0b001000,
+    Function = 0b010000,
+    Null     = 0b100000,
 }
 
 impl Type {
@@ -57,8 +59,9 @@ impl fmt::Display for Type {
             match self {
                 Type::Int => "int",
                 Type::Float => "float",
-                Type::Bool => "bool",
                 Type::String => "string",
+                Type::Bool => "bool",
+                Type::Function => "function",
                 Type::Null => "null",
             }
         )
@@ -93,6 +96,7 @@ impl Value {
             Value::Int(_) => Type::Int,
             Value::Float(_) => Type::Float,
             Value::String(_) => Type::String,
+            Value::Function(_) => Type::Function,
             Value::Null => Type::Null,
         }
     }

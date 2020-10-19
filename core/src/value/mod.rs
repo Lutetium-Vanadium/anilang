@@ -3,9 +3,12 @@ use enumflags2::BitFlags;
 use std::cell::RefCell;
 use std::rc::Rc;
 mod from;
+mod function;
 
 #[cfg(test)]
 mod tests;
+
+pub use function::Function;
 
 pub type Ref<T> = Rc<RefCell<T>>;
 type Result<T> = std::result::Result<T, ErrorKind>;
@@ -24,6 +27,7 @@ pub enum ErrorKind {
 #[derive(Debug, Clone)]
 pub enum Value {
     String(Rc<RefCell<String>>),
+    Function(Rc<Function>), // Functions are not mutable
     Int(i64),
     Float(f64),
     Bool(bool),
@@ -48,7 +52,15 @@ impl PartialEq for Value {
             Value::Int(l) => l == r.into(),
             Value::Float(l) => l == r.into(),
             Value::Bool(l) => l == r.into(),
-            Value::String(ref l) => l.borrow().as_str() == std::cell::Ref::from(&r).as_str(),
+            Value::String(ref l_rc) => {
+                // Easy to check if both are references to the same string, otherwise check if the
+                // actual strings are equal
+                Rc::ptr_eq(&l_rc, &r.clone().as_rc_str())
+                    || l_rc.borrow().as_str() == r.as_ref_str().as_str()
+            }
+            // Functions are only equal if they are references to the same defination, the actual
+            // args and function body are not considered.
+            Value::Function(ref l) => Rc::ptr_eq(l, &r.as_rc_fn()),
             Value::Null => false,
         }
     }
@@ -72,10 +84,8 @@ impl PartialOrd for Value {
             Value::Int(l) => l.partial_cmp(&r.into()),
             Value::Float(l) => l.partial_cmp(&r.into()),
             Value::Bool(l) => l.partial_cmp(&r.into()),
-            Value::String(ref l) => l
-                .borrow()
-                .as_str()
-                .partial_cmp(std::cell::Ref::from(&r).as_str()),
+            Value::String(ref l) => l.borrow().as_str().partial_cmp(r.as_ref_str().as_str()),
+            Value::Function(_) => None,
             Value::Null => None,
         }
     }
@@ -105,6 +115,7 @@ impl fmt::Display for Value {
                     write!(f, "'")
                 }
             }
+            Value::Function(ref func) => write!(f, "{}", func),
             Value::Int(i) => write!(f, "{}", i),
             Value::Float(fl) => write!(f, "{}", fl),
             Value::Bool(b) => write!(f, "{}", b),
@@ -114,7 +125,7 @@ impl fmt::Display for Value {
 }
 
 // Also see `core/src/types.rs` for type impls &
-//          `core/src/value/from.rs` for to primitive impls
+//          `core/src/value/from.rs` for to base type impls
 
 /// impl for the various unary operations
 impl Value {
@@ -172,7 +183,7 @@ impl Value {
             Value::Int(left) => Ok(Value::Int(left + i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left + f64::from(right))),
             Value::String(left) => {
-                let right: Ref<String> = Rc::from(right);
+                let right: Ref<String> = right.as_rc_str();
                 Ok(Value::String(if Rc::strong_count(&left) == 1 {
                     left.borrow_mut().push_str(&right.borrow());
                     left

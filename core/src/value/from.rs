@@ -9,7 +9,7 @@
 ///     _ => unreachable!()
 /// }
 /// ```
-use super::Value;
+use super::{Function, Value};
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
@@ -55,6 +55,9 @@ impl From<&Value> for f64 {
     }
 }
 
+// NOTE while the boolean conversion exists from all types, it is not exposed as a implicit
+// conversion, these conversions are only there for simplicity in the comparison operators, i.e.
+// '||', '>' etc
 impl From<Value> for bool {
     fn from(val: Value) -> bool {
         match val {
@@ -62,6 +65,10 @@ impl From<Value> for bool {
             Value::Int(i) => i != 0,
             Value::Float(f) => f != 0.0,
             Value::Bool(b) => b,
+            // Function objects are truthy, but the returned after calling a Function need not be
+            // Value::Function refers to the function object itself, and not the return type of the
+            // function
+            Value::Function(_) => true,
             Value::Null => false,
         }
     }
@@ -74,26 +81,30 @@ impl From<&Value> for bool {
             Value::Int(i) => i != &0,
             Value::Float(f) => f != &0.0,
             Value::Bool(b) => *b,
+            Value::Function(_) => true,
             Value::Null => false,
         }
     }
 }
 
-impl From<Value> for Rc<RefCell<String>> {
-    /// Should only be called for Value::String
-    fn from(val: Value) -> Rc<RefCell<String>> {
-        match val {
-            Value::String(r) => r,
+impl Value {
+    pub fn as_rc_str(self) -> Rc<RefCell<String>> {
+        match self {
+            Value::String(s) => s,
             _ => unreachable!(),
         }
     }
-}
 
-impl<'a> From<&'a Value> for Ref<'a, String> {
-    /// Should only be called for &Value::String
-    fn from(val: &'a Value) -> Ref<'a, String> {
-        match val {
+    pub fn as_ref_str(&self) -> Ref<String> {
+        match self {
             Value::String(ref s) => s.borrow(),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_rc_fn(self) -> Rc<Function> {
+        match self {
+            Value::Function(f) => f,
             _ => unreachable!(),
         }
     }
@@ -137,7 +148,7 @@ mod tests {
 
     #[test]
     fn val_to_ref_string() {
-        assert_eq!(Rc::<RefCell<String>>::from(s("s")).borrow().as_str(), "s");
-        assert_eq!(std::cell::Ref::from(&s("s")).as_str(), "s");
+        assert_eq!(s("s").as_rc_str().borrow().as_str(), "s");
+        assert_eq!(s("s").as_ref_str().as_str(), "s");
     }
 }

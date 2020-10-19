@@ -52,6 +52,7 @@ pub enum TokenKind {
     WhileKeyword, // 'while'
     LoopKeyword,  // 'loop'
     LetKeyword,   // 'let'
+    FnKeyword,    // 'fn'
 
     // Unrecognised
     Bad,

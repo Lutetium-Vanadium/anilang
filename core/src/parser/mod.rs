@@ -133,6 +133,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             {
                 self.parse_calc_assignment_expression()
             }
+            TokenKind::FnKeyword => self.parse_fn_statement(),
             TokenKind::IfKeyword => self.parse_if_statement(),
             TokenKind::BreakKeyword => {
                 SyntaxNode::BreakNode(node::BreakNode::new(self.next().text_span.clone()))
@@ -179,6 +180,37 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         ));
 
         SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
+    }
+
+    fn parse_fn_statement(&self) -> SyntaxNode {
+        let fn_token = self.match_token(TokenKind::FnKeyword);
+        let ident = self.match_token(TokenKind::Ident);
+        self.match_token(TokenKind::OpenParan);
+        let mut args = Vec::new();
+        loop {
+            let next = self.next();
+            match next.kind {
+                TokenKind::Ident => {
+                    args.push(self.src[&next.text_span].to_owned());
+                    self.match_token(TokenKind::CommaOperator);
+                }
+                TokenKind::CloseParan => break,
+                _ => {
+                    self.diagnostics
+                        .unexpected_token(next, Some(&TokenKind::Ident));
+                }
+            }
+        }
+
+        self.match_token(TokenKind::OpenBrace);
+        let block = self.parse_block(TokenKind::CloseBrace);
+
+        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode::new(
+            fn_token,
+            self.src[&ident.text_span].to_owned(),
+            args,
+            block,
+        ))
     }
 
     fn parse_if_statement(&self) -> SyntaxNode {

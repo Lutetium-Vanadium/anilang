@@ -3,7 +3,7 @@ use crate::syntax_node as node;
 use crate::text_span::TextSpan;
 use crate::tokens::TokenKind;
 use crate::types::Type;
-use crate::value::{ErrorKind, Value};
+use crate::value::{ErrorKind, Function, Value};
 use node::SyntaxNode;
 
 pub mod scope;
@@ -151,6 +151,7 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             SyntaxNode::LoopNode(node) => self.evaluate_loop(node),
             SyntaxNode::AssignmentNode(node) => self.evaluate_assignment(node),
             SyntaxNode::DeclarationNode(node) => self.evaluate_declaration(node),
+            SyntaxNode::FnDeclarationNode(node) => self.evaluate_fn_declaration(node),
             SyntaxNode::BinaryNode(node) => self.evaluate_binary(node),
             SyntaxNode::UnaryNode(node) => self.evaluate_unary(node),
             SyntaxNode::BreakNode(_) => {
@@ -249,11 +250,30 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         }
 
         if let Some(_) = self.scopes.last().unwrap().try_get_value(&node.ident) {
-            self.diagnostics.already_declared(&node);
+            self.diagnostics.already_declared(&node.ident, node.span);
             return Value::Null;
         }
 
         let value = self.evaluate_node(*node.value);
+        self.scopes
+            .last_mut()
+            .unwrap()
+            .insert(node.ident, value.clone());
+
+        value
+    }
+
+    fn evaluate_fn_declaration(&mut self, node: node::FnDeclarationNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
+        if let Some(_) = self.scopes.last().unwrap().try_get_value(&node.ident) {
+            self.diagnostics.already_declared(&node.ident, node.span);
+            return Value::Null;
+        }
+
+        let value = Value::from(Function::new(node.args, node.block));
         self.scopes
             .last_mut()
             .unwrap()

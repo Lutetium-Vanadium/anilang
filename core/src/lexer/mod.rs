@@ -209,6 +209,7 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
                 "loop" => TokenKind::LoopKeyword,
                 "while" => TokenKind::WhileKeyword,
                 "let" => TokenKind::LetKeyword,
+                "fn" => TokenKind::FnKeyword,
                 _ => TokenKind::Ident,
             },
             start => e - start
