@@ -76,22 +76,14 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
     ) -> Value {
         let mut evaluator = Self {
             diagnostics,
-            scopes: vec![global_scope.clone()],
+            scopes: Vec::new(),
             should_break: false,
         };
 
-        // since there is a global_scope, this just needs to execute the statements and not
-        // generate a new scope
-        let mut val = Value::Null;
-        for node in root.block {
-            val = evaluator.evaluate_node(node);
-        }
+        let (val, modified_global_scope) =
+            evaluator.evaluate_block_with_scope(root, global_scope.clone());
 
-        // Since scopes starts with a global scope, there should be only the global scope remaining
-        // since all the other scopes should have been popped of
-        assert_eq!(evaluator.scopes.len(), 1);
-        global_scope.replace(evaluator.scopes.pop().unwrap());
-
+        global_scope.replace(modified_global_scope);
         val
     }
 
@@ -161,21 +153,27 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         }
     }
 
-    fn evaluate_block(&mut self, block: node::BlockNode) -> Value {
+    fn evaluate_block_with_scope(
+        &mut self,
+        block: node::BlockNode,
+        scope: scope::Scope,
+    ) -> (Value, scope::Scope) {
         if self.should_exit() {
-            return Value::Null;
+            return (Value::Null, scope);
         }
 
-        self.scopes.push(scope::Scope::new());
+        self.scopes.push(scope);
 
         let mut val = Value::Null;
         for node in block.block {
             val = self.evaluate_node(node);
         }
 
-        self.scopes.pop();
+        (val, self.scopes.pop().unwrap())
+    }
 
-        val
+    fn evaluate_block(&mut self, block: node::BlockNode) -> Value {
+        self.evaluate_block_with_scope(block, scope::Scope::new()).0
     }
 
     fn evaluate_variable(&mut self, variable: node::VariableNode) -> Value {
