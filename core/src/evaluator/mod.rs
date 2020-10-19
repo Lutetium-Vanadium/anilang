@@ -117,8 +117,7 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             }
         }
 
-        self.diagnostics
-            .unknown_reference(&node::VariableNode::raw(ident, span));
+        self.diagnostics.unknown_reference(&ident, span);
     }
 
     fn get_var(&mut self, ident: &str) -> Option<&Value> {
@@ -187,7 +186,8 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         match self.get_var(&variable.ident) {
             Some(v) => v.clone(),
             None => {
-                self.diagnostics.unknown_reference(&variable);
+                self.diagnostics
+                    .unknown_reference(&variable.ident, variable.span);
                 Value::Null
             }
         }

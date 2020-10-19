@@ -297,10 +297,10 @@ impl<'a> Diagnostics<'a> {
     /// let a = a + 123
     ///         ^
     /// `a` wasn't not declared before
-    pub fn unknown_reference(&self, variable: &node::VariableNode) {
+    pub fn unknown_reference(&self, ident: &str, span: TextSpan) {
         self.report(
-            format!("UnknownReference: Variable `{}` not found", variable.ident),
-            variable.span.clone(),
+            format!("UnknownReference: Variable `{}` not found", ident),
+            span,
         )
     }
 
