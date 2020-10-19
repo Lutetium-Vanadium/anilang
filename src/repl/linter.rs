@@ -53,6 +53,7 @@ fn print_token(
 
         TokenKind::IfKeyword
         | TokenKind::ElseKeyword
+        | TokenKind::FnKeyword
         | TokenKind::BreakKeyword
         | TokenKind::WhileKeyword
         | TokenKind::LoopKeyword

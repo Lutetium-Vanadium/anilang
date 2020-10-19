@@ -133,7 +133,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             {
                 self.parse_calc_assignment_expression()
             }
-            TokenKind::FnKeyword => self.parse_fn_statement(),
+            TokenKind::FnKeyword => self.parse_fn_declaration_statement(),
             TokenKind::IfKeyword => self.parse_if_statement(),
             TokenKind::BreakKeyword => {
                 SyntaxNode::BreakNode(node::BreakNode::new(self.next().text_span.clone()))
@@ -182,7 +182,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
     }
 
-    fn parse_fn_statement(&self) -> SyntaxNode {
+    fn parse_fn_declaration_statement(&self) -> SyntaxNode {
         let fn_token = self.match_token(TokenKind::FnKeyword);
         let ident = self.match_token(TokenKind::Ident);
         self.match_token(TokenKind::OpenParan);
