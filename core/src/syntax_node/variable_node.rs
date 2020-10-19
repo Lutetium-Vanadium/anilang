@@ -1,8 +1,7 @@
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
-use crossterm::{queue, style};
-use std::io::prelude::*;
+use crossterm::style;
 
 #[derive(Debug, Clone)]
 pub struct VariableNode {
@@ -23,17 +22,7 @@ impl VariableNode {
     }
 
     pub(super) fn _prt(&self, indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
-        let marker = if is_last { "└── " } else { "├── " };
-
-        let _ = queue!(
-            stdout,
-            style::SetForegroundColor(style::Color::Grey),
-            style::Print(&indent),
-            style::Print(marker),
-            style::SetForegroundColor(style::Color::Green),
-            style::Print(format!("{}\n", self)),
-            style::ResetColor,
-        );
+        let _ = super::print_node(style::Color::Green, &indent, self, is_last, stdout);
     }
 }
 

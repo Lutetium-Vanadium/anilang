@@ -1,7 +1,6 @@
-use super::SyntaxNode;
+use super::{print_node, SyntaxNode};
 use crate::text_span::TextSpan;
-use crossterm::{queue, style};
-use std::io::prelude::*;
+use crossterm::style;
 
 #[derive(Default, Debug, Clone)]
 pub struct BlockNode {
@@ -25,17 +24,7 @@ impl BlockNode {
     }
 
     pub(crate) fn _prt(&self, mut indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
-        let marker = if is_last { "└── " } else { "├── " };
-
-        let _ = queue!(
-            stdout,
-            style::SetForegroundColor(style::Color::Grey),
-            style::Print(&indent),
-            style::Print(marker),
-            style::SetForegroundColor(style::Color::Blue),
-            style::Print(format!("{}\n", self)),
-            style::ResetColor,
-        );
+        let _ = print_node(style::Color::Blue, &indent, self, is_last, stdout);
 
         indent += if is_last { "   " } else { "│  " };
 

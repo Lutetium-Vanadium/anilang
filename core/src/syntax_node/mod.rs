@@ -26,6 +26,27 @@ pub use loop_node::*;
 pub use unary_node::*;
 pub use variable_node::*;
 
+#[inline]
+fn print_node<T: std::fmt::Display>(
+    colour: style::Color,
+    indent: &str,
+    node: &T,
+    is_last: bool,
+    stdout: &mut std::io::Stdout,
+) -> crossterm::Result<()> {
+    let marker = if is_last { "└── " } else { "├── " };
+
+    queue!(
+        stdout,
+        style::SetForegroundColor(style::Color::Grey),
+        style::Print(indent),
+        style::Print(marker),
+        style::SetForegroundColor(colour),
+        style::Print(format!("{}\n", node)),
+        style::ResetColor,
+    )
+}
+
 #[derive(Debug, Clone)]
 pub enum SyntaxNode {
     AssignmentNode(assignment_node::AssignmentNode),
@@ -95,17 +116,7 @@ impl SyntaxNode {
             SyntaxNode::UnaryNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::VariableNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::BadNode => {
-                let marker = if is_last { "└── " } else { "├── " };
-
-                let _ = queue!(
-                    stdout,
-                    style::SetForegroundColor(style::Color::Grey),
-                    style::Print(&indent),
-                    style::Print(marker),
-                    style::SetForegroundColor(style::Color::Yellow),
-                    style::Print(format!("{}\n", self)),
-                    style::ResetColor,
-                );
+                let _ = print_node(style::Color::Red, &indent, self, is_last, stdout);
             }
         }
     }
