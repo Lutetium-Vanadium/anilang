@@ -186,20 +186,33 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         let fn_token = self.match_token(TokenKind::FnKeyword);
         let ident = self.match_token(TokenKind::Ident);
         self.match_token(TokenKind::OpenParan);
+
         let mut args = Vec::new();
-        loop {
-            let next = self.next();
-            match next.kind {
-                TokenKind::Ident => {
+        if self.cur().kind != TokenKind::CloseParan {
+            loop {
+                // `match_token()` not used because if the token is not an ident, loop should stop
+                let next = self.next();
+                if next.kind == TokenKind::Ident {
                     args.push(self.src[&next.text_span].to_owned());
-                    self.match_token(TokenKind::CommaOperator);
-                }
-                TokenKind::CloseParan => break,
-                _ => {
+
+                    let next = self.next();
+                    match next.kind {
+                        TokenKind::CommaOperator => {}
+                        TokenKind::CloseParan => break,
+                        _ => {
+                            self.diagnostics
+                                .unexpected_token(next, Some(&TokenKind::CommaOperator));
+                            break;
+                        }
+                    }
+                } else {
                     self.diagnostics
                         .unexpected_token(next, Some(&TokenKind::Ident));
+                    break;
                 }
             }
+        } else {
+            self.next();
         }
 
         self.match_token(TokenKind::OpenBrace);
