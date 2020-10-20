@@ -23,8 +23,8 @@ fn main() -> Result<()> {
             let value =
                 anilang::Evaluator::evaluate_with_global(root, &mut diagnostics, &mut global_scope);
             match value {
-                value if !diagnostics.any() => println!("{}", value),
                 anilang::Value::Null => {}
+                value if !diagnostics.any() => println!("{}", value),
                 _ => {}
             }
         }
