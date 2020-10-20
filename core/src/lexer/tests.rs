@@ -89,6 +89,7 @@ fn lexes_kind_properly() {
     assert_eq!(lex_one("while").kind, TokenKind::WhileKeyword);
     assert_eq!(lex_one("loop").kind, TokenKind::LoopKeyword);
     assert_eq!(lex_one("let").kind, TokenKind::LetKeyword);
+    assert_eq!(lex_one("fn").kind, TokenKind::FnKeyword);
 
     assert_eq!(lex_one(";").kind, TokenKind::Bad);
 }

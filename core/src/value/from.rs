@@ -113,6 +113,7 @@ impl Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::syntax_node::BlockNode;
 
     fn s(s: &str) -> Value {
         Value::String(Rc::new(RefCell::new(s.to_owned())))
@@ -150,5 +151,15 @@ mod tests {
     fn val_to_ref_string() {
         assert_eq!(s("s").as_rc_str().borrow().as_str(), "s");
         assert_eq!(s("s").as_ref_str().as_str(), "s");
+    }
+
+    #[test]
+    fn val_to_ref_fn() {
+        let rc_f = Rc::new(Function::new(
+            vec!["a".to_owned(), "b".to_owned()],
+            BlockNode::new(vec![], Default::default()),
+        ));
+        let f = Value::Function(Rc::clone(&rc_f));
+        assert!(Rc::ptr_eq(&rc_f, &f.as_rc_fn()));
     }
 }

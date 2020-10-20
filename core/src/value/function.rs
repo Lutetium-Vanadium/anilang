@@ -34,3 +34,12 @@ impl From<Function> for Value {
         Value::Function(std::rc::Rc::new(f))
     }
 }
+
+impl Default for Function {
+    fn default() -> Self {
+        Self {
+            args: Vec::new(),
+            body: BlockNode::new(Vec::new(), Default::default()),
+        }
+    }
+}

@@ -96,6 +96,85 @@ fn parse_calc_assignment_properly() {
 }
 
 #[test]
+fn parse_fn_declaration_properly() {
+    let tokens = vec![
+        Token::new(TokenKind::FnKeyword, 0, 2),
+        Token::new(TokenKind::Ident, 3, 1),
+        Token::new(TokenKind::OpenParan, 4, 1),
+        Token::new(TokenKind::CloseParan, 5, 1),
+        Token::new(TokenKind::OpenBrace, 7, 1),
+        Token::new(TokenKind::Number, 9, 3),
+        Token::new(TokenKind::CloseBrace, 13, 1),
+        Token::new(TokenKind::EOF, 14, 0),
+    ];
+
+    let root = parse("fn f() { 123 }", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let fdn = match &root.block[0] {
+        SyntaxNode::FnDeclarationNode(fdn) if &fdn.ident == "f" => fdn,
+        n => panic!("expected FnDeclarationNode with ident 'f', got {:?}", n),
+    };
+
+    assert_eq!(fdn.args.len(), 0);
+    assert_eq!(fdn.block.block.len(), 1);
+    assert!(matches!(
+        &fdn.block.block[0],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(123),
+            ..
+        })
+    ));
+
+    let tokens = vec![
+        Token::new(TokenKind::FnKeyword, 0, 2),
+        Token::new(TokenKind::Ident, 3, 1),
+        Token::new(TokenKind::OpenParan, 4, 1),
+        Token::new(TokenKind::Ident, 5, 1),
+        Token::new(TokenKind::CommaOperator, 6, 1),
+        Token::new(TokenKind::Ident, 8, 1),
+        Token::new(TokenKind::CloseParan, 9, 1),
+        Token::new(TokenKind::OpenBrace, 11, 1),
+        Token::new(TokenKind::Ident, 13, 1),
+        Token::new(TokenKind::PlusOperator, 15, 1),
+        Token::new(TokenKind::Ident, 17, 1),
+        Token::new(TokenKind::CloseBrace, 19, 1),
+        Token::new(TokenKind::EOF, 20, 0),
+    ];
+
+    let root = parse("fn f(a, b) { a + b }", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let fdn = match &root.block[0] {
+        SyntaxNode::FnDeclarationNode(fdn) if &fdn.ident == "f" => fdn,
+        n => panic!("expected FnDeclarationNode with ident 'f', got {:?}", n),
+    };
+
+    assert_eq!(fdn.args, vec!["a".to_owned(), "b".to_owned()]);
+    assert_eq!(fdn.block.block.len(), 1);
+    let bn = match &fdn.block.block[0] {
+        SyntaxNode::BinaryNode(bn) if bn.operator == TokenKind::PlusOperator => bn,
+        n => panic!("expected BinaryNode with PlusOperator, got {:?}", n),
+    };
+
+    assert_eq!(
+        match &*bn.left {
+            SyntaxNode::VariableNode(node::VariableNode { ident, .. }) => ident,
+            n => panic!("expected VariableNode, got {:?}", n),
+        },
+        "a"
+    );
+
+    assert_eq!(
+        match &*bn.right {
+            SyntaxNode::VariableNode(node::VariableNode { ident, .. }) => ident,
+            n => panic!("expected VariableNode, got {:?}", n),
+        },
+        "b"
+    );
+}
+
+#[test]
 fn parse_if_properly() {
     let tokens = vec![
         Token::new(TokenKind::IfKeyword, 0, 2),

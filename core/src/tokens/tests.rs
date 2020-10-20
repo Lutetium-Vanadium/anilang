@@ -93,6 +93,7 @@ fn correct_binary_precedence() {
     assert_eq!(t(WhileKeyword).binary_precedence(), 0);
     assert_eq!(t(LoopKeyword).binary_precedence(), 0);
     assert_eq!(t(LetKeyword).binary_precedence(), 0);
+    assert_eq!(t(FnKeyword).binary_precedence(), 0);
     assert_eq!(t(Bad).binary_precedence(), 0);
 }
 
@@ -137,5 +138,6 @@ fn is_calc_assign() {
     assert_eq!(t(WhileKeyword).is_calc_assign(), false);
     assert_eq!(t(LoopKeyword).is_calc_assign(), false);
     assert_eq!(t(LetKeyword).is_calc_assign(), false);
+    assert_eq!(t(FnKeyword).is_calc_assign(), false);
     assert_eq!(t(Bad).is_calc_assign(), false);
 }

@@ -288,6 +288,74 @@ fn evaluate_declaration_properly() {
 }
 
 #[test]
+fn evaluate_fn_declaration_properly() {
+    let mut scope = scope::Scope::new();
+    let return_f = eval_s(
+        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
+            ident: "a".to_owned(),
+            span: span(),
+            args: vec!["arg1".to_owned()],
+            block: node::BlockNode {
+                span: span(),
+                block: vec![],
+            },
+        }),
+        &mut scope,
+    );
+    let func = scope.try_get_value("a").unwrap().clone().as_rc_fn();
+    assert!(Rc::ptr_eq(&return_f.as_rc_fn(), &func));
+    assert_eq!(func.args, vec!["arg1".to_owned()]);
+    assert_eq!(func.body.block.len(), 0);
+}
+
+#[test]
+fn evaluate_fn_call_properly() {
+    let mut scope = scope::Scope::new();
+    scope.insert(
+        "add".to_owned(),
+        Value::Function(Rc::new(Function::new(
+            vec!["a".to_owned(), "b".to_owned()],
+            node::BlockNode {
+                span: span(),
+                block: vec![SyntaxNode::BinaryNode(node::BinaryNode {
+                    span: span(),
+                    operator: TokenKind::PlusOperator,
+                    left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
+                        ident: "a".to_owned(),
+                        span: span(),
+                    })),
+                    right: Box::new(SyntaxNode::VariableNode(node::VariableNode {
+                        ident: "b".to_owned(),
+                        span: span(),
+                    })),
+                })],
+            },
+        ))),
+    );
+
+    assert_eq!(
+        eval_s(
+            SyntaxNode::FnCallNode(node::FnCallNode {
+                ident: "add".to_owned(),
+                span: span(),
+                args: vec![
+                    SyntaxNode::LiteralNode(node::LiteralNode {
+                        value: i(1),
+                        span: span(),
+                    }),
+                    SyntaxNode::LiteralNode(node::LiteralNode {
+                        value: i(2),
+                        span: span(),
+                    }),
+                ],
+            }),
+            &mut scope,
+        ),
+        i(3)
+    );
+}
+
+#[test]
 fn evaluate_binary_properly() {
     assert_eq!(
         eval(SyntaxNode::BinaryNode(node::BinaryNode {

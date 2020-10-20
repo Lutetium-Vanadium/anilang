@@ -14,6 +14,9 @@ fn b(b: bool) -> Value {
 fn s(s: &str) -> Value {
     Value::String(Rc::new(RefCell::new(s.to_owned())))
 }
+fn func() -> Value {
+    Value::Function(Rc::new(Function::default()))
+}
 fn n() -> Value {
     Value::Null
 }
@@ -60,6 +63,7 @@ fn unary_plus_valid() {
 fn unary_plus_invalid() {
     assert_eq!(b(true).plus(), err_it(Type::Bool));
     assert_eq!(s("a").plus(), err_it(Type::String));
+    assert_eq!(func().plus(), err_it(Type::Function));
     assert_eq!(n().plus(), err_it(Type::Null));
 }
 
@@ -73,6 +77,7 @@ fn unary_minus_valid() {
 fn unary_minus_invalid() {
     assert_eq!(b(true).minus(), err_it(Type::Bool));
     assert_eq!(s("a").minus(), err_it(Type::String));
+    assert_eq!(func().minus(), err_it(Type::Function));
     assert_eq!(n().minus(), err_it(Type::Null));
 }
 
@@ -90,6 +95,7 @@ fn unary_not() {
     assert_eq!(bool::from(s("s").not()), false);
     assert_eq!(bool::from(s("").not()), true);
 
+    assert_eq!(bool::from(func().not()), false);
     assert_eq!(bool::from(n().not()), true);
 }
 
@@ -106,10 +112,12 @@ fn binary_add_valid() {
 fn binary_add_invalid() {
     assert_eq!(b(true).add(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").add(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(func().add(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().add(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).add(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).add(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(i(10).add(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).add(n()), err_ir(Type::Null, Type::Int.into()));
 }
 
@@ -125,10 +133,12 @@ fn binary_sub_valid() {
 fn binary_sub_invalid() {
     assert_eq!(b(true).sub(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").sub(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(func().sub(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().sub(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).sub(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).sub(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(i(10).sub(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).sub(n()), err_ir(Type::Null, Type::Int.into()));
 }
 
@@ -144,10 +154,12 @@ fn binary_mult_valid() {
 fn binary_mult_invalid() {
     assert_eq!(b(true).mult(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").mult(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(func().mult(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().mult(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).mult(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).mult(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(i(10).mult(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).mult(n()), err_ir(Type::Null, Type::Int.into()));
 }
 
@@ -163,10 +175,12 @@ fn binary_div_valid() {
 fn binary_div_invalid() {
     assert_eq!(b(true).div(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").div(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(func().div(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().div(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).div(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).div(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(i(10).div(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).div(n()), err_ir(Type::Null, Type::Int.into()));
 
     assert_eq!(i(10).div(i(0)), Err(ErrorKind::DivideByZero));
@@ -184,10 +198,18 @@ fn binary_mod_valid() {
 fn binary_mod_invalid() {
     assert_eq!(b(true).modulo(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").modulo(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(
+        func().modulo(i(10)),
+        err_ir(Type::Int, Type::Function.into())
+    );
     assert_eq!(n().modulo(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).modulo(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).modulo(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(
+        i(10).modulo(func()),
+        err_ir(Type::Function, Type::Int.into())
+    );
     assert_eq!(i(10).modulo(n()), err_ir(Type::Null, Type::Int.into()));
 
     assert_eq!(i(10).modulo(i(0)), Err(ErrorKind::DivideByZero));
@@ -205,10 +227,12 @@ fn binary_pow_valid() {
 fn binary_pow_invalid() {
     assert_eq!(b(true).pow(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").pow(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(func().pow(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().pow(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).pow(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).pow(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(i(10).pow(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).pow(n()), err_ir(Type::Null, Type::Int.into()));
 
     assert_eq!(i(10).pow(i(-10)), err_eb(-10));
@@ -228,6 +252,10 @@ fn binary_or() {
 
     assert_eq!(s("hello").or(s("world")), s("hello"));
     assert_eq!(s("").or(s("world")), s("world"));
+
+    let f = func();
+    assert_eq!(f.clone().or(i(2)), f.clone());
+    assert_eq!(b(false).or(f.clone()), f);
 
     assert_eq!(n().or(i(2)), i(2));
     assert!(n().or(n()).is_null());
@@ -249,6 +277,9 @@ fn binary_and() {
     assert_eq!(s("hello").and(s("world")), s("world"));
     assert_eq!(s("").and(s("world")), s(""));
 
+    assert_eq!(func().and(i(2)), i(2));
+    assert_eq!(b(false).and(func()), b(false));
+
     assert!(n().and(i(2)).is_null());
     assert!(n().and(n()).is_null());
 
@@ -267,6 +298,8 @@ fn binary_eq() {
     assert_eq!(s("hello"), s("hello"));
     assert_eq!(b(true), b(true));
     assert_eq!(b(false), b(false));
+    let f = func();
+    assert_eq!(f.clone(), f);
 }
 
 #[test]
@@ -278,6 +311,7 @@ fn binary_ne() {
     assert_ne!(s("hello"), s("world"));
     assert_ne!(b(true), b(false));
     assert_ne!(b(false), b(true));
+    assert_ne!(func(), func());
     assert_ne!(n(), n());
 }
 

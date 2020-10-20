@@ -87,7 +87,7 @@ pub mod v {
 
 /// null != null, therefore checking if a value is null be using `assert_eq` or `==`, gives false
 /// negative, this should be used instead
-trait IsNull {
+pub trait IsNull {
     fn is_null(&self) -> bool;
 }
 impl IsNull for anilang::Value {

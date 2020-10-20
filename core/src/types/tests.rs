@@ -35,28 +35,40 @@ fn detect_implicit_cast() {
 fn detect_explicit_cast() {
     assert_eq!((Type::Int).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::Int).cast_type(&Type::String), Cast::Explicit);
+    assert_eq!((Type::Int).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::Int).cast_type(&Type::Null), Cast::Explicit);
 
     assert_eq!((Type::Bool).cast_type(&Type::Int), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::Int), Cast::Explicit);
+    assert_eq!((Type::Function).cast_type(&Type::Int), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::Int), Cast::Explicit);
 
     assert_eq!((Type::Float).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::Float).cast_type(&Type::String), Cast::Explicit);
+    assert_eq!((Type::Float).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::Float).cast_type(&Type::Null), Cast::Explicit);
 
     assert_eq!((Type::Bool).cast_type(&Type::Float), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::Float), Cast::Explicit);
+    assert_eq!((Type::Function).cast_type(&Type::Float), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::Float), Cast::Explicit);
 
     assert_eq!((Type::Bool).cast_type(&Type::String), Cast::Explicit);
+    assert_eq!((Type::Function).cast_type(&Type::String), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::String), Cast::Explicit);
 
     assert_eq!((Type::String).cast_type(&Type::Bool), Cast::Explicit);
+    assert_eq!((Type::String).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::Null), Cast::Explicit);
 
+    assert_eq!((Type::Bool).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::Bool).cast_type(&Type::Null), Cast::Explicit);
+
+    assert_eq!((Type::Function).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::Bool), Cast::Explicit);
+
+    assert_eq!((Type::Function).cast_type(&Type::Null), Cast::Explicit);
+    assert_eq!((Type::Null).cast_type(&Type::Function), Cast::Explicit);
 }
 
 #[test]
@@ -67,8 +79,8 @@ fn bitflag_type_to_string() {
     // It gives the types in order of enum declaration, and not the order in which they are
     // instantiated
     assert_eq!(
-        &(Type::Bool | Type::Float | Type::String).to_string(),
-        "float | string | bool"
+        &(Type::Function | Type::Float | Type::String).to_string(),
+        "float | string | function"
     );
     assert_eq!(&BitFlags::from(Type::Bool).to_string(), "bool");
 }
@@ -85,6 +97,9 @@ fn b(b: bool) -> Value {
 fn s(s: &str) -> Value {
     Value::String(Rc::new(RefCell::new(s.to_owned())))
 }
+fn func() -> Value {
+    Value::Function(Rc::new(Default::default()))
+}
 fn n() -> Value {
     Value::Null
 }
@@ -95,6 +110,7 @@ fn get_correct_type() {
     assert_eq!(f(0.0).type_(), Type::Float);
     assert_eq!(s("hello").type_(), Type::String);
     assert_eq!(b(true).type_(), Type::Bool);
+    assert_eq!(func().type_(), Type::Function);
     assert_eq!(n().type_(), Type::Null);
 }
 
@@ -115,6 +131,10 @@ fn try_cast_fail() {
     assert_eq!(i(0).try_cast(Type::Bool).err().unwrap(), Cast::Explicit);
     assert_eq!(f(0.0).try_cast(Type::String).err().unwrap(), Cast::Explicit);
     assert_eq!(
+        f(0.0).try_cast(Type::Function).err().unwrap(),
+        Cast::Explicit
+    );
+    assert_eq!(
         b(true).try_cast(Type::String).err().unwrap(),
         Cast::Explicit
     );
@@ -122,5 +142,6 @@ fn try_cast_fail() {
         s("hello").try_cast(Type::Float).err().unwrap(),
         Cast::Explicit
     );
+    assert_eq!(func().try_cast(Type::Float).err().unwrap(), Cast::Explicit);
     assert_eq!(n().try_cast(Type::Int).err().unwrap(), Cast::Explicit);
 }
