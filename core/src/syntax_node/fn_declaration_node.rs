@@ -37,9 +37,9 @@ impl FnDeclarationNode {
 
         println!("{}├── [", indent);
         for arg in self.args.iter() {
-            println!("{}· {}", indent, arg);
+            println!("{}│  {}", indent, arg);
         }
-        println!("{}]", indent);
+        println!("{}│ ]", indent);
         self.block._prt(indent, true, stdout);
     }
 }

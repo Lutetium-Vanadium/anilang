@@ -28,12 +28,9 @@ impl FnCallNode {
         let _ = print_node(style::Color::Blue, &indent, self, is_last, stdout);
 
         indent += if is_last { "   " } else { "│  " };
-
-        println!("{}├── (", indent);
-        for arg in self.args.iter() {
-            arg._prt(indent.clone(), is_last, stdout);
+        for (i, arg) in self.args.iter().enumerate() {
+            arg._prt(indent.clone(), i + 1 == self.args.len(), stdout);
         }
-        println!("{})", indent);
     }
 }
 
