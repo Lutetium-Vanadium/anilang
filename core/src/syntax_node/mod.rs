@@ -3,6 +3,7 @@ mod binary_node;
 mod block_node;
 mod break_node;
 mod declaration_node;
+mod fn_call_node;
 mod fn_declaration_node;
 mod if_node;
 mod loop_node;
@@ -21,6 +22,7 @@ pub use binary_node::*;
 pub use block_node::*;
 pub use break_node::*;
 pub use declaration_node::*;
+pub use fn_call_node::*;
 pub use fn_declaration_node::*;
 pub use if_node::*;
 pub use literal_node::*;
@@ -56,6 +58,7 @@ pub enum SyntaxNode {
     BlockNode(block_node::BlockNode),
     BreakNode(break_node::BreakNode),
     DeclarationNode(declaration_node::DeclarationNode),
+    FnCallNode(fn_call_node::FnCallNode),
     FnDeclarationNode(fn_declaration_node::FnDeclarationNode),
     IfNode(if_node::IfNode),
     LiteralNode(literal_node::LiteralNode),
@@ -74,6 +77,7 @@ impl fmt::Display for SyntaxNode {
             SyntaxNode::BlockNode(ref n) => write!(f, "{}", n),
             SyntaxNode::BreakNode(ref n) => write!(f, "{}", n),
             SyntaxNode::DeclarationNode(ref n) => write!(f, "{}", n),
+            SyntaxNode::FnCallNode(ref n) => write!(f, "{}", n),
             SyntaxNode::FnDeclarationNode(ref n) => write!(f, "{}", n),
             SyntaxNode::IfNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LiteralNode(ref n) => write!(f, "{}", n),
@@ -93,6 +97,7 @@ impl SyntaxNode {
             SyntaxNode::BlockNode(ref n) => &n.span,
             SyntaxNode::BreakNode(ref n) => &n.span,
             SyntaxNode::DeclarationNode(ref n) => &n.span,
+            SyntaxNode::FnCallNode(ref n) => &n.span,
             SyntaxNode::FnDeclarationNode(ref n) => &n.span,
             SyntaxNode::IfNode(ref n) => &n.span,
             SyntaxNode::LiteralNode(ref n) => &n.span,
@@ -115,6 +120,7 @@ impl SyntaxNode {
             SyntaxNode::BlockNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::BreakNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::DeclarationNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::FnCallNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::FnDeclarationNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::IfNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::LiteralNode(ref n) => n._prt(indent, is_last, stdout),

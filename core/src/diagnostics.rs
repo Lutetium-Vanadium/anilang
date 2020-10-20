@@ -374,4 +374,11 @@ impl<'a> Diagnostics<'a> {
 
         self.report(msg, span)
     }
+
+    pub fn incorrect_arg_count(&self, expected: usize, got: usize, span: TextSpan) {
+        self.report(
+            format!("TypeError: expected {} args, got {} args", expected, got),
+            span,
+        )
+    }
 }

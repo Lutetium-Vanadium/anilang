@@ -321,6 +321,9 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             TokenKind::String | TokenKind::Number | TokenKind::Boolean => {
                 self.parse_literal_expression()
             }
+            TokenKind::Ident if self.peek(1).kind == TokenKind::OpenParan => {
+                self.parse_fn_call_statement()
+            }
             TokenKind::Ident => {
                 SyntaxNode::VariableNode(node::VariableNode::new(self.next(), self.src))
             }
@@ -337,6 +340,31 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         let expression = self.parse_statement();
         self.match_token(TokenKind::CloseParan);
         expression
+    }
+
+    fn parse_fn_call_statement(&self) -> SyntaxNode {
+        let ident = self.next();
+        self.next();
+
+        let mut args = Vec::new();
+        let close_paran = if self.cur().kind == TokenKind::CloseParan {
+            self.next()
+        } else {
+            loop {
+                args.push(self.parse_statement());
+                let next = self.next();
+                match next.kind {
+                    TokenKind::CommaOperator => {}
+                    TokenKind::CloseParan => break next,
+                    _ => {
+                        self.diagnostics
+                            .unexpected_token(next, Some(&TokenKind::Ident));
+                    }
+                }
+            }
+        };
+
+        SyntaxNode::FnCallNode(node::FnCallNode::new(ident, args, close_paran, self.src))
     }
 
     fn parse_literal_expression(&self) -> SyntaxNode {

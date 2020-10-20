@@ -143,6 +143,7 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             SyntaxNode::AssignmentNode(node) => self.evaluate_assignment(node),
             SyntaxNode::DeclarationNode(node) => self.evaluate_declaration(node),
             SyntaxNode::FnDeclarationNode(node) => self.evaluate_fn_declaration(node),
+            SyntaxNode::FnCallNode(node) => self.evaluate_fn_call(node),
             SyntaxNode::BinaryNode(node) => self.evaluate_binary(node),
             SyntaxNode::UnaryNode(node) => self.evaluate_unary(node),
             SyntaxNode::BreakNode(_) => {
@@ -278,6 +279,45 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             .insert(node.ident, value.clone());
 
         value
+    }
+
+    fn evaluate_fn_call(&mut self, node: node::FnCallNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
+        let func = match self.get_var(&node.ident) {
+            Some(func) if func.type_() == Type::Function => func.clone(),
+            Some(v) => {
+                let type_ = v.type_();
+                self.diagnostics.from_value_error(
+                    ErrorKind::IncorrectType {
+                        got: type_,
+                        expected: Type::Function.into(),
+                    },
+                    node.span,
+                );
+                return Value::Null;
+            }
+            None => {
+                self.diagnostics.unknown_reference(&node.ident, node.span);
+                return Value::Null;
+            }
+        }
+        .as_rc_fn();
+
+        if func.args.len() != node.args.len() {
+            self.diagnostics
+                .incorrect_arg_count(func.args.len(), node.args.len(), node.span);
+            return Value::Null;
+        }
+
+        let mut scope = scope::Scope::new();
+        for (i, arg) in node.args.into_iter().enumerate() {
+            scope.insert(func.args[i].clone(), self.evaluate_node(arg));
+        }
+
+        self.evaluate_block_with_scope(func.body.clone(), scope).0
     }
 
     fn evaluate_binary(&mut self, node: node::BinaryNode) -> Value {
