@@ -85,3 +85,10 @@ while <cond> {
     ...
 }
 ```
+
+Functions can be declared in the following way:
+```rust
+fn <func_name>(<args>...) {
+    ...
+}
+```

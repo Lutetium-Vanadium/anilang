@@ -26,11 +26,24 @@ pub enum ErrorKind {
 /// the element
 #[derive(Debug, Clone)]
 pub enum Value {
+    /// `String`s are expensive to copy, so a `Rc` is used, copying the reference to the String,
+    /// and not the string itself. `Rc<T>` however gives only immutable access to the inner `T`,
+    /// so instead of directly using `Rc<String>`, we use `Rc<RefCell<String>>` to provide mutable
+    /// strings.
     String(Rc<RefCell<String>>),
+    /// Functions are expensive to copy because they contain the whole function body as well as
+    /// a `Vec<String>`, therefore a `Rc` is used. Since functions are immutable, `Rc<Function>`
+    /// can directly be used.
     Function(Rc<Function>), // Functions are not mutable
+    /// A primitive integer type, easy to copy, so is not placed in a `Rc`
     Int(i64),
+    /// A primitive float type, easy to copy, so is not placed in a `Rc`
     Float(f64),
+    /// A primitive bool type, easy to copy, so is not placed in a `Rc`
     Bool(bool),
+    /// `null` value is generated as a default value when no other value is known. So it is mainly
+    /// used when an error has occured, but the function still has to return a value even if it
+    /// will not be used.
     Null,
 }
 
@@ -40,11 +53,13 @@ impl PartialEq for Value {
     fn eq(&self, other: &Value) -> bool {
         let l = match self.try_cast(other.type_()) {
             Ok(l) => l,
+            // No implicit cast means it cannot be compared
             Err(_) => return false,
         };
 
         let r = match other.try_cast(l.type_()) {
             Ok(r) => r,
+            // No implicit cast means it cannot be compared
             Err(_) => return false,
         };
 
@@ -72,11 +87,13 @@ impl PartialOrd for Value {
     fn partial_cmp(&self, other: &Value) -> Option<std::cmp::Ordering> {
         let l = match self.try_cast(other.type_()) {
             Ok(l) => l,
+            // No implicit cast means it cannot be compared
             Err(_) => return None,
         };
 
         let r = match other.try_cast(l.type_()) {
             Ok(r) => r,
+            // No implicit cast means it cannot be compared
             Err(_) => return None,
         };
 
@@ -85,6 +102,7 @@ impl PartialOrd for Value {
             Value::Float(l) => l.partial_cmp(&r.into()),
             Value::Bool(l) => l.partial_cmp(&r.into()),
             Value::String(ref l) => l.borrow().as_str().partial_cmp(r.as_ref_str().as_str()),
+            // Functions have no ordering as they are just a container for a `BlockNode`
             Value::Function(_) => None,
             Value::Null => None,
         }
