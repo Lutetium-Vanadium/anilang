@@ -92,7 +92,7 @@ impl Error {
             queue!(
                 stdout,
                 style::SetForegroundColor(style::Color::DarkBlue),
-                style::Print(format!("{:0w$} | ", s, w = w)),
+                style::Print(format!("{: >w$} | ", s, w = w)),
                 style::ResetColor,
                 style::Print(&src.text[src.line(s).0..self.span.start()]),
                 style::SetForegroundColor(style::Color::DarkRed),
@@ -106,7 +106,7 @@ impl Error {
                     stdout,
                     style::SetForegroundColor(style::Color::DarkBlue),
                     style::SetAttribute(style::Attribute::NoUnderline),
-                    style::Print(format!("{:0w$} | ", i, w = w)),
+                    style::Print(format!("{: >w$} | ", i, w = w)),
                     style::SetForegroundColor(style::Color::DarkRed),
                     style::SetAttribute(style::Attribute::Underlined),
                     style::Print(&src.text[src.line(i).0..src.line(i).1]),
