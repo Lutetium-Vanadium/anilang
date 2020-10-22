@@ -31,7 +31,7 @@ pub struct History {
 
 impl History {
     pub fn new() -> Self {
-        History::with_capacity(100)
+        History::with_capacity(64)
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
