@@ -43,6 +43,10 @@ fn err_eb(got: i64) -> Result<Value> {
     })
 }
 
+fn err_ior(index: i64, len: i64) -> Result<Value> {
+    Err(ErrorKind::IndexOutOfRange { index, len })
+}
+
 impl Value {
     pub fn is_null(&self) -> bool {
         if let Type::Null = self.type_() {
@@ -97,6 +101,72 @@ fn unary_not() {
 
     assert_eq!(bool::from(func().not()), false);
     assert_eq!(bool::from(n().not()), true);
+}
+
+#[test]
+fn indexable_valid() {
+    assert!(s("string").indexable(Type::Int));
+}
+
+#[test]
+fn indexable_invalid() {
+    assert!(!s("string").indexable(Type::Float));
+    assert!(!s("string").indexable(Type::Bool));
+    assert!(!s("string").indexable(Type::String));
+    assert!(!s("string").indexable(Type::Function));
+    assert!(!s("string").indexable(Type::Null));
+
+    let values = [i(0), f(0.0), b(false), func(), n()];
+
+    for value in values.iter() {
+        assert!(!value.indexable(Type::Int));
+        assert!(!value.indexable(Type::Float));
+        assert!(!value.indexable(Type::Bool));
+        assert!(!value.indexable(Type::String));
+        assert!(!value.indexable(Type::Function));
+        assert!(!value.indexable(Type::Null));
+    }
+}
+
+#[test]
+fn get_at_valid() {
+    assert_eq!(s("string").get_at(i(0)).unwrap().as_ref_str().as_str(), "s");
+    assert_eq!(
+        s("string").get_at(i(-2)).unwrap().as_ref_str().as_str(),
+        "n"
+    );
+}
+
+#[test]
+fn get_at_invalid() {
+    assert_eq!(s("string").get_at(i(7)), err_ior(7, 6));
+    assert_eq!(s("string").get_at(i(-12)), err_ior(-12, 6));
+}
+
+#[test]
+fn set_at_valid() {
+    assert_eq!(
+        s("string")
+            .set_at(i(0), s("f"))
+            .unwrap()
+            .as_ref_str()
+            .as_str(),
+        "ftring"
+    );
+    assert_eq!(
+        s("string")
+            .set_at(i(-2), s("f"))
+            .unwrap()
+            .as_ref_str()
+            .as_str(),
+        "strifg"
+    );
+}
+
+#[test]
+fn set_at_invalid() {
+    assert_eq!(s("string").set_at(i(7), s("")), err_ior(7, 6));
+    assert_eq!(s("string").set_at(i(-12), s("")), err_ior(-12, 6));
 }
 
 #[test]

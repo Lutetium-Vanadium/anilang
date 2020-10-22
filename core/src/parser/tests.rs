@@ -45,13 +45,46 @@ fn parse_assignment_properly() {
     let root = parse("a = 123", tokens);
     assert_eq!(root.block.len(), 1);
 
-    let dn = match &root.block[0] {
+    let an = match &root.block[0] {
+        SyntaxNode::AssignmentNode(an) if &an.ident == "a" => an,
+        n => panic!("expected AssignmentNode with ident 'a', got {:?}", n),
+    };
+
+    assert!(an.index.is_none());
+    assert!(matches!(
+        *an.value,
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(123),
+            ..
+        })
+    ));
+
+    let tokens = vec![
+        Token::new(TokenKind::Ident, 0, 1),
+        Token::new(TokenKind::OpenBracket, 1, 1),
+        Token::new(TokenKind::Number, 2, 1),
+        Token::new(TokenKind::CloseBracket, 3, 1),
+        Token::new(TokenKind::AssignmentOperator, 5, 1),
+        Token::new(TokenKind::Number, 7, 3),
+        Token::new(TokenKind::EOF, 10, 0),
+    ];
+    let root = parse("a[0] = 123", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let an = match &root.block[0] {
         SyntaxNode::AssignmentNode(an) if &an.ident == "a" => an,
         n => panic!("expected AssignmentNode with ident 'a', got {:?}", n),
     };
 
     assert!(matches!(
-        *dn.value,
+        **an.index.as_ref().unwrap(),
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(0),
+            ..
+        })
+    ));
+    assert!(matches!(
+        *an.value,
         SyntaxNode::LiteralNode(node::LiteralNode {
             value: Value::Int(123),
             ..
@@ -410,6 +443,46 @@ fn parse_while_properly() {
             ..
         })
     ));
+}
+
+#[test]
+fn parse_index_properly() {
+    let tokens = vec![
+        Token::new(TokenKind::String, 0, 7),
+        Token::new(TokenKind::OpenBracket, 7, 1),
+        Token::new(TokenKind::Number, 8, 1),
+        Token::new(TokenKind::CloseBracket, 9, 1),
+        Token::new(TokenKind::EOF, 10, 0),
+    ];
+
+    let root = parse("'hello'[2]", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let index = match &root.block[0] {
+        SyntaxNode::IndexNode(index) => index,
+        n => panic!("Expected IndexNode, got {}", n),
+    };
+
+    assert!(matches!(
+        *index.index,
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(2),
+            ..
+        })
+    ));
+
+    assert_eq!(
+        match &*index.child {
+            SyntaxNode::LiteralNode(node::LiteralNode {
+                value: Value::String(s),
+                ..
+            }) => s,
+            n => panic!("Expected LiteralString, got {}", n),
+        }
+        .borrow()
+        .as_str(),
+        "hello"
+    );
 }
 
 #[test]

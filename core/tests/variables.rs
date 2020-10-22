@@ -138,3 +138,33 @@ fn variable_scoping() {
         v::i(98)
     );
 }
+
+#[test]
+fn index_assign_variables() {
+    assert_eq!(
+        execute(
+            "let a = 'hello'
+            a[2] = 'r'"
+        )
+        .unwrap(),
+        v::s("herlo")
+    );
+
+    assert_eq!(
+        execute(
+            "let a = 'hello'
+            a[2] = ''"
+        )
+        .unwrap(),
+        v::s("helo")
+    );
+
+    assert_eq!(
+        execute(
+            "let a = 'hello'
+            a[2] = 'llll'"
+        )
+        .unwrap(),
+        v::s("helllllo")
+    );
+}

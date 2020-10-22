@@ -12,3 +12,9 @@ fn escapes_string() {
     assert_eq!(execute(r#"'String\''"#).unwrap(), v::s("String'"));
     assert_eq!(execute(r#"'String\\'"#).unwrap(), v::s("String\\"));
 }
+
+#[test]
+fn index_strings() {
+    assert_eq!(execute(r#"'hello'[2]"#).unwrap(), v::s("l"));
+    assert_eq!(execute(r#"'hello'[-2]"#).unwrap(), v::s("l"));
+}

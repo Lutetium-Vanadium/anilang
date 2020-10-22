@@ -133,13 +133,79 @@ fn evaluate_variable_properly() {
     );
 }
 
-// NOTE if conditions don't need to be checked, since the following
+#[test]
+fn evaluate_index_properly() {
+    let mut scope = scope::Scope::new();
+    scope.insert("a".to_owned(), s("hello world"));
+    assert_eq!(
+        eval_s(
+            SyntaxNode::IndexNode(node::IndexNode {
+                span: span(),
+                index: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
+                    span: span(),
+                    operator: TokenKind::StarOperator,
+                    left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: i(2),
+                    })),
+                    right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: i(3),
+                    })),
+                })),
+                child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
+                    ident: "a".to_owned(),
+                    span: span()
+                })),
+            }),
+            &mut scope
+        )
+        .as_ref_str()
+        .as_str(),
+        "w"
+    );
+
+    assert_eq!(
+        eval_b(node::BlockNode {
+            block: vec![
+                SyntaxNode::DeclarationNode(node::DeclarationNode {
+                    ident: "a".to_owned(),
+                    value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                        value: s("hello world"),
+                        span: span(),
+                    })),
+                    span: span()
+                }),
+                SyntaxNode::IndexNode(node::IndexNode {
+                    span: span(),
+                    index: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: i(2),
+                    })),
+                    child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
+                        ident: "a".to_owned(),
+                        span: span()
+                    })),
+                }),
+            ],
+            span: span(),
+        })
+        .as_ref_str()
+        .as_str(),
+        "l"
+    );
+}
+
+// NOTE else if conditions don't need to be checked, since the following
+// ```
 // if <cond-1> {
 //     ...
 // } else if <cond-2> {
 //     ...
 // }
+// ```
 // is syntactic sugar for
+// ```
 // if <cond-1> {
 //     ...
 // } else {
@@ -147,6 +213,7 @@ fn evaluate_variable_properly() {
 //         ...
 //     }
 // }
+// ```
 #[test]
 fn evaluate_if_properly() {
     let if_tree = |cond| {
@@ -259,15 +326,45 @@ fn evaluate_assignment_properly() {
                 span: span(),
                 index: None,
                 value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(2),
+                    value: s("world"),
                     span: span(),
                 })),
             }),
             &mut scope
-        ),
-        i(2)
+        )
+        .as_ref_str()
+        .as_str(),
+        "world",
     );
-    assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 2);
+    assert_eq!(
+        scope.try_get_value("a").unwrap().as_ref_str().as_str(),
+        "world"
+    );
+
+    assert_eq!(
+        eval_s(
+            SyntaxNode::AssignmentNode(node::AssignmentNode {
+                ident: "a".to_owned(),
+                span: span(),
+                index: Some(Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                    value: i(1),
+                    span: span(),
+                }))),
+                value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                    value: s("a"),
+                    span: span(),
+                })),
+            }),
+            &mut scope
+        )
+        .as_ref_str()
+        .as_str(),
+        "warld",
+    );
+    assert_eq!(
+        scope.try_get_value("a").unwrap().as_ref_str().as_str(),
+        "warld"
+    );
 }
 
 #[test]
