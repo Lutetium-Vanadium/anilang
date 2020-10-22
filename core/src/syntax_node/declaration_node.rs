@@ -37,6 +37,6 @@ impl DeclarationNode {
 use std::fmt;
 impl fmt::Display for DeclarationNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DeclarationOperator")
+        write!(f, "DeclarationOperator: {}", self.ident)
     }
 }

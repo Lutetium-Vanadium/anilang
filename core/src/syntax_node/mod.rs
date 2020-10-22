@@ -6,6 +6,7 @@ mod declaration_node;
 mod fn_call_node;
 mod fn_declaration_node;
 mod if_node;
+mod index_node;
 mod loop_node;
 mod unary_node;
 mod variable_node;
@@ -25,6 +26,7 @@ pub use declaration_node::*;
 pub use fn_call_node::*;
 pub use fn_declaration_node::*;
 pub use if_node::*;
+pub use index_node::*;
 pub use literal_node::*;
 pub use loop_node::*;
 pub use unary_node::*;
@@ -53,18 +55,19 @@ fn print_node<T: std::fmt::Display>(
 
 #[derive(Debug, Clone)]
 pub enum SyntaxNode {
-    AssignmentNode(assignment_node::AssignmentNode),
-    BinaryNode(binary_node::BinaryNode),
-    BlockNode(block_node::BlockNode),
-    BreakNode(break_node::BreakNode),
-    DeclarationNode(declaration_node::DeclarationNode),
-    FnCallNode(fn_call_node::FnCallNode),
-    FnDeclarationNode(fn_declaration_node::FnDeclarationNode),
-    IfNode(if_node::IfNode),
-    LiteralNode(literal_node::LiteralNode),
-    LoopNode(loop_node::LoopNode),
-    UnaryNode(unary_node::UnaryNode),
-    VariableNode(variable_node::VariableNode),
+    AssignmentNode(AssignmentNode),
+    BinaryNode(BinaryNode),
+    BlockNode(BlockNode),
+    BreakNode(BreakNode),
+    DeclarationNode(DeclarationNode),
+    FnCallNode(FnCallNode),
+    FnDeclarationNode(FnDeclarationNode),
+    IfNode(IfNode),
+    IndexNode(IndexNode),
+    LiteralNode(LiteralNode),
+    LoopNode(LoopNode),
+    UnaryNode(UnaryNode),
+    VariableNode(VariableNode),
     BadNode,
 }
 
@@ -80,6 +83,7 @@ impl fmt::Display for SyntaxNode {
             SyntaxNode::FnCallNode(ref n) => write!(f, "{}", n),
             SyntaxNode::FnDeclarationNode(ref n) => write!(f, "{}", n),
             SyntaxNode::IfNode(ref n) => write!(f, "{}", n),
+            SyntaxNode::IndexNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LiteralNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LoopNode(ref n) => write!(f, "{}", n),
             SyntaxNode::UnaryNode(ref n) => write!(f, "{}", n),
@@ -100,6 +104,7 @@ impl SyntaxNode {
             SyntaxNode::FnCallNode(ref n) => &n.span,
             SyntaxNode::FnDeclarationNode(ref n) => &n.span,
             SyntaxNode::IfNode(ref n) => &n.span,
+            SyntaxNode::IndexNode(ref n) => &n.span,
             SyntaxNode::LiteralNode(ref n) => &n.span,
             SyntaxNode::LoopNode(ref n) => &n.span,
             SyntaxNode::UnaryNode(ref n) => &n.span,
@@ -123,6 +128,7 @@ impl SyntaxNode {
             SyntaxNode::FnCallNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::FnDeclarationNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::IfNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::IndexNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::LiteralNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::LoopNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::UnaryNode(ref n) => n._prt(indent, is_last, stdout),

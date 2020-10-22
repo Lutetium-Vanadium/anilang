@@ -370,6 +370,14 @@ impl<'a> Diagnostics<'a> {
                 expected.to_string(),
                 got
             ),
+            value::ErrorKind::Unindexable { val_t, index_t } => format!(
+                "Unindexable: Value of type <{}> is not indexable by <{}>",
+                val_t, index_t,
+            ),
+            value::ErrorKind::IndexOutOfRange { index, len } => format!(
+                "IndexOutOfRange: index {} out of range, len: {}",
+                index, len,
+            ),
         };
 
         self.report(msg, span)

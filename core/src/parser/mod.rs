@@ -95,6 +95,19 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         cur
     }
 
+    fn is_index_assign(&self) -> bool {
+        let mut i = self.index() + 2;
+        while i < self.tokens.len() - 1 {
+            if self.tokens[i].kind == TokenKind::CloseBracket {
+                return self.tokens[i + 1].kind == TokenKind::AssignmentOperator;
+            };
+
+            i += 1;
+        }
+
+        false
+    }
+
     // ----- Parse Methods -----
 
     fn parse_block(&self, delim: TokenKind) -> node::BlockNode {
@@ -126,6 +139,11 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             TokenKind::LetKeyword => self.parse_declaration_expression(),
             TokenKind::Ident if self.peek(1).kind == TokenKind::AssignmentOperator => {
                 self.parse_assignment_expression()
+            }
+            TokenKind::Ident
+                if self.peek(1).kind == TokenKind::OpenBracket && self.is_index_assign() =>
+            {
+                self.parse_index_assignment_expression()
             }
             TokenKind::Ident
                 if self.peek(1).is_calc_assign()
@@ -162,6 +180,18 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         self.next();
         let value = self.parse_statement();
         SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
+    }
+
+    fn parse_index_assignment_expression(&self) -> SyntaxNode {
+        let ident = self.next();
+        self.next();
+        let index = self.parse_statement();
+        self.match_token(TokenKind::CloseBracket);
+        self.next();
+        let value = self.parse_statement();
+        SyntaxNode::AssignmentNode(node::AssignmentNode::new_index(
+            ident, index, value, self.src,
+        ))
     }
 
     fn parse_calc_assignment_expression(&self) -> SyntaxNode {
@@ -309,7 +339,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     }
 
     fn parse_general_expression(&self) -> SyntaxNode {
-        match self.cur().kind {
+        let expr = match self.cur().kind {
             // Float in the form of '.123'
             //                       |^^^- Number
             //                  Dot -^
@@ -332,6 +362,15 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 self.diagnostics.unexpected_token(&self.next(), None);
                 SyntaxNode::BadNode
             }
+        };
+
+        if self.cur().kind == TokenKind::OpenBracket {
+            self.next();
+            let index = self.parse_statement();
+            let close_bracket = self.match_token(TokenKind::CloseBracket);
+            SyntaxNode::IndexNode(node::IndexNode::new(expr, index, close_bracket))
+        } else {
+            expr
         }
     }
 

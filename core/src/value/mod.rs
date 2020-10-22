@@ -19,6 +19,8 @@ pub enum ErrorKind {
     IncorrectLeftType { got: Type, expected: BitFlags<Type> },
     IncorrectRightType { got: Type, expected: BitFlags<Type> },
     OutOfBounds { got: i64, start: i64, end: i64 },
+    IndexOutOfRange { index: i64, len: i64 },
+    Unindexable { val_t: Type, index_t: Type },
     DivideByZero,
 }
 
@@ -174,6 +176,93 @@ impl Value {
     /// Unary Not !<val>
     pub fn not(self) -> Value {
         Value::Bool(!bool::from(self))
+    }
+}
+
+/// Convert an `i64` index on some length, to a `usize`
+///
+/// len has to be a positive i64.
+/// if `-len <= index < len` returns a `usize`
+/// otherwise returns an error
+///
+/// It works similar to python indexing
+///   0   1   2   3   4   5   6   7   8
+/// .---.---.---.---.---.---.---.---.---.
+/// |   |   |   |   |   |   |   |   |   | ---> len = 9
+/// '---'---'---'---'---'---'---'---'---'
+///  -9  -8  -7  -6  -5  -4  -3  -2  -1
+fn normalise_index(index: i64, len: i64) -> Result<usize> {
+    if index < 0 {
+        if len < -index {
+            Err(ErrorKind::IndexOutOfRange { index, len })
+        } else {
+            Ok((len + index) as usize)
+        }
+    } else {
+        if len <= index {
+            Err(ErrorKind::IndexOutOfRange { index, len })
+        } else {
+            Ok(index as usize)
+        }
+    }
+}
+
+/// impl for index operations
+impl Value {
+    pub fn indexable(&self, index_type: Type) -> bool {
+        match self.type_() {
+            Type::String if index_type == Type::Int => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_at(self, index: Value) -> Result<Value> {
+        if !self.indexable(index.type_()) {
+            return Err(ErrorKind::Unindexable {
+                val_t: self.type_(),
+                index_t: index.type_(),
+            });
+        }
+
+        match self {
+            Value::String(s) => {
+                let s = s.borrow();
+                let i = normalise_index(i64::from(index), s.chars().count() as i64)?;
+
+                Ok(Value::String(Rc::new(RefCell::new(String::from(
+                    s.chars().nth(i).unwrap(),
+                )))))
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn set_at(self, index: Value, value: Value) -> Result<Value> {
+        if !self.indexable(index.type_()) {
+            return Err(ErrorKind::Unindexable {
+                val_t: self.type_(),
+                index_t: index.type_(),
+            });
+        }
+
+        match &self {
+            Value::String(s) => {
+                let value = value
+                    .try_cast(Type::String)
+                    .map_err(|_| ErrorKind::IncorrectType {
+                        got: value.type_(),
+                        expected: Type::String.into(),
+                    })?;
+                let i = normalise_index(i64::from(index), s.borrow().chars().count() as i64)?;
+
+                let (index, _) = s.borrow().char_indices().nth(i).unwrap();
+                s.borrow_mut()
+                    .replace_range(index..(index + 1), value.as_ref_str().as_str());
+
+                Ok(self)
+            }
+            _ => unreachable!(),
+        }
     }
 }
 

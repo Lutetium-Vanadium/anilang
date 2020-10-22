@@ -62,6 +62,7 @@ fn evaluate_block_properly() {
                     SyntaxNode::AssignmentNode(node::AssignmentNode {
                         ident: "a".to_owned(),
                         span: span(),
+                        index: None,
                         value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
                             operator: TokenKind::MinusOperator,
                             span: span(),
@@ -208,6 +209,7 @@ fn evaluate_loop_properly() {
                 SyntaxNode::AssignmentNode(node::AssignmentNode {
                     ident: "a".to_owned(),
                     span: span(),
+                    index: None,
                     value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
                         operator: TokenKind::PlusOperator,
                         span: span(),
@@ -255,6 +257,7 @@ fn evaluate_assignment_properly() {
             SyntaxNode::AssignmentNode(node::AssignmentNode {
                 ident: "a".to_owned(),
                 span: span(),
+                index: None,
                 value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
                     value: i(2),
                     span: span(),

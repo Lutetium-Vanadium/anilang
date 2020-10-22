@@ -138,6 +138,7 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             SyntaxNode::BlockNode(block) => self.evaluate_block(block),
             SyntaxNode::LiteralNode(literal) => self.evaluate_literal(literal),
             SyntaxNode::VariableNode(variable) => self.evaluate_variable(variable),
+            SyntaxNode::IndexNode(node) => self.evaluate_index(node),
             SyntaxNode::IfNode(node) => self.evaluate_if(node),
             SyntaxNode::LoopNode(node) => self.evaluate_loop(node),
             SyntaxNode::AssignmentNode(node) => self.evaluate_assignment(node),
@@ -192,6 +193,23 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         }
     }
 
+    fn evaluate_index(&mut self, node: node::IndexNode) -> Value {
+        if self.should_exit() {
+            return Value::Null;
+        }
+
+        let child = self.evaluate_node(*node.child);
+        let index = self.evaluate_node(*node.index);
+
+        match child.get_at(index) {
+            Ok(value) => value,
+            Err(e) => {
+                self.diagnostics.from_value_error(e, node.span);
+                Value::Null
+            }
+        }
+    }
+
     fn evaluate_if(&mut self, node: node::IfNode) -> Value {
         if self.should_exit() {
             return Value::Null;
@@ -239,8 +257,28 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         }
 
         let value = self.evaluate_node(*node.value);
-        self.insert_var(node.ident, value.clone(), node.span);
-        value
+
+        if let Some(index) = node.index {
+            let index = self.evaluate_node(*index);
+            let var = match self.get_var(&node.ident) {
+                Some(var) => var.clone(),
+                None => {
+                    self.diagnostics.unknown_reference(&node.ident, node.span);
+                    return Value::Null;
+                }
+            };
+
+            match var.set_at(index, value) {
+                Ok(v) => v,
+                Err(e) => {
+                    self.diagnostics.from_value_error(e, node.span);
+                    Value::Null
+                }
+            }
+        } else {
+            self.insert_var(node.ident, value.clone(), node.span);
+            value
+        }
     }
 
     fn evaluate_declaration(&mut self, node: node::DeclarationNode) -> Value {
