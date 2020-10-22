@@ -460,7 +460,7 @@ fn parse_index_properly() {
 
     let index = match &root.block[0] {
         SyntaxNode::IndexNode(index) => index,
-        n => panic!("Expected IndexNode, got {}", n),
+        n => panic!("Expected IndexNode, got {:?}", n),
     };
 
     assert!(matches!(
@@ -477,12 +477,48 @@ fn parse_index_properly() {
                 value: Value::String(s),
                 ..
             }) => s,
-            n => panic!("Expected LiteralString, got {}", n),
+            n => panic!("Expected LiteralString, got {:?}", n),
         }
         .borrow()
         .as_str(),
         "hello"
     );
+}
+
+#[test]
+fn parse_block_properly() {
+    let tokens = vec![
+        Token::new(TokenKind::OpenBrace, 0, 1),
+        Token::new(TokenKind::Number, 2, 3),
+        Token::new(TokenKind::Number, 6, 3),
+        Token::new(TokenKind::CloseBrace, 10, 1),
+        Token::new(TokenKind::EOF, 11, 1),
+    ];
+    let root = parse("{ 123 456 }", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let block = match &root.block[0] {
+        SyntaxNode::BlockNode(block) => block,
+        n => panic!("Expected BlockNode, got {:?}", n),
+    };
+
+    assert_eq!(block.block.len(), 2);
+
+    assert!(matches!(
+        &block.block[0],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(123),
+            ..
+        })
+    ));
+
+    assert!(matches!(
+        &block.block[1],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(456),
+            ..
+        })
+    ));
 }
 
 #[test]

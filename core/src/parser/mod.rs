@@ -357,6 +357,10 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             TokenKind::Ident => {
                 SyntaxNode::VariableNode(node::VariableNode::new(self.next(), self.src))
             }
+            TokenKind::OpenBrace => {
+                self.next();
+                SyntaxNode::BlockNode(self.parse_block(TokenKind::CloseBrace))
+            }
             TokenKind::OpenParan => self.parse_paran_expression(),
             _ => {
                 self.diagnostics.unexpected_token(&self.next(), None);
