@@ -15,7 +15,7 @@ impl UnaryNode {
     pub fn new(operator: &Token, child: SyntaxNode) -> Self {
         Self {
             operator: operator.kind.clone(),
-            span: operator.text_span.clone(),
+            span: TextSpan::from_spans(&operator.text_span, child.span()),
             child: Box::new(child),
         }
     }

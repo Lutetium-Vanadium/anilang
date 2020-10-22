@@ -15,7 +15,7 @@ impl BinaryNode {
     pub fn new(operator: &Token, left: SyntaxNode, right: SyntaxNode) -> Self {
         Self {
             operator: operator.kind.clone(),
-            span: operator.text_span.clone(),
+            span: TextSpan::from_spans(left.span(), right.span()),
             left: Box::new(left),
             right: Box::new(right),
         }
