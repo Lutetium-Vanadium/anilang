@@ -92,6 +92,12 @@ impl Repl {
         }
     }
 
+    fn exit(&mut self) -> ! {
+        let _ = terminal::disable_raw_mode();
+        println!();
+        std::process::exit(0)
+    }
+
     /// Print a command
     fn print_lines(
         &self,
@@ -167,9 +173,7 @@ impl Repl {
                     event::KeyCode::Char(chr)
                         if e.modifiers.contains(event::KeyModifiers::CONTROL) && chr == 'c' =>
                     {
-                        terminal::disable_raw_mode()?;
-                        println!();
-                        std::process::exit(0);
+                        self.exit()
                     }
                     event::KeyCode::Char(chr) => {
                         if c.use_history {
@@ -310,9 +314,7 @@ impl Repl {
                         let is_command = if !c.use_history && lines.len() == 1 {
                             match &lines[0] as &str {
                                 "exit" => {
-                                    terminal::disable_raw_mode()?;
-                                    println!();
-                                    std::process::exit(0);
+                                    self.exit();
                                 }
                                 ".tree" => {
                                     self.show_tree = !self.show_tree;
