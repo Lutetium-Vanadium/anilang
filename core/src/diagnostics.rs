@@ -122,7 +122,7 @@ impl Error {
                 style::Print(" | "),
                 style::SetForegroundColor(style::Color::DarkRed),
                 style::SetAttribute(style::Attribute::Underlined),
-                style::Print(&src.text[src.line(e).1..self.span.end()]),
+                style::Print(&src.text[src.line(e).0..self.span.end()]),
                 style::ResetColor,
                 style::SetAttribute(style::Attribute::NoUnderline),
                 style::Print(&src.text[self.span.end()..src.line(e).1]),
@@ -135,6 +135,7 @@ impl Error {
             style::SetForegroundColor(style::Color::DarkBlue),
             style::Print(" ".repeat(w)),
             style::Print(" |\n"),
+            style::ResetColor,
         )?;
 
         stdout.flush().map_err(|e| crossterm::ErrorKind::IoError(e))
