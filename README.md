@@ -92,3 +92,17 @@ fn <func_name>(<args>...) {
     ...
 }
 ```
+
+Strings can be indexed using `[]`
+```rust
+"string"[1]
+variable[2]
+```
+They can also be assigned to
+```rust
+let variable = "----"
+variable[2] = "a"  // variable is "--a-"
+variable[1] = "ab" // variable is "-aba-"
+```
+Strings larger than 1 character will remove the character at that index
+and insert the characters given
