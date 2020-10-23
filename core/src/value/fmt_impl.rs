@@ -16,3 +16,32 @@ impl fmt::Display for Value {
         }
     }
 }
+
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::String(ref s) => {
+                let s = &s.borrow();
+                // while printing quotes must be escaped to avoid confusion
+                if s.contains("'") && !s.contains("\"") {
+                    write!(f, "\"{}\"", s)
+                } else {
+                    write!(f, "'")?;
+                    for i in s.chars() {
+                        if i == '\'' {
+                            write!(f, "\\{}", i)?;
+                        } else {
+                            write!(f, "{}", i)?;
+                        }
+                    }
+                    write!(f, "'")
+                }
+            }
+            Value::Function(ref func) => write!(f, "{}", func),
+            Value::Int(i) => write!(f, "{:?}", i),
+            Value::Float(fl) => write!(f, "{:?}", fl),
+            Value::Bool(b) => write!(f, "{:?}", b),
+            Value::Null => write!(f, "null"),
+        }
+    }
+}

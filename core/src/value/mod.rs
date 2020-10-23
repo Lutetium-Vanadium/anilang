@@ -28,7 +28,7 @@ pub enum ErrorKind {
 
 /// Enum to store value of any type, values which are tuple structs, contain the actual value in
 /// the element
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Value {
     /// `String`s are expensive to copy, so a `Rc` is used, copying the reference to the String,
     /// and not the string itself. `Rc<T>` however gives only immutable access to the inner `T`,

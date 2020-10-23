@@ -24,7 +24,7 @@ fn main() -> Result<()> {
                 anilang::Evaluator::evaluate_with_global(root, &mut diagnostics, &mut global_scope);
             match value {
                 anilang::Value::Null => {}
-                value if !diagnostics.any() => println!("{}", value),
+                value if !diagnostics.any() => println!("{:?}", value),
                 _ => {}
             }
         }
