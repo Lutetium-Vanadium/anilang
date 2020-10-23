@@ -8,4 +8,5 @@ edition = "2018"
 
 [dependencies]
 crossterm = "0.17.7"
+app_dirs2 = "2.3"
 anilang-core = { path="core" }

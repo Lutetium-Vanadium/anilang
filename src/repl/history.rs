@@ -1,5 +1,8 @@
 use std::cell::Cell;
 use std::collections::VecDeque;
+use std::fs;
+use std::io::{self, prelude::*};
+use std::path::PathBuf;
 
 /// Maintains REPL history of previously executed commands
 ///
@@ -27,18 +30,21 @@ pub struct History {
     /// There is a need for a state where no history is in currently being used. For that state, -1
     /// is used.
     iter_i: Cell<isize>,
+    /// File to persist the history
+    path: Option<PathBuf>,
 }
 
 impl History {
-    pub fn new() -> Self {
-        History::with_capacity(64)
+    pub fn new(path: Option<PathBuf>) -> Self {
+        History::with_capacity(64, path)
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
-        History {
+    pub fn with_capacity(capacity: usize, path: Option<PathBuf>) -> Self {
+        Self {
             buffer: VecDeque::with_capacity(capacity + 1),
             capacity,
             iter_i: Cell::new(-1),
+            path,
         }
     }
 
@@ -53,6 +59,63 @@ impl History {
 
         self.reset_iter();
         self.buffer.push_front(lines);
+    }
+
+    // Each command is seperated by a '---'
+    // So for example if there are 2 commands:
+    // ```
+    // let a = 2
+    // ```
+    // and
+    // ```
+    // if a < 2 {
+    //     a += 4
+    // }
+    // ```
+    //
+    // The history file produced would be:
+    // ```
+    // let a = 2
+    // ---
+    // if a < 2 {
+    //     a += 4
+    // }
+    // ---
+    // ```
+    /// Reads from history file and appends it to the current history buffer
+    pub fn read_from_file(&mut self) -> io::Result<()> {
+        let contents = fs::read_to_string(self.path.as_ref().ok_or(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Path to persisted file not found",
+        ))?)?;
+        let mut lines = Vec::new();
+        for line in contents.lines() {
+            if line.starts_with("---") {
+                self.push(lines);
+                lines = Vec::new();
+            } else {
+                lines.push(line.to_owned());
+            }
+        }
+        Ok(())
+    }
+
+    /// Writes to the history path
+    pub fn write_to_file(&self) -> io::Result<()> {
+        let mut f = fs::File::create(self.path.as_ref().ok_or(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Path to persisted file not found",
+        ))?)?;
+
+        for lines in &self.buffer {
+            for line in lines {
+                f.write(line.as_bytes())?;
+                f.write(b"\n")?;
+            }
+            f.write(b"---\n")?;
+        }
+
+        Ok(())
     }
 
     fn _len(&self) -> isize {
@@ -118,5 +181,11 @@ impl std::ops::Index<usize> for History {
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.buffer[index]
+    }
+}
+
+impl Drop for History {
+    fn drop(&mut self) {
+        let _ = self.write_to_file();
     }
 }

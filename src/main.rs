@@ -3,7 +3,7 @@ use crossterm::Result;
 mod repl;
 
 fn main() -> Result<()> {
-    let mut repl = repl::Repl::new("» ", "· ");
+    let mut repl = repl::Repl::new("» ", "· ", repl::get_persistant_file_path());
 
     let mut global_scope = anilang::Scope::new();
 

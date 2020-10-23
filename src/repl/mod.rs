@@ -10,6 +10,7 @@ use history::History;
 use crossterm::{cursor, event, execute, queue, style, terminal};
 use std::cmp::min;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 pub struct Repl {
     /// The history of commands run
@@ -37,15 +38,27 @@ pub struct Repl {
 }
 
 impl Repl {
-    pub fn new(leader: &'static str, continued_leader: &'static str) -> Self {
-        Self {
-            history: History::new(),
+    pub fn new(
+        leader: &'static str,
+        continued_leader: &'static str,
+        path: Option<PathBuf>,
+    ) -> Self {
+        let should_persist = path.is_some();
+
+        let mut repl = Self {
+            history: History::new(path),
             leader,
             leader_len: leader.chars().count(),
             continued_leader,
             continued_leader_len: leader.chars().count(),
             show_tree: false,
+        };
+
+        if should_persist {
+            let _ = repl.history.read_from_file();
         }
+
+        repl
     }
 
     #[allow(dead_code)]
@@ -53,15 +66,24 @@ impl Repl {
         leader: &'static str,
         continued_leader: &'static str,
         capacity: usize,
+        path: Option<PathBuf>,
     ) -> Self {
-        Self {
-            history: History::with_capacity(capacity),
+        let should_persist = path.is_some();
+
+        let mut repl = Self {
+            history: History::with_capacity(capacity, path),
             leader,
             leader_len: leader.chars().count(),
             continued_leader,
             continued_leader_len: leader.chars().count(),
             show_tree: false,
+        };
+
+        if should_persist {
+            let _ = repl.history.read_from_file();
         }
+
+        repl
     }
 
     /// Gives current command based on the cursor
@@ -95,6 +117,7 @@ impl Repl {
     fn exit(&mut self) -> ! {
         let _ = terminal::disable_raw_mode();
         println!();
+        let _ = self.history.write_to_file();
         std::process::exit(0)
     }
 
@@ -422,6 +445,16 @@ impl Repl {
         }
 
         Ok(src)
+    }
+}
+
+pub fn get_persistant_file_path() -> Option<PathBuf> {
+    match app_dirs2::data_root(app_dirs2::AppDataType::UserCache) {
+        Ok(mut p) => {
+            p.push(".anilang-history");
+            Some(p)
+        }
+        Err(_) => None,
     }
 }
 
