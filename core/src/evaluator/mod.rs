@@ -319,10 +319,31 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         value
     }
 
+    fn try_evaluate_inbuilt_fn(
+        &mut self,
+        node: node::FnCallNode,
+    ) -> Result<Value, node::FnCallNode> {
+        match node.ident.as_str() {
+            "print" => {
+                for node in node.args {
+                    print!("{} ", self.evaluate_node(node));
+                }
+                println!();
+                Ok(Value::Null)
+            }
+            _ => Err(node),
+        }
+    }
+
     fn evaluate_fn_call(&mut self, node: node::FnCallNode) -> Value {
         if self.should_exit() {
             return Value::Null;
         }
+
+        let node = match self.try_evaluate_inbuilt_fn(node) {
+            Ok(val) => return val,
+            Err(node) => node,
+        };
 
         let func = match self.get_var(&node.ident) {
             Some(func) if func.type_() == Type::Function => func.clone(),

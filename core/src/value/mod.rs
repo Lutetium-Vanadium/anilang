@@ -75,7 +75,7 @@ impl PartialEq for Value {
                 Rc::ptr_eq(&l_rc, &r.clone().as_rc_str())
                     || l_rc.borrow().as_str() == r.as_ref_str().as_str()
             }
-            // Functions are only equal if they are references to the same defination, the actual
+            // Functions are only equal if they are references to the same definition, the actual
             // args and function body are not considered.
             Value::Function(ref l) => Rc::ptr_eq(l, &r.as_rc_fn()),
             Value::Null => false,
@@ -118,23 +118,7 @@ use std::fmt;
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::String(ref s) => {
-                let s = &s.borrow();
-                // while printing quotes must be escaped to avoid confusion
-                if s.contains("'") && !s.contains("\"") {
-                    write!(f, "\"{}\"", s)
-                } else {
-                    write!(f, "'")?;
-                    for i in s.chars() {
-                        if i == '\'' {
-                            write!(f, "\\{}", i)?;
-                        } else {
-                            write!(f, "{}", i)?;
-                        }
-                    }
-                    write!(f, "'")
-                }
-            }
+            Value::String(ref s) => write!(f, "{}", s.borrow()),
             Value::Function(ref func) => write!(f, "{}", func),
             Value::Int(i) => write!(f, "{}", i),
             Value::Float(fl) => write!(f, "{}", fl),
@@ -269,7 +253,7 @@ impl Value {
 /// impl for the various binary operations
 impl Value {
     /// Binary Addition
-    ///   * Arithemtic: <num> + <num>
+    ///   * Arithmetic: <num> + <num>
     ///   * Concatenation: <str1> + <str2> = "<str1><str2>"
     pub fn add(self, right: Value) -> Result<Value> {
         let right = right
