@@ -13,10 +13,17 @@ pub fn print_linted(stdout: &mut io::Stdout, line: &str) -> crossterm::Result<()
         _ => {
             let src = anilang::SourceText::new(line);
             let mut diagnostics = anilang::Diagnostics::new(&src).no_print();
-            let tokens = anilang::Lexer::lex(&src, &mut diagnostics);
+            let mut tokens = anilang::Lexer::lex(&src, &mut diagnostics)
+                .into_iter()
+                .peekable();
 
-            for token in tokens {
-                print_token(&src[&token.text_span], &token.kind, stdout)?;
+            while let Some(token) = tokens.next() {
+                print_token(
+                    &src[&token.text_span],
+                    &token.kind,
+                    tokens.peek().map(|t| &t.kind),
+                    stdout,
+                )?;
             }
         }
     }
@@ -45,6 +52,7 @@ use style::Color;
 fn print_token(
     text: &str,
     token_kind: &TokenKind,
+    next_token: Option<&TokenKind>,
     stdout: &mut io::Stdout,
 ) -> crossterm::Result<()> {
     let colour = match token_kind {
@@ -86,6 +94,14 @@ fn print_token(
                 style::Print(text),
                 style::SetAttribute(style::Attribute::NoUnderline),
             );
+        }
+
+        TokenKind::Ident => {
+            if let Some(TokenKind::OpenParan) = next_token {
+                Color::DarkGreen
+            } else {
+                Color::Reset
+            }
         }
 
         _ => Color::Reset,
