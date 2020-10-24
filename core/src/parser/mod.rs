@@ -362,6 +362,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 SyntaxNode::BlockNode(self.parse_block(TokenKind::CloseBrace))
             }
             TokenKind::OpenParan => self.parse_paran_expression(),
+            TokenKind::OpenBracket => self.parse_list_expression(),
             _ => {
                 self.diagnostics.unexpected_token(&self.next(), None);
                 SyntaxNode::BadNode
@@ -378,36 +379,50 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         }
     }
 
-    fn parse_paran_expression(&self) -> SyntaxNode {
-        self.match_token(TokenKind::OpenParan);
-        let expression = self.parse_statement();
-        self.match_token(TokenKind::CloseParan);
-        expression
+    fn parse_comma_seperated_values(&self, delim: TokenKind) -> (Vec<SyntaxNode>, &Token) {
+        let mut args = Vec::new();
+
+        let end_delim = if self.cur().kind == delim {
+            self.next()
+        } else {
+            loop {
+                args.push(self.parse_statement());
+                let next = self.next();
+                match &next.kind {
+                    TokenKind::CommaOperator => {}
+                    kind if kind == &delim => break next,
+                    _ => {
+                        self.diagnostics
+                            .unexpected_token(next, Some(&TokenKind::CommaOperator));
+                    }
+                }
+            }
+        };
+
+        (args, end_delim)
     }
 
     fn parse_fn_call_statement(&self) -> SyntaxNode {
         let ident = self.next();
         self.next();
 
-        let mut args = Vec::new();
-        let close_paran = if self.cur().kind == TokenKind::CloseParan {
-            self.next()
-        } else {
-            loop {
-                args.push(self.parse_statement());
-                let next = self.next();
-                match next.kind {
-                    TokenKind::CommaOperator => {}
-                    TokenKind::CloseParan => break next,
-                    _ => {
-                        self.diagnostics
-                            .unexpected_token(next, Some(&TokenKind::Ident));
-                    }
-                }
-            }
-        };
+        let (args, close_paran) = self.parse_comma_seperated_values(TokenKind::CloseParan);
 
         SyntaxNode::FnCallNode(node::FnCallNode::new(ident, args, close_paran, self.src))
+    }
+
+    fn parse_list_expression(&self) -> SyntaxNode {
+        let open_bracket = self.match_token(TokenKind::OpenBracket);
+        let (list, close_bracket) = self.parse_comma_seperated_values(TokenKind::CloseBracket);
+
+        SyntaxNode::ListNode(node::ListNode::new(open_bracket, list, close_bracket))
+    }
+
+    fn parse_paran_expression(&self) -> SyntaxNode {
+        self.match_token(TokenKind::OpenParan);
+        let expression = self.parse_statement();
+        self.match_token(TokenKind::CloseParan);
+        expression
     }
 
     fn parse_literal_expression(&self) -> SyntaxNode {

@@ -137,6 +137,7 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         match node {
             SyntaxNode::BlockNode(block) => self.evaluate_block(block),
             SyntaxNode::LiteralNode(literal) => self.evaluate_literal(literal),
+            SyntaxNode::ListNode(node) => self.evaluate_list(node),
             SyntaxNode::VariableNode(variable) => self.evaluate_variable(variable),
             SyntaxNode::IndexNode(node) => self.evaluate_index(node),
             SyntaxNode::IfNode(node) => self.evaluate_if(node),
@@ -249,6 +250,14 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
 
     fn evaluate_literal(&self, literal: node::LiteralNode) -> Value {
         literal.value
+    }
+
+    fn evaluate_list(&mut self, node: node::ListNode) -> Value {
+        let mut list = Vec::with_capacity(node.elements.len());
+        for e in node.elements {
+            list.push(self.evaluate_node(e));
+        }
+        Value::List(std::rc::Rc::new(std::cell::RefCell::new(list)))
     }
 
     fn evaluate_assignment(&mut self, node: node::AssignmentNode) -> Value {
