@@ -78,6 +78,12 @@ pub mod v {
         Value::String(Rc::new(RefCell::new(s.to_owned())))
     }
 
+    /// Creates an `anilang::Value::List()`
+    #[allow(dead_code)]
+    pub fn l(l: Vec<Value>) -> Value {
+        Value::List(Rc::new(RefCell::new(l)))
+    }
+
     /// Creates an `anilang::Value::Null`
     #[allow(dead_code)]
     pub fn n() -> Value {

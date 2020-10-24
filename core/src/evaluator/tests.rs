@@ -19,6 +19,9 @@ fn b(b: bool) -> Value {
 fn s(s: &str) -> Value {
     Value::String(Rc::new(RefCell::new(s.to_owned())))
 }
+fn l(l: Vec<Value>) -> Value {
+    Value::List(Rc::new(RefCell::new(l)))
+}
 
 fn eval_b(root: node::BlockNode) -> Value {
     // The source text is only needed in diagnostics, so can be ignored
@@ -311,6 +314,28 @@ fn evaluate_literal_properly() {
             val
         );
     }
+}
+
+#[test]
+fn evaluate_list_properly() {
+    let elements = [i(0), s("a"), l(vec![f(0.0), b(false)])];
+
+    assert_eq!(
+        eval(SyntaxNode::ListNode(node::ListNode {
+            span: span(),
+            elements: elements
+                .iter()
+                .map(|e| {
+                    SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: e.clone(),
+                    })
+                })
+                .collect(),
+        }))
+        .as_ref_list()[..],
+        elements,
+    );
 }
 
 #[test]

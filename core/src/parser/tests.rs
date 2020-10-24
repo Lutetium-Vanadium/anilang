@@ -522,6 +522,43 @@ fn parse_block_properly() {
 }
 
 #[test]
+fn parse_list_properly() {
+    let tokens = vec![
+        Token::new(TokenKind::OpenBracket, 0, 1),
+        Token::new(TokenKind::Number, 1, 3),
+        Token::new(TokenKind::CommaOperator, 4, 1),
+        Token::new(TokenKind::Number, 6, 3),
+        Token::new(TokenKind::CloseBracket, 9, 1),
+        Token::new(TokenKind::EOF, 10, 1),
+    ];
+    let root = parse("[123, 456]", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let list = match &root.block[0] {
+        SyntaxNode::ListNode(list) => list,
+        n => panic!("Expected ListNode, got {:?}", n),
+    };
+
+    assert_eq!(list.elements.len(), 2);
+
+    assert!(matches!(
+        &list.elements[0],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(123),
+            ..
+        })
+    ));
+
+    assert!(matches!(
+        &list.elements[1],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(456),
+            ..
+        })
+    ));
+}
+
+#[test]
 fn parse_int_properly() {
     let tokens = vec![
         Token::new(TokenKind::Number, 0, 3),
