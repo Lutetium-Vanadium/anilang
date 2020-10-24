@@ -9,7 +9,7 @@
 ///     _ => unreachable!()
 /// }
 /// ```
-use super::{Function, Value};
+use super::{Function, List, Value};
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
@@ -62,6 +62,7 @@ impl From<Value> for bool {
     fn from(val: Value) -> bool {
         match val {
             Value::String(s) => s.borrow().len() != 0,
+            Value::List(l) => l.borrow().len() != 0,
             Value::Int(i) => i != 0,
             Value::Float(f) => f != 0.0,
             Value::Bool(b) => b,
@@ -78,6 +79,7 @@ impl From<&Value> for bool {
     fn from(val: &Value) -> bool {
         match val {
             Value::String(s) => s.borrow().len() != 0,
+            Value::List(l) => l.borrow().len() != 0,
             Value::Int(i) => i != &0,
             Value::Float(f) => f != &0.0,
             Value::Bool(b) => *b,
@@ -98,6 +100,19 @@ impl Value {
     pub fn as_ref_str(&self) -> Ref<String> {
         match self {
             Value::String(ref s) => s.borrow(),
+            _ => unreachable!(),
+        }
+    }
+    pub fn as_rc_list(self) -> Rc<RefCell<List>> {
+        match self {
+            Value::List(l) => l,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn as_ref_list(&self) -> Ref<List> {
+        match self {
+            Value::List(ref l) => l.borrow(),
             _ => unreachable!(),
         }
     }

@@ -8,6 +8,7 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::String(ref s) => write!(f, "{}", s.borrow()),
+            Value::List(ref s) => write!(f, "{:?}", s.borrow()),
             Value::Function(ref func) => write!(f, "{}", func),
             Value::Int(i) => write!(f, "{}", i),
             Value::Float(fl) => write!(f, "{}", fl),
@@ -37,6 +38,7 @@ impl fmt::Debug for Value {
                     write!(f, "'")
                 }
             }
+            Value::List(ref s) => write!(f, "{:?}", s.borrow()),
             Value::Function(ref func) => write!(f, "{}", func),
             Value::Int(i) => write!(f, "{:?}", i),
             Value::Float(fl) => write!(f, "{:?}", fl),
