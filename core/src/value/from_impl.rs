@@ -134,6 +134,14 @@ mod tests {
         Value::String(Rc::new(RefCell::new(s.to_owned())))
     }
 
+    fn i(i: i64) -> Value {
+        Value::Int(i)
+    }
+
+    fn l(l: List) -> Value {
+        Value::List(Rc::new(RefCell::new(l)))
+    }
+
     #[test]
     fn val_to_int() {
         assert_eq!(i64::from(Value::Int(10)), 10);
@@ -166,6 +174,18 @@ mod tests {
     fn val_to_ref_string() {
         assert_eq!(s("s").as_rc_str().borrow().as_str(), "s");
         assert_eq!(s("s").as_ref_str().as_str(), "s");
+    }
+
+    #[test]
+    fn val_to_ref_list() {
+        assert_eq!(
+            l(vec![i(0), i(1), s("s")]).as_rc_list().borrow()[..],
+            [i(0), i(1), s("s")]
+        );
+        assert_eq!(
+            l(vec![i(0), i(1), s("s")]).as_ref_list()[..],
+            [i(0), i(1), s("s")]
+        );
     }
 
     #[test]

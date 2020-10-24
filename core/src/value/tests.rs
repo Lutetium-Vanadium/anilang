@@ -14,6 +14,9 @@ fn b(b: bool) -> Value {
 fn s(s: &str) -> Value {
     Value::String(Rc::new(RefCell::new(s.to_owned())))
 }
+fn l(l: List) -> Value {
+    Value::List(Rc::new(RefCell::new(l)))
+}
 fn func() -> Value {
     Value::Function(Rc::new(Function::default()))
 }
@@ -67,6 +70,7 @@ fn unary_plus_valid() {
 fn unary_plus_invalid() {
     assert_eq!(b(true).plus(), err_it(Type::Bool));
     assert_eq!(s("a").plus(), err_it(Type::String));
+    assert_eq!(l(vec![]).plus(), err_it(Type::List));
     assert_eq!(func().plus(), err_it(Type::Function));
     assert_eq!(n().plus(), err_it(Type::Null));
 }
@@ -81,6 +85,7 @@ fn unary_minus_valid() {
 fn unary_minus_invalid() {
     assert_eq!(b(true).minus(), err_it(Type::Bool));
     assert_eq!(s("a").minus(), err_it(Type::String));
+    assert_eq!(l(vec![]).minus(), err_it(Type::List));
     assert_eq!(func().minus(), err_it(Type::Function));
     assert_eq!(n().minus(), err_it(Type::Null));
 }
@@ -99,6 +104,9 @@ fn unary_not() {
     assert_eq!(bool::from(s("s").not()), false);
     assert_eq!(bool::from(s("").not()), true);
 
+    assert_eq!(bool::from(l(vec![i(0)]).not()), false);
+    assert_eq!(bool::from(l(vec![]).not()), true);
+
     assert_eq!(bool::from(func().not()), false);
     assert_eq!(bool::from(n().not()), true);
 }
@@ -106,15 +114,20 @@ fn unary_not() {
 #[test]
 fn indexable_valid() {
     assert!(s("string").indexable(Type::Int));
+    assert!(l(vec![]).indexable(Type::Int));
 }
 
 #[test]
 fn indexable_invalid() {
-    assert!(!s("string").indexable(Type::Float));
-    assert!(!s("string").indexable(Type::Bool));
-    assert!(!s("string").indexable(Type::String));
-    assert!(!s("string").indexable(Type::Function));
-    assert!(!s("string").indexable(Type::Null));
+    let values = [s("string"), l(vec![])];
+
+    for value in values.iter() {
+        assert!(!value.indexable(Type::Float));
+        assert!(!value.indexable(Type::Bool));
+        assert!(!value.indexable(Type::String));
+        assert!(!value.indexable(Type::Function));
+        assert!(!value.indexable(Type::Null));
+    }
 
     let values = [i(0), f(0.0), b(false), func(), n()];
 
@@ -135,12 +148,24 @@ fn get_at_valid() {
         s("string").get_at(i(-2)).unwrap().as_ref_str().as_str(),
         "n"
     );
+
+    assert_eq!(l(vec![i(0), f(2.0), b(true)]).get_at(i(0)).unwrap(), i(0));
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).get_at(i(-2)).unwrap(),
+        f(2.0)
+    );
 }
 
 #[test]
 fn get_at_invalid() {
     assert_eq!(s("string").get_at(i(7)), err_ior(7, 6));
     assert_eq!(s("string").get_at(i(-12)), err_ior(-12, 6));
+
+    assert_eq!(l(vec![i(0), f(2.0), b(true)]).get_at(i(7)), err_ior(7, 3));
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).get_at(i(-12)),
+        err_ior(-12, 3)
+    );
 }
 
 #[test]
@@ -161,12 +186,36 @@ fn set_at_valid() {
             .as_str(),
         "strifg"
     );
+
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)])
+            .set_at(i(0), s("string"))
+            .unwrap()
+            .as_ref_list()[..],
+        [s("string"), f(2.0), b(true)]
+    );
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)])
+            .set_at(i(-2), s("string"))
+            .unwrap()
+            .as_ref_list()[..],
+        [i(0), s("string"), b(true)]
+    );
 }
 
 #[test]
 fn set_at_invalid() {
     assert_eq!(s("string").set_at(i(7), s("")), err_ior(7, 6));
     assert_eq!(s("string").set_at(i(-12), s("")), err_ior(-12, 6));
+
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).set_at(i(7), s("")),
+        err_ior(7, 3)
+    );
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).set_at(i(-12), s("")),
+        err_ior(-12, 3)
+    );
 }
 
 #[test]
@@ -175,18 +224,29 @@ fn binary_add_valid() {
     assert_eq!(i(1).add(f(2.0)), Ok(f(3.0)));
     assert_eq!(f(1.0).add(i(2)), Ok(f(3.0)));
     assert_eq!(f(1.0).add(f(2.0)), Ok(f(3.0)));
-    assert_eq!(s("hello").add(s("world")), Ok(s("helloworld")));
+    assert_eq!(
+        l(vec![i(0), f(2.0)]).add(l(vec![b(true)])),
+        Ok(l(vec![i(0), f(2.0), b(true)]))
+    );
 }
 
 #[test]
 fn binary_add_invalid() {
     assert_eq!(b(true).add(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").add(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).add(i(10)),
+        err_ir(Type::Int, Type::List.into())
+    );
     assert_eq!(func().add(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().add(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).add(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).add(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(
+        i(10).add(l(vec![i(0), f(2.0), b(true)])),
+        err_ir(Type::List, Type::Int.into())
+    );
     assert_eq!(i(10).add(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).add(n()), err_ir(Type::Null, Type::Int.into()));
 }
@@ -203,11 +263,19 @@ fn binary_sub_valid() {
 fn binary_sub_invalid() {
     assert_eq!(b(true).sub(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").sub(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).sub(i(10)),
+        err_ir(Type::Int, Type::List.into())
+    );
     assert_eq!(func().sub(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().sub(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).sub(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).sub(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(
+        i(10).sub(l(vec![i(0), f(2.0), b(true)])),
+        err_ir(Type::List, Type::Int.into())
+    );
     assert_eq!(i(10).sub(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).sub(n()), err_ir(Type::Null, Type::Int.into()));
 }
@@ -224,11 +292,19 @@ fn binary_mult_valid() {
 fn binary_mult_invalid() {
     assert_eq!(b(true).mult(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").mult(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).mult(i(10)),
+        err_ir(Type::Int, Type::List.into())
+    );
     assert_eq!(func().mult(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().mult(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).mult(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).mult(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(
+        i(10).mult(l(vec![i(0), f(2.0), b(true)])),
+        err_ir(Type::List, Type::Int.into())
+    );
     assert_eq!(i(10).mult(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).mult(n()), err_ir(Type::Null, Type::Int.into()));
 }
@@ -245,11 +321,19 @@ fn binary_div_valid() {
 fn binary_div_invalid() {
     assert_eq!(b(true).div(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").div(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).div(i(10)),
+        err_ir(Type::Int, Type::List.into())
+    );
     assert_eq!(func().div(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().div(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).div(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).div(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(
+        i(10).div(l(vec![i(0), f(2.0), b(true)])),
+        err_ir(Type::List, Type::Int.into())
+    );
     assert_eq!(i(10).div(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).div(n()), err_ir(Type::Null, Type::Int.into()));
 
@@ -269,6 +353,10 @@ fn binary_mod_invalid() {
     assert_eq!(b(true).modulo(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").modulo(i(10)), err_ir(Type::Int, Type::String.into()));
     assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).modulo(i(10)),
+        err_ir(Type::Int, Type::List.into())
+    );
+    assert_eq!(
         func().modulo(i(10)),
         err_ir(Type::Int, Type::Function.into())
     );
@@ -276,6 +364,10 @@ fn binary_mod_invalid() {
 
     assert_eq!(i(10).modulo(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).modulo(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(
+        i(10).modulo(l(vec![i(0), f(2.0), b(true)])),
+        err_ir(Type::List, Type::Int.into())
+    );
     assert_eq!(
         i(10).modulo(func()),
         err_ir(Type::Function, Type::Int.into())
@@ -297,11 +389,19 @@ fn binary_pow_valid() {
 fn binary_pow_invalid() {
     assert_eq!(b(true).pow(i(10)), err_ir(Type::Int, Type::Bool.into()));
     assert_eq!(s("a").pow(i(10)), err_ir(Type::Int, Type::String.into()));
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).pow(i(10)),
+        err_ir(Type::Int, Type::List.into())
+    );
     assert_eq!(func().pow(i(10)), err_ir(Type::Int, Type::Function.into()));
     assert_eq!(n().pow(i(10)), err_ir(Type::Int, Type::Null.into()));
 
     assert_eq!(i(10).pow(b(true)), err_ir(Type::Bool, Type::Int.into()));
     assert_eq!(i(10).pow(s("a")), err_ir(Type::String, Type::Int.into()));
+    assert_eq!(
+        i(10).pow(l(vec![i(0), f(2.0), b(true)])),
+        err_ir(Type::List, Type::Int.into())
+    );
     assert_eq!(i(10).pow(func()), err_ir(Type::Function, Type::Int.into()));
     assert_eq!(i(10).pow(n()), err_ir(Type::Null, Type::Int.into()));
 
@@ -322,6 +422,15 @@ fn binary_or() {
 
     assert_eq!(s("hello").or(s("world")), s("hello"));
     assert_eq!(s("").or(s("world")), s("world"));
+
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).or(l(vec![i(0), f(2.0), b(true)])),
+        l(vec![i(0), f(2.0), b(true)])
+    );
+    assert_eq!(
+        l(vec![]).or(l(vec![i(0), f(2.0), b(true)])),
+        l(vec![i(0), f(2.0), b(true)])
+    );
 
     let f = func();
     assert_eq!(f.clone().or(i(2)), f.clone());
@@ -347,6 +456,12 @@ fn binary_and() {
     assert_eq!(s("hello").and(s("world")), s("world"));
     assert_eq!(s("").and(s("world")), s(""));
 
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]).and(l(vec![i(0), f(-2.0), b(false)])),
+        l(vec![i(0), f(-2.0), b(false)])
+    );
+    assert_eq!(l(vec![]).and(l(vec![i(0), f(2.0), b(true)])), l(vec![]));
+
     assert_eq!(func().and(i(2)), i(2));
     assert_eq!(b(false).and(func()), b(false));
 
@@ -366,6 +481,10 @@ fn binary_eq() {
     assert_eq!(i(1), f(1.0));
     assert_eq!(f(1.0), f(1.0));
     assert_eq!(s("hello"), s("hello"));
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)]),
+        l(vec![i(0), f(2.0), b(true)])
+    );
     assert_eq!(b(true), b(true));
     assert_eq!(b(false), b(false));
     let f = func();
@@ -379,6 +498,10 @@ fn binary_ne() {
     assert_ne!(i(1), f(1.1));
     assert_ne!(f(1.0), f(2.0));
     assert_ne!(s("hello"), s("world"));
+    assert_ne!(
+        l(vec![i(0), f(2.0), b(true)]),
+        l(vec![s("world"), f(2.0), b(true)]),
+    );
     assert_ne!(b(true), b(false));
     assert_ne!(b(false), b(true));
     assert_ne!(func(), func());
@@ -392,6 +515,7 @@ fn binary_lt() {
     assert!(i(1) < f(1.1));
     assert!(f(1.0) < f(2.0));
     assert!(s("hello") < s("world"));
+    assert!(l(vec![i(0), f(8.0), b(true)]) < l(vec![i(2), f(2.0), b(true)]));
     assert!(b(false) < b(true));
 }
 
@@ -402,6 +526,7 @@ fn binary_gt() {
     assert!(i(3) > f(1.1));
     assert!(f(3.0) > f(2.0));
     assert!(s("xyz") > s("world"));
+    assert!(l(vec![i(0), f(4.0), b(true)]) > l(vec![i(0), f(2.0), b(true)]));
     assert!(b(true) > b(false));
 }
 
@@ -417,6 +542,8 @@ fn binary_le() {
     assert!(f(2.0) <= f(2.0));
     assert!(s("abc") <= s("world"));
     assert!(s("world") <= s("world"));
+    assert!(l(vec![i(0), f(8.0), b(true)]) <= l(vec![i(2), f(2.0), b(true)]));
+    assert!(l(vec![i(0), f(2.0), b(true)]) <= l(vec![i(0), f(2.0), b(true)]));
     assert!(b(true) <= b(true));
     assert!(b(false) <= b(true));
 }
@@ -433,6 +560,8 @@ fn binary_ge() {
     assert!(f(2.0) >= f(2.0));
     assert!(s("xyz") >= s("world"));
     assert!(s("world") >= s("world"));
+    assert!(l(vec![i(0), f(4.0), b(true)]) >= l(vec![i(0), f(2.0), b(true)]));
+    assert!(l(vec![i(0), f(2.0), b(true)]) >= l(vec![i(0), f(2.0), b(true)]));
     assert!(b(true) >= b(false));
     assert!(b(false) >= b(false));
 }
