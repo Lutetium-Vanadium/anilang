@@ -56,13 +56,14 @@ fn nested_index() {
     assert_eq!(
         execute(
             "let l = [123, [123.1, [9812]]]
-            l[1][0] = 50
+            l[0] = 50
+            l[1][0] += 50
             l[-1][1][-1] = 'hello world'"
         )
         .unwrap(),
         v::l(vec![
-            v::i(123),
-            v::l(vec![v::i(50), v::l(vec![v::s("hello world")])]),
+            v::i(50),
+            v::l(vec![v::f(173.1), v::l(vec![v::s("hello world")])]),
         ]),
     );
 }

@@ -15,25 +15,16 @@ pub struct AssignmentNode {
 }
 
 impl AssignmentNode {
-    pub fn new(ident_token: &Token, value: SyntaxNode, src: &SourceText) -> Self {
-        Self {
-            ident: src[&ident_token.text_span].to_owned(),
-            span: TextSpan::from_spans(&ident_token.text_span, value.span()),
-            indices: None,
-            value: Box::new(value),
-        }
-    }
-
-    pub fn new_index(
+    pub fn new(
         ident_token: &Token,
-        indices: Vec<SyntaxNode>,
+        indices: Option<Vec<SyntaxNode>>,
         value: SyntaxNode,
         src: &SourceText,
     ) -> Self {
         Self {
             ident: src[&ident_token.text_span].to_owned(),
             span: TextSpan::from_spans(&ident_token.text_span, value.span()),
-            indices: Some(indices),
+            indices: indices,
             value: Box::new(value),
         }
     }

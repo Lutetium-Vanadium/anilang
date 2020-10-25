@@ -95,7 +95,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         cur
     }
 
-    fn is_index_assign(&self) -> bool {
+    fn is_index_assign(&self) -> AssignmentType {
         let mut i = self.index() + 2;
         let mut open_bracket_count = 1;
 
@@ -103,13 +103,18 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             match self.tokens[i].kind {
                 TokenKind::OpenBracket => open_bracket_count += 1,
                 TokenKind::CloseBracket if open_bracket_count == 1 => {
+                    if self.tokens[i + 1].is_calc_assign()
+                        && self.tokens[i + 2].kind == TokenKind::AssignmentOperator
+                    {
+                        return AssignmentType::CalcAssignment;
+                    }
                     match self.tokens[i + 1].kind {
                         // Add an extra so that the OpenBracket is skipped, and do not change
                         // open_bracket_count since it needs to be decremented for the CloseBracket
                         // and incremented for the OpenBracket
                         TokenKind::OpenBracket => i += 1,
-                        TokenKind::AssignmentOperator => return true,
-                        _ => return false,
+                        TokenKind::AssignmentOperator => return AssignmentType::Assignment,
+                        _ => return AssignmentType::None,
                     }
                 }
                 TokenKind::CloseBracket => open_bracket_count -= 1,
@@ -119,7 +124,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             i += 1;
         }
 
-        false
+        AssignmentType::None
     }
 
     // ----- Parse Methods -----
@@ -155,9 +160,16 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 self.parse_assignment_expression()
             }
             TokenKind::Ident
-                if self.peek(1).kind == TokenKind::OpenBracket && self.is_index_assign() =>
+                if self.peek(1).kind == TokenKind::OpenBracket
+                    && self.is_index_assign() == AssignmentType::Assignment =>
             {
-                self.parse_index_assignment_expression()
+                self.parse_assignment_expression()
+            }
+            TokenKind::Ident
+                if self.peek(1).kind == TokenKind::OpenBracket
+                    && self.is_index_assign() == AssignmentType::CalcAssignment =>
+            {
+                self.parse_calc_assignment_expression()
             }
             TokenKind::Ident
                 if self.peek(1).is_calc_assign()
@@ -191,32 +203,52 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
     fn parse_assignment_expression(&self) -> SyntaxNode {
         let ident = self.next();
-        self.next();
-        let value = self.parse_statement();
-        SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
-    }
 
-    fn parse_index_assignment_expression(&self) -> SyntaxNode {
-        let ident = self.next();
-        let mut indices = vec![];
-        while self.cur().kind == TokenKind::OpenBracket {
-            self.next();
-            indices.push(self.parse_statement());
-            self.match_token(TokenKind::CloseBracket);
-        }
+        let indices = if self.cur().kind == TokenKind::OpenBracket {
+            let mut indices = Vec::new();
+            while self.cur().kind == TokenKind::OpenBracket {
+                self.next();
+                indices.push(self.parse_statement());
+                self.match_token(TokenKind::CloseBracket);
+            }
+            Some(indices)
+        } else {
+            None
+        };
+
         self.next();
         let value = self.parse_statement();
-        SyntaxNode::AssignmentNode(node::AssignmentNode::new_index(
-            ident, indices, value, self.src,
-        ))
+        SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, indices, value, self.src))
     }
 
     fn parse_calc_assignment_expression(&self) -> SyntaxNode {
         let ident = self.next();
+
+        let indices = if self.cur().kind == TokenKind::OpenBracket {
+            let mut indices = Vec::new();
+            while self.cur().kind == TokenKind::OpenBracket {
+                self.next();
+                indices.push(self.parse_statement());
+                self.match_token(TokenKind::CloseBracket);
+            }
+            Some(indices)
+        } else {
+            None
+        };
+
         let op = self.next();
         let span = TextSpan::from_spans(&op.text_span, &self.next().text_span);
 
-        let left = SyntaxNode::VariableNode(node::VariableNode::new(ident, self.src));
+        let mut left = SyntaxNode::VariableNode(node::VariableNode::new(ident, self.src));
+        if let Some(ref indices) = indices {
+            for index in indices {
+                left = SyntaxNode::IndexNode(node::IndexNode::from_span(
+                    left,
+                    index.clone(),
+                    index.span().clone(),
+                ))
+            }
+        }
         let right = self.parse_statement();
 
         let value = SyntaxNode::BinaryNode(node::BinaryNode::with_span(
@@ -226,7 +258,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             span,
         ));
 
-        SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, value, self.src))
+        SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, indices, value, self.src))
     }
 
     fn parse_fn_declaration_statement(&self) -> SyntaxNode {
@@ -495,4 +527,12 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             }
         }
     }
+}
+
+#[derive(PartialEq, Eq)]
+#[repr(u8)]
+enum AssignmentType {
+    Assignment,
+    CalcAssignment,
+    None,
 }
