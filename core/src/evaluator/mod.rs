@@ -267,9 +267,8 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
 
         let value = self.evaluate_node(*node.value);
 
-        if let Some(index) = node.index {
-            let index = self.evaluate_node(*index);
-            let var = match self.get_var(&node.ident) {
+        if let Some(indices) = node.indices {
+            let mut var = match self.get_var(&node.ident) {
                 Some(var) => var.clone(),
                 None => {
                     self.diagnostics.unknown_reference(&node.ident, node.span);
@@ -277,13 +276,36 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
                 }
             };
 
-            match var.set_at(index, value) {
-                Ok(v) => v,
-                Err(e) => {
-                    self.diagnostics.from_value_error(e, node.span);
-                    Value::Null
+            let last_i = indices.len() - 1;
+            for (i, index) in indices.into_iter().enumerate() {
+                let index = self.evaluate_node(index);
+
+                if i < last_i {
+                    var = match var.get_at(index) {
+                        Ok(var) => var,
+                        Err(e) => {
+                            self.diagnostics.from_value_error(e, node.span);
+                            break;
+                        }
+                    };
+                } else {
+                    match var.set_at(index, value) {
+                        Ok(v) => {
+                            return if last_i != 0 {
+                                self.get_var(&node.ident).unwrap().clone()
+                            } else {
+                                v
+                            }
+                        }
+                        Err(e) => {
+                            self.diagnostics.from_value_error(e, node.span);
+                            break;
+                        }
+                    }
                 }
             }
+
+            Value::Null
         } else {
             self.insert_var(node.ident, value.clone(), node.span);
             value

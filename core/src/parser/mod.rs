@@ -97,9 +97,23 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
     fn is_index_assign(&self) -> bool {
         let mut i = self.index() + 2;
+        let mut open_bracket_count = 1;
+
         while i < self.tokens.len() - 1 {
-            if self.tokens[i].kind == TokenKind::CloseBracket {
-                return self.tokens[i + 1].kind == TokenKind::AssignmentOperator;
+            match self.tokens[i].kind {
+                TokenKind::OpenBracket => open_bracket_count += 1,
+                TokenKind::CloseBracket if open_bracket_count == 1 => {
+                    match self.tokens[i + 1].kind {
+                        // Add an extra so that the OpenBracket is skipped, and do not change
+                        // open_bracket_count since it needs to be decremented for the CloseBracket
+                        // and incremented for the OpenBracket
+                        TokenKind::OpenBracket => i += 1,
+                        TokenKind::AssignmentOperator => return true,
+                        _ => return false,
+                    }
+                }
+                TokenKind::CloseBracket => open_bracket_count -= 1,
+                _ => {}
             };
 
             i += 1;
@@ -184,13 +198,16 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
     fn parse_index_assignment_expression(&self) -> SyntaxNode {
         let ident = self.next();
-        self.next();
-        let index = self.parse_statement();
-        self.match_token(TokenKind::CloseBracket);
+        let mut indices = vec![];
+        while self.cur().kind == TokenKind::OpenBracket {
+            self.next();
+            indices.push(self.parse_statement());
+            self.match_token(TokenKind::CloseBracket);
+        }
         self.next();
         let value = self.parse_statement();
         SyntaxNode::AssignmentNode(node::AssignmentNode::new_index(
-            ident, index, value, self.src,
+            ident, indices, value, self.src,
         ))
     }
 
@@ -339,7 +356,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     }
 
     fn parse_general_expression(&self) -> SyntaxNode {
-        let expr = match self.cur().kind {
+        let mut node = match self.cur().kind {
             // Float in the form of '.123'
             //                       |^^^- Number
             //                  Dot -^
@@ -369,14 +386,14 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             }
         };
 
-        if self.cur().kind == TokenKind::OpenBracket {
+        while self.cur().kind == TokenKind::OpenBracket {
             self.next();
             let index = self.parse_statement();
             let close_bracket = self.match_token(TokenKind::CloseBracket);
-            SyntaxNode::IndexNode(node::IndexNode::new(expr, index, close_bracket))
-        } else {
-            expr
+            node = SyntaxNode::IndexNode(node::IndexNode::new(node, index, close_bracket));
         }
+
+        node
     }
 
     fn parse_comma_seperated_values(&self, delim: TokenKind) -> (Vec<SyntaxNode>, &Token) {

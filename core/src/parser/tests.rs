@@ -50,7 +50,7 @@ fn parse_assignment_properly() {
         n => panic!("expected AssignmentNode with ident 'a', got {:?}", n),
     };
 
-    assert!(an.index.is_none());
+    assert!(an.indices.is_none());
     assert!(matches!(
         *an.value,
         SyntaxNode::LiteralNode(node::LiteralNode {
@@ -76,8 +76,9 @@ fn parse_assignment_properly() {
         n => panic!("expected AssignmentNode with ident 'a', got {:?}", n),
     };
 
+    assert_eq!(an.indices.as_ref().unwrap().len(), 1);
     assert!(matches!(
-        **an.index.as_ref().unwrap(),
+        an.indices.as_ref().unwrap()[0],
         SyntaxNode::LiteralNode(node::LiteralNode {
             value: Value::Int(0),
             ..

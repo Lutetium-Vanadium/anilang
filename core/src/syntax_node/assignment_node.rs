@@ -10,7 +10,7 @@ pub struct AssignmentNode {
     pub ident: String,
     /// For an assignment `<variable>[<index>] = <value>`, index refers to the <index>, and *not*
     /// a `IndexNode`
-    pub index: Option<Box<SyntaxNode>>,
+    pub indices: Option<Vec<SyntaxNode>>,
     pub value: Box<SyntaxNode>,
 }
 
@@ -19,21 +19,21 @@ impl AssignmentNode {
         Self {
             ident: src[&ident_token.text_span].to_owned(),
             span: TextSpan::from_spans(&ident_token.text_span, value.span()),
-            index: None,
+            indices: None,
             value: Box::new(value),
         }
     }
 
     pub fn new_index(
         ident_token: &Token,
-        index: SyntaxNode,
+        indices: Vec<SyntaxNode>,
         value: SyntaxNode,
         src: &SourceText,
     ) -> Self {
         Self {
             ident: src[&ident_token.text_span].to_owned(),
             span: TextSpan::from_spans(&ident_token.text_span, value.span()),
-            index: Some(Box::new(index)),
+            indices: Some(indices),
             value: Box::new(value),
         }
     }
@@ -43,8 +43,10 @@ impl AssignmentNode {
 
         indent += if is_last { "   " } else { "│  " };
 
-        if let Some(ref index) = self.index {
-            index._prt(indent.clone(), false, stdout);
+        if let Some(ref indices) = self.indices {
+            for index in indices {
+                index._prt(indent.clone(), false, stdout);
+            }
         }
 
         self.value._prt(indent, true, stdout);

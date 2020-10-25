@@ -65,7 +65,7 @@ fn evaluate_block_properly() {
                     SyntaxNode::AssignmentNode(node::AssignmentNode {
                         ident: "a".to_owned(),
                         span: span(),
-                        index: None,
+                        indices: None,
                         value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
                             operator: TokenKind::MinusOperator,
                             span: span(),
@@ -279,7 +279,7 @@ fn evaluate_loop_properly() {
                 SyntaxNode::AssignmentNode(node::AssignmentNode {
                     ident: "a".to_owned(),
                     span: span(),
-                    index: None,
+                    indices: None,
                     value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
                         operator: TokenKind::PlusOperator,
                         span: span(),
@@ -349,7 +349,7 @@ fn evaluate_assignment_properly() {
             SyntaxNode::AssignmentNode(node::AssignmentNode {
                 ident: "a".to_owned(),
                 span: span(),
-                index: None,
+                indices: None,
                 value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
                     value: s("world"),
                     span: span(),
@@ -371,10 +371,10 @@ fn evaluate_assignment_properly() {
             SyntaxNode::AssignmentNode(node::AssignmentNode {
                 ident: "a".to_owned(),
                 span: span(),
-                index: Some(Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                indices: Some(vec![SyntaxNode::LiteralNode(node::LiteralNode {
                     value: i(1),
                     span: span(),
-                }))),
+                })]),
                 value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
                     value: s("a"),
                     span: span(),
