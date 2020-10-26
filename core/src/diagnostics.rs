@@ -216,8 +216,7 @@ impl<'a> Diagnostics<'a> {
     /// However, these are not raised during string parsing
     /// let a = "~1213"
     /// Completely legal code
-    pub fn bad_char(&self, index: usize) {
-        let span = TextSpan::new(index, 1);
+    pub fn bad_char(&self, span: TextSpan) {
         self.report(
             format!("BadChar: Unknown character '{}'", &self.src[&span]),
             span,
@@ -231,11 +230,8 @@ impl<'a> Diagnostics<'a> {
     /// if true {
     ///         ^
     /// A block of code, or the close brace is expected
-    pub fn unexpected_eof(&self) {
-        self.report(
-            format!("UnexpectedEOF"),
-            TextSpan::new(self.src.text.len() - 1, 1),
-        );
+    pub fn unexpected_eof(&self, span: TextSpan) {
+        self.report(format!("UnexpectedEOF"), span);
     }
 
     /// Generated in the parser

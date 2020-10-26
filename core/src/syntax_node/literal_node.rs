@@ -33,9 +33,25 @@ impl Parse for String {
     fn parse(src: &str) -> Result<Value> {
         let mut string = String::new();
         let mut is_escaped = false;
+        let mut chars = src.chars();
+
+        // ignore the delimiters
+        // note: although the lexer already operates on the assumption
+        // that the delimiters are 1 byte long, there is no guarantee,
+        // that the first and last characters are necessarily delimiters.
+        // For example:
+        // ```
+        // "Pa└
+        // ```
+        // Parsing of the above code would panic.
+        // The lexer would report an UnexpectedEOF, but since error count
+        // is not checked before every step, the incomplete string will
+        // still be parsed
+        let _ = chars.next();
+        let _ = chars.next_back();
 
         // Ignore the delimiter
-        for chr in src[1..(src.len() - 1)].chars() {
+        for chr in chars {
             if is_escaped {
                 is_escaped = !is_escaped;
             } else if chr == '\\' {

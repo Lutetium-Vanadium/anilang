@@ -136,7 +136,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         while self.cur().kind != delim {
             match self.cur().kind {
                 TokenKind::EOF => {
-                    self.diagnostics.unexpected_eof();
+                    self.diagnostics
+                        .unexpected_eof(self.tokens[self.index() - 1].text_span.clone());
                     break;
                 }
                 TokenKind::OpenBrace => {

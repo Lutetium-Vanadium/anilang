@@ -167,7 +167,7 @@ impl Repl {
             self.continued_leader_len
         };
 
-        c.charno = min(c.charno, lines[c.lineno].len());
+        c.charno = min(c.charno, lines[c.lineno].chars().count());
 
         execute!(
             stdout,
@@ -233,7 +233,9 @@ impl Repl {
                             c.use_history = false;
                         };
 
-                        lines[c.lineno].insert(c.charno, chr);
+                        let byte_i = get_byte_i(&lines[c.lineno], c.charno);
+
+                        lines[c.lineno].insert(byte_i, chr);
                         c.charno += 1;
 
                         &lines[c.lineno]
@@ -256,7 +258,7 @@ impl Repl {
                     }
                     event::KeyCode::End => {
                         let s = self.cur_str(&c, &lines);
-                        c.charno = s.len();
+                        c.charno = s.chars().count();
                         s
                     }
                     event::KeyCode::Left if c.charno > 0 => {
@@ -283,7 +285,7 @@ impl Repl {
                         c.lineno -= 1;
                         queue!(stdout, cursor::MoveUp(1))?;
                         let s = self.cur_str(&c, &lines);
-                        c.charno = min(s.len(), c.charno);
+                        c.charno = min(s.chars().count(), c.charno);
                         s
                     }
 
@@ -307,10 +309,11 @@ impl Repl {
                         c.lineno += 1;
                         queue!(stdout, cursor::MoveDown(1))?;
                         let s = self.cur_str(&c, &lines);
-                        c.charno = min(s.len(), c.charno);
+                        c.charno = min(s.chars().count(), c.charno);
                         s
                     }
 
+                    // Regular case, just need to delete a character
                     event::KeyCode::Backspace if c.charno > 0 => {
                         if c.use_history {
                             self.replace_with_history(&mut lines);
@@ -318,7 +321,8 @@ impl Repl {
                         };
 
                         c.charno -= 1;
-                        lines[c.lineno].remove(c.charno);
+                        let byte_i = get_byte_i(&lines[c.lineno], c.charno);
+                        lines[c.lineno].remove(byte_i);
                         &lines[c.lineno]
                     }
                     // It is the last character, and it is not the last line
@@ -329,7 +333,7 @@ impl Repl {
                         };
 
                         c.lineno -= 1;
-                        c.charno = lines[c.lineno].len();
+                        c.charno = lines[c.lineno].chars().count();
                         let line = lines.remove(c.lineno + 1);
                         lines[c.lineno] += &line;
 
@@ -338,6 +342,8 @@ impl Repl {
 
                         &lines[c.lineno]
                     }
+
+                    // Regular delete, just need to delete one character
                     event::KeyCode::Delete
                         if c.charno < self.cur_str(&c, &lines).chars().count() =>
                     {
@@ -346,7 +352,8 @@ impl Repl {
                             c.use_history = false;
                         };
 
-                        lines[c.lineno].remove(c.charno);
+                        let byte_i = get_byte_i(&lines[c.lineno], c.charno);
+                        lines[c.lineno].remove(byte_i);
                         &lines[c.lineno]
                     }
                     event::KeyCode::Delete if (c.lineno + 1) < self.cur(&c, &lines).len() => {
@@ -492,6 +499,14 @@ pub fn get_persistant_file_path() -> Option<PathBuf> {
         }
         Err(_) => None,
     }
+}
+
+fn get_byte_i(string: &str, i: usize) -> usize {
+    string
+        .char_indices()
+        .nth(i)
+        .map(|c| c.0)
+        .unwrap_or(string.len())
 }
 
 #[derive(Debug, Default)]

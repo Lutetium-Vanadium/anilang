@@ -1,5 +1,6 @@
 use crate::diagnostics::Diagnostics;
 use crate::source_text::SourceText;
+use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 
 #[cfg(test)]
@@ -155,8 +156,9 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
                     '{' => add!(self, TokenKind::OpenBrace, i => 1),
                     '}' => add!(self, TokenKind::CloseBrace, i => 1),
                     _ => {
-                        self.diagnostics.bad_char(i);
-                        add!(self, TokenKind::Bad, i => 1);
+                        let len = self.chars.peek().map(|c| c.0).unwrap_or(self.src.len()) - i;
+                        self.diagnostics.bad_char(TextSpan::new(i, len));
+                        add!(self, TokenKind::Bad, i => len);
                     }
                 }
             }
@@ -167,37 +169,41 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
     }
 
     fn lex_whitespace(&mut self, start: usize) {
-        let mut e = start;
-        while let Some((i, chr)) = self.chars.peek() {
-            e = *i;
-
-            if !chr.is_whitespace() {
-                // Do not include the last character
-                e -= 1;
-                break;
+        let mut e;
+        loop {
+            if let Some((i, chr)) = self.chars.peek() {
+                e = *i;
+                if !chr.is_whitespace() {
+                    break;
+                } else {
+                    self.chars.next();
+                }
             } else {
-                self.chars.next();
+                e = self.src.len();
+                break;
             }
         }
 
-        add!(self, TokenKind::Whitespace, start => e + 1 - start);
+        add!(self, TokenKind::Whitespace, start => e - start);
     }
 
     fn lex_ident(&mut self, start: usize) {
-        let mut e = start;
-        while let Some((i, chr)) = self.chars.peek() {
-            e = *i;
+        let mut e;
+        loop {
+            if let Some((i, chr)) = self.chars.peek() {
+                e = *i;
 
-            if !chr.is_alphanumeric() {
-                // Do not include the last character
-                e -= 1;
-                break;
+                if !chr.is_alphanumeric() {
+                    break;
+                } else {
+                    self.chars.next();
+                }
             } else {
-                self.chars.next();
+                e = self.src.len();
+                break;
             }
         }
 
-        e += 1;
         add!(
             self,
             match &self.src.text[start..e] {
@@ -216,44 +222,50 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
     }
 
     fn lex_number(&mut self, start: usize) {
-        let mut e = start;
-        while let Some((i, chr)) = self.chars.peek() {
-            e = *i;
+        let mut e;
+        loop {
+            if let Some((i, chr)) = self.chars.peek() {
+                e = *i;
 
-            if !chr.is_numeric() {
-                // Do not include the last character
-                e -= 1;
-                break;
+                if !chr.is_numeric() {
+                    break;
+                } else {
+                    self.chars.next();
+                }
             } else {
-                self.chars.next();
+                e = self.src.len();
+                break;
             }
         }
-        add!(self, TokenKind::Number, start => e + 1 - start);
+
+        add!(self, TokenKind::Number, start => e - start);
     }
 
+    /// NOTE this operates on the assumption delim is exactly one byte when encoded with UTF-8
     fn lex_string(&mut self, start: usize, delim: char) {
         let mut is_escaped = false;
         let mut e = start;
-        let mut got_end_delim = false;
 
-        while let Some((i, chr)) = self.chars.next() {
-            e = i;
+        loop {
+            if let Some((i, chr)) = self.chars.next() {
+                e = i;
 
-            if is_escaped {
-                is_escaped = !is_escaped;
-            } else if chr == '\\' {
-                is_escaped = true;
-            } else if chr == delim {
-                got_end_delim = true;
-                // Do not subtract one since one needs to be added for delim anyway
+                if is_escaped {
+                    is_escaped = !is_escaped;
+                } else if chr == '\\' {
+                    is_escaped = true;
+                } else if chr == delim {
+                    e += 1;
+                    break;
+                }
+            } else {
+                let len = self.src.len() - e;
+                self.diagnostics.unexpected_eof(TextSpan::new(e, len));
+                e = self.src.len();
                 break;
             }
         }
 
-        if !got_end_delim {
-            self.diagnostics.unexpected_eof();
-        }
-
-        add!(self, TokenKind::String, start => e + 1 - start);
+        add!(self, TokenKind::String, start => e - start);
     }
 }
