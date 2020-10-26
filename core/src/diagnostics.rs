@@ -224,6 +224,20 @@ impl<'a> Diagnostics<'a> {
         );
     }
 
+    /// Generated in the lexer and parser
+    ///
+    /// Is reported when a token is expected, but an EOF is found, see `core/src/parser.rs`
+    /// Examples:
+    /// if true {
+    ///         ^
+    /// A block of code, or the close brace is expected
+    pub fn unexpected_eof(&self) {
+        self.report(
+            format!("UnexpectedEOF"),
+            TextSpan::new(self.src.text.len() - 1, 1),
+        );
+    }
+
     /// Generated in the parser
     ///
     /// Is reported when a part of the source text being evaluated as a literal fails to parse into
@@ -274,20 +288,6 @@ impl<'a> Diagnostics<'a> {
                 );
             }
         }
-    }
-
-    /// Generated in the parser
-    ///
-    /// Is reported when a token is expected, but an EOF is found, see `core/src/parser.rs`
-    /// Examples:
-    /// if true {
-    ///         ^
-    /// A block of code, or the close brace is expected
-    pub fn unexpected_eof(&self) {
-        self.report(
-            format!("UnexpectedEOF"),
-            TextSpan::new(self.src.text.len() - 1, 1),
-        );
     }
 
     /// Generated in the evaluator
