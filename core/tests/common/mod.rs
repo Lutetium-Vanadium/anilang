@@ -3,7 +3,7 @@ type Result = std::result::Result<anilang::Value, ()>;
 #[allow(dead_code)]
 fn _execute(code: &str, scope: &mut anilang::Scope) -> Result {
     let src = anilang::SourceText::new(code);
-    let diagnostics = anilang::Diagnostics::new(&src);
+    let diagnostics = anilang::Diagnostics::new(&src).no_print();
 
     let tokens = anilang::Lexer::lex(&src, &diagnostics);
     let root = anilang::Parser::parse(tokens, &src, &diagnostics);
