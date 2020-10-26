@@ -11,17 +11,17 @@ fn main() -> Result<()> {
         let line = repl.next(crossterm::style::Color::Green)?;
 
         let src = anilang::SourceText::new(&line);
-        let mut diagnostics = anilang::Diagnostics::new(&src);
+        let diagnostics = anilang::Diagnostics::new(&src);
 
-        let tokens = anilang::Lexer::lex(&src, &mut diagnostics);
-        let root = anilang::Parser::parse(tokens, &src, &mut diagnostics);
+        let tokens = anilang::Lexer::lex(&src, &diagnostics);
+        let root = anilang::Parser::parse(tokens, &src, &diagnostics);
 
         if !diagnostics.any() {
             if repl.show_tree {
                 root.prt();
             }
             let value =
-                anilang::Evaluator::evaluate_with_global(root, &mut diagnostics, &mut global_scope);
+                anilang::Evaluator::evaluate_with_global(root, &diagnostics, &mut global_scope);
             match value {
                 anilang::Value::Null => {}
                 value if !diagnostics.any() => println!("{:?}", value),

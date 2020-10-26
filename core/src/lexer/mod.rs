@@ -146,8 +146,7 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
                         }
                     }
 
-                    '\'' => self.lex_string(i, '\''),
-                    '"' => self.lex_string(i, '"'),
+                    '\'' | '"' => self.lex_string(i, chr),
 
                     '[' => add!(self, TokenKind::OpenBracket, i => 1),
                     ']' => add!(self, TokenKind::CloseBracket, i => 1),

@@ -104,7 +104,6 @@ impl Repl {
 
     /// Copy the lines from history into the lines buffer
     fn replace_with_history(&self, lines: &mut Vec<String>) {
-        // TODO check if history iter should be reset
         let cur = self.history.cur().unwrap();
         lines.resize(cur.len(), String::new());
 
