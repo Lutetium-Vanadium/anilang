@@ -12,9 +12,9 @@ pub struct History {
     /// Each command is stored as `Vec<String>` where each String refers to a line.
     ///
     /// The list of all commands is stored in a `VecDeque` since it must be allowed to insert and
-    /// pop effeciently in *opposite* directions. It stores the history in reverse, since index 0
+    /// pop efficiently in *opposite* directions. It stores the history in reverse, since index 0
     /// is meant to be the previously executed command and index 1 the one before that and so on.
-    /// So it must be effecient to push commands to the front of the buffer without recopying
+    /// So it must be efficient to push commands to the front of the buffer without recopying
     /// everything.
     buffer: VecDeque<Vec<String>>,
     /// The max capacity of history.
@@ -53,6 +53,7 @@ impl History {
     }
 
     pub fn push(&mut self, lines: Vec<String>) {
+        // Make sure to not reallocate and keep within the capacity
         if self.at_capacity() {
             self.buffer.pop_back();
         }
@@ -61,7 +62,7 @@ impl History {
         self.buffer.push_front(lines);
     }
 
-    // Each command is seperated by a '---'
+    // Each command is separated by a '---'
     // So for example if there are 2 commands:
     // ```
     // let a = 2
@@ -107,7 +108,7 @@ impl History {
             "Path to persisted file not found",
         ))?)?;
 
-        for lines in &self.buffer {
+        for lines in self.buffer.iter().rev() {
             for line in lines {
                 f.write(line.as_bytes())?;
                 f.write(b"\n")?;
@@ -156,7 +157,7 @@ impl History {
     pub fn next(&self) -> Option<&Vec<String>> {
         let iter_i = self.iter_i.get() - 1;
 
-        // It is was already -1, so there definitly isn't a next to give.
+        // It is was already -1, so there definitely isn't a next to give.
         if iter_i >= -1 {
             self.iter_i.set(iter_i);
             self._at(iter_i)
