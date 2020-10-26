@@ -321,7 +321,8 @@ impl Repl {
                         lines[c.lineno].remove(c.charno);
                         &lines[c.lineno]
                     }
-                    event::KeyCode::Backspace if c.lineno > 1 => {
+                    // It is the last character, and it is not the last line
+                    event::KeyCode::Backspace if c.lineno > 0 => {
                         if c.use_history {
                             self.replace_with_history(&mut lines);
                             c.use_history = false;
