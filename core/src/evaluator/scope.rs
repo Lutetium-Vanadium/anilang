@@ -16,7 +16,7 @@ use std::collections::HashMap;
 /// scope.insert("variable".to_owned(), Value::Int(123));
 /// assert_eq!(scope.try_get_value("variable"), Some(&Value::Int(123)));
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Scope {
     vars: HashMap<String, value::Value>,
 }

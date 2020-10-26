@@ -24,7 +24,7 @@ impl AssignmentNode {
         Self {
             ident: src[&ident_token.text_span].to_owned(),
             span: TextSpan::from_spans(&ident_token.text_span, value.span()),
-            indices: indices,
+            indices,
             value: Box::new(value),
         }
     }

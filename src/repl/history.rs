@@ -85,10 +85,9 @@ impl History {
     // ```
     /// Reads from history file and appends it to the current history buffer
     pub fn read_from_file(&mut self) -> io::Result<()> {
-        let contents = fs::read_to_string(self.path.as_ref().ok_or(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Path to persisted file not found",
-        ))?)?;
+        let contents = fs::read_to_string(self.path.as_ref().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotFound, "Path to persisted file not found")
+        })?)?;
         let mut lines = Vec::new();
         for line in contents.lines() {
             if line.starts_with("---") {
@@ -103,17 +102,16 @@ impl History {
 
     /// Writes to the history path
     pub fn write_to_file(&self) -> io::Result<()> {
-        let mut f = fs::File::create(self.path.as_ref().ok_or(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Path to persisted file not found",
-        ))?)?;
+        let mut f = fs::File::create(self.path.as_ref().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::NotFound, "Path to persisted file not found")
+        })?)?;
 
         for lines in self.buffer.iter().rev() {
             for line in lines {
-                f.write(line.as_bytes())?;
-                f.write(b"\n")?;
+                f.write_all(line.as_bytes())?;
+                f.write_all(b"\n")?;
             }
-            f.write(b"---\n")?;
+            f.write_all(b"---\n")?;
         }
 
         Ok(())

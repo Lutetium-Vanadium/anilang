@@ -94,18 +94,14 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
     }
 
     fn insert_var(&mut self, ident: String, value: Value, span: TextSpan) {
-        let mut i = self.scopes.len() - 1;
-        loop {
-            if let Some(_) = self.scopes[i].try_get_value(&ident) {
+        let mut i = self.scopes.len();
+        while i > 0 {
+            i -= 1;
+
+            if self.scopes[i].try_get_value(&ident).is_some() {
                 // Found the variable already declared in some parent scope
                 self.scopes[i].insert(ident, value);
                 return;
-            }
-
-            if i == 0 {
-                break;
-            } else {
-                i -= 1;
             }
         }
 
@@ -113,16 +109,12 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
     }
 
     fn get_var(&mut self, ident: &str) -> Option<&Value> {
-        let mut i = self.scopes.len() - 1;
-        loop {
+        let mut i = self.scopes.len();
+        while i > 0 {
+            i -= 1;
+
             if let Some(v) = self.scopes[i].try_get_value(ident) {
                 return Some(v);
-            }
-
-            if i == 0 {
-                break;
-            } else {
-                i -= 1;
             }
         }
 
@@ -317,7 +309,13 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             return Value::Null;
         }
 
-        if let Some(_) = self.scopes.last().unwrap().try_get_value(&node.ident) {
+        if self
+            .scopes
+            .last()
+            .unwrap()
+            .try_get_value(&node.ident)
+            .is_some()
+        {
             self.diagnostics.already_declared(&node.ident, node.span);
             return Value::Null;
         }
@@ -336,7 +334,13 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             return Value::Null;
         }
 
-        if let Some(_) = self.scopes.last().unwrap().try_get_value(&node.ident) {
+        if self
+            .scopes
+            .last()
+            .unwrap()
+            .try_get_value(&node.ident)
+            .is_some()
+        {
             self.diagnostics.already_declared(&node.ident, node.span);
             return Value::Null;
         }
@@ -394,7 +398,7 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
                 return Value::Null;
             }
         }
-        .as_rc_fn();
+        .to_rc_fn();
 
         if func.args.len() != node.args.len() {
             self.diagnostics

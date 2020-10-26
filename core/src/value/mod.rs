@@ -111,12 +111,10 @@ fn normalise_index(index: i64, len: i64) -> Result<usize> {
         } else {
             Ok((len + index) as usize)
         }
+    } else if len <= index {
+        Err(ErrorKind::IndexOutOfRange { index, len })
     } else {
-        if len <= index {
-            Err(ErrorKind::IndexOutOfRange { index, len })
-        } else {
-            Ok(index as usize)
-        }
+        Ok(index as usize)
     }
 }
 
@@ -181,12 +179,12 @@ impl Value {
                     let mut chars = s.char_indices().skip(i);
                     (
                         chars.next().unwrap().0,
-                        chars.next().map(|c| c.0).unwrap_or(s.len()),
+                        chars.next().map(|c| c.0).unwrap_or_else(|| s.len()),
                     )
                 };
 
                 s.borrow_mut()
-                    .replace_range(start_i..end_i, value.as_ref_str().as_str());
+                    .replace_range(start_i..end_i, value.to_ref_str().as_str());
 
                 Ok(self)
             }
@@ -227,7 +225,7 @@ impl Value {
             Value::Int(left) => Ok(Value::Int(left + i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left + f64::from(right))),
             Value::String(left) => {
-                let right = right.as_rc_str();
+                let right = right.to_rc_str();
 
                 Ok(Value::String(if Rc::strong_count(&left) == 1 {
                     left.borrow_mut().push_str(&right.borrow());
@@ -245,7 +243,7 @@ impl Value {
                 }))
             }
             Value::List(left) => {
-                let right = right.as_rc_list();
+                let right = right.to_rc_list();
 
                 Ok(Value::List(if Rc::strong_count(&left) == 1 {
                     left.borrow_mut().extend_from_slice(&right.borrow()[..]);

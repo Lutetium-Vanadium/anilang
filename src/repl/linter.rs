@@ -12,8 +12,8 @@ pub fn print_linted(stdout: &mut io::Stdout, line: &str) -> crossterm::Result<()
         }
         _ => {
             let src = anilang::SourceText::new(line);
-            let mut diagnostics = anilang::Diagnostics::new(&src).no_print();
-            let mut tokens = anilang::Lexer::lex(&src, &mut diagnostics)
+            let diagnostics = anilang::Diagnostics::new(&src).no_print();
+            let mut tokens = anilang::Lexer::lex(&src, &diagnostics)
                 .into_iter()
                 .peekable();
 

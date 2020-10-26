@@ -138,7 +138,7 @@ impl Error {
             style::ResetColor,
         )?;
 
-        stdout.flush().map_err(|e| crossterm::ErrorKind::IoError(e))
+        stdout.flush().map_err(crossterm::ErrorKind::IoError)
     }
 }
 
@@ -231,7 +231,7 @@ impl<'a> Diagnostics<'a> {
     ///         ^
     /// A block of code, or the close brace is expected
     pub fn unexpected_eof(&self, span: TextSpan) {
-        self.report(format!("UnexpectedEOF"), span);
+        self.report("UnexpectedEOF".to_owned(), span);
     }
 
     /// Generated in the parser

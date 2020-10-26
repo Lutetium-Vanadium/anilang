@@ -143,9 +143,9 @@ fn indexable_invalid() {
 
 #[test]
 fn get_at_valid() {
-    assert_eq!(s("string").get_at(i(0)).unwrap().as_ref_str().as_str(), "s");
+    assert_eq!(s("string").get_at(i(0)).unwrap().to_ref_str().as_str(), "s");
     assert_eq!(
-        s("string").get_at(i(-2)).unwrap().as_ref_str().as_str(),
+        s("string").get_at(i(-2)).unwrap().to_ref_str().as_str(),
         "n"
     );
 
@@ -174,7 +174,7 @@ fn set_at_valid() {
         s("string")
             .set_at(i(0), s("f"))
             .unwrap()
-            .as_ref_str()
+            .to_ref_str()
             .as_str(),
         "ftring"
     );
@@ -182,7 +182,7 @@ fn set_at_valid() {
         s("string")
             .set_at(i(-2), s("f"))
             .unwrap()
-            .as_ref_str()
+            .to_ref_str()
             .as_str(),
         "strifg"
     );
@@ -191,14 +191,14 @@ fn set_at_valid() {
         l(vec![i(0), f(2.0), b(true)])
             .set_at(i(0), s("string"))
             .unwrap()
-            .as_ref_list()[..],
+            .to_ref_list()[..],
         [s("string"), f(2.0), b(true)]
     );
     assert_eq!(
         l(vec![i(0), f(2.0), b(true)])
             .set_at(i(-2), s("string"))
             .unwrap()
-            .as_ref_list()[..],
+            .to_ref_list()[..],
         [i(0), s("string"), b(true)]
     );
 }

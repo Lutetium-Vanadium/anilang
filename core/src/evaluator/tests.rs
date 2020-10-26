@@ -163,7 +163,7 @@ fn evaluate_index_properly() {
             }),
             &mut scope
         )
-        .as_ref_str()
+        .to_ref_str()
         .as_str(),
         "w"
     );
@@ -193,7 +193,7 @@ fn evaluate_index_properly() {
             ],
             span: span(),
         })
-        .as_ref_str()
+        .to_ref_str()
         .as_str(),
         "l"
     );
@@ -333,7 +333,7 @@ fn evaluate_list_properly() {
                 })
                 .collect(),
         }))
-        .as_ref_list()[..],
+        .to_ref_list()[..],
         elements,
     );
 }
@@ -357,12 +357,12 @@ fn evaluate_assignment_properly() {
             }),
             &mut scope
         )
-        .as_ref_str()
+        .to_ref_str()
         .as_str(),
         "world",
     );
     assert_eq!(
-        scope.try_get_value("a").unwrap().as_ref_str().as_str(),
+        scope.try_get_value("a").unwrap().to_ref_str().as_str(),
         "world"
     );
 
@@ -382,12 +382,12 @@ fn evaluate_assignment_properly() {
             }),
             &mut scope
         )
-        .as_ref_str()
+        .to_ref_str()
         .as_str(),
         "warld",
     );
     assert_eq!(
-        scope.try_get_value("a").unwrap().as_ref_str().as_str(),
+        scope.try_get_value("a").unwrap().to_ref_str().as_str(),
         "warld"
     );
 }
@@ -427,8 +427,8 @@ fn evaluate_fn_declaration_properly() {
         }),
         &mut scope,
     );
-    let func = scope.try_get_value("a").unwrap().clone().as_rc_fn();
-    assert!(Rc::ptr_eq(&return_f.as_rc_fn(), &func));
+    let func = scope.try_get_value("a").unwrap().clone().to_rc_fn();
+    assert!(Rc::ptr_eq(&return_f.to_rc_fn(), &func));
     assert_eq!(func.args, vec!["arg1".to_owned()]);
     assert_eq!(func.body.block.len(), 0);
 }

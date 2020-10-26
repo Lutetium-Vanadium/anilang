@@ -6,8 +6,8 @@ pub fn get_indent(lines: &[String]) -> u32 {
 
     for line in lines {
         let src = anilang::SourceText::new(line);
-        let mut diagnostics = anilang::Diagnostics::new(&src).no_print();
-        let tokens = anilang::Lexer::lex(&src, &mut diagnostics);
+        let diagnostics = anilang::Diagnostics::new(&src).no_print();
+        let tokens = anilang::Lexer::lex(&src, &diagnostics);
         for i in tokens {
             match i.kind {
                 anilang::TokenKind::OpenBrace => brace += 1,

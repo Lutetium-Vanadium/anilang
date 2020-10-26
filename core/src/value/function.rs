@@ -15,7 +15,7 @@ impl Function {
 use std::fmt;
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.args.len() == 0 {
+        if self.args.is_empty() {
             write!(f, "fn ()")
         } else {
             let mut iter = self.args.iter();

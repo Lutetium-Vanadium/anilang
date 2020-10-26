@@ -64,7 +64,7 @@ impl From<Value> for bool {
             Value::String(s) => s.borrow().len() != 0,
             Value::List(l) => l.borrow().len() != 0,
             Value::Int(i) => i != 0,
-            Value::Float(f) => f != 0.0,
+            Value::Float(f) => f.abs() > f64::EPSILON,
             Value::Bool(b) => b,
             // Function objects are truthy, but the returned after calling a Function need not be
             // Value::Function refers to the function object itself, and not the return type of the
@@ -81,7 +81,8 @@ impl From<&Value> for bool {
             Value::String(s) => s.borrow().len() != 0,
             Value::List(l) => l.borrow().len() != 0,
             Value::Int(i) => i != &0,
-            Value::Float(f) => f != &0.0,
+            // f64 comparisons are not completely accurate, so check if it is within the threshold
+            Value::Float(f) => f.abs() > f64::EPSILON,
             Value::Bool(b) => *b,
             Value::Function(_) => true,
             Value::Null => false,
@@ -90,34 +91,34 @@ impl From<&Value> for bool {
 }
 
 impl Value {
-    pub fn as_rc_str(self) -> Rc<RefCell<String>> {
+    pub fn to_rc_str(self) -> Rc<RefCell<String>> {
         match self {
             Value::String(s) => s,
             _ => unreachable!(),
         }
     }
 
-    pub fn as_ref_str(&self) -> Ref<String> {
+    pub fn to_ref_str(&self) -> Ref<String> {
         match self {
             Value::String(ref s) => s.borrow(),
             _ => unreachable!(),
         }
     }
-    pub fn as_rc_list(self) -> Rc<RefCell<List>> {
+    pub fn to_rc_list(self) -> Rc<RefCell<List>> {
         match self {
             Value::List(l) => l,
             _ => unreachable!(),
         }
     }
 
-    pub fn as_ref_list(&self) -> Ref<List> {
+    pub fn to_ref_list(&self) -> Ref<List> {
         match self {
             Value::List(ref l) => l.borrow(),
             _ => unreachable!(),
         }
     }
 
-    pub fn as_rc_fn(self) -> Rc<Function> {
+    pub fn to_rc_fn(self) -> Rc<Function> {
         match self {
             Value::Function(f) => f,
             _ => unreachable!(),
@@ -172,18 +173,18 @@ mod tests {
 
     #[test]
     fn val_to_ref_string() {
-        assert_eq!(s("s").as_rc_str().borrow().as_str(), "s");
-        assert_eq!(s("s").as_ref_str().as_str(), "s");
+        assert_eq!(s("s").to_rc_str().borrow().as_str(), "s");
+        assert_eq!(s("s").to_ref_str().as_str(), "s");
     }
 
     #[test]
     fn val_to_ref_list() {
         assert_eq!(
-            l(vec![i(0), i(1), s("s")]).as_rc_list().borrow()[..],
+            l(vec![i(0), i(1), s("s")]).to_rc_list().borrow()[..],
             [i(0), i(1), s("s")]
         );
         assert_eq!(
-            l(vec![i(0), i(1), s("s")]).as_ref_list()[..],
+            l(vec![i(0), i(1), s("s")]).to_ref_list()[..],
             [i(0), i(1), s("s")]
         );
     }
@@ -195,6 +196,6 @@ mod tests {
             BlockNode::new(vec![], Default::default()),
         ));
         let f = Value::Function(Rc::clone(&rc_f));
-        assert!(Rc::ptr_eq(&rc_f, &f.as_rc_fn()));
+        assert!(Rc::ptr_eq(&rc_f, &f.to_rc_fn()));
     }
 }

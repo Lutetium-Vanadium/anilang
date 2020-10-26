@@ -156,7 +156,12 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
                     '{' => add!(self, TokenKind::OpenBrace, i => 1),
                     '}' => add!(self, TokenKind::CloseBrace, i => 1),
                     _ => {
-                        let len = self.chars.peek().map(|c| c.0).unwrap_or(self.src.len()) - i;
+                        let len = self
+                            .chars
+                            .peek()
+                            .map(|c| c.0)
+                            .unwrap_or_else(|| self.src.len())
+                            - i;
                         self.diagnostics.bad_char(TextSpan::new(i, len));
                         add!(self, TokenKind::Bad, i => len);
                     }

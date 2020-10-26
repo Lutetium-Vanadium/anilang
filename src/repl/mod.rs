@@ -87,7 +87,7 @@ impl Repl {
     }
 
     /// Gives current command based on the cursor
-    fn cur<'a>(&'a self, c: &Cursor, lines: &'a Vec<String>) -> &'a Vec<String> {
+    fn cur<'a>(&'a self, c: &Cursor, lines: &'a [String]) -> &'a [String] {
         if c.use_history {
             // unwrap because if use_history is enabled, there must be at least one element in
             // history
@@ -98,7 +98,7 @@ impl Repl {
     }
 
     /// Easy access to the current line
-    fn cur_str<'a>(&'a self, c: &Cursor, lines: &'a Vec<String>) -> &'a str {
+    fn cur_str<'a>(&'a self, c: &Cursor, lines: &'a [String]) -> &'a str {
         &self.cur(c, lines)[c.lineno]
     }
 
@@ -129,7 +129,7 @@ impl Repl {
         &self,
         stdout: &mut std::io::Stdout,
         c: &mut Cursor,
-        lines: &Vec<String>,
+        lines: &[String],
         colour: style::Color,
     ) -> crossterm::Result<()> {
         if c.lineno > 0 {
@@ -506,7 +506,7 @@ fn get_byte_i(string: &str, i: usize) -> usize {
         .char_indices()
         .nth(i)
         .map(|c| c.0)
-        .unwrap_or(string.len())
+        .unwrap_or_else(|| string.len())
 }
 
 #[derive(Debug, Default)]

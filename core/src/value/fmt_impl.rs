@@ -24,7 +24,7 @@ impl fmt::Debug for Value {
             Value::String(ref s) => {
                 let s = &s.borrow();
                 // while printing quotes must be escaped to avoid confusion
-                if s.contains("'") && !s.contains("\"") {
+                if s.contains('\'') && !s.contains('"') {
                     write!(f, "\"{}\"", s)
                 } else {
                     write!(f, "'")?;
