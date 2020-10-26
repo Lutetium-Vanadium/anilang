@@ -176,9 +176,17 @@ impl Value {
 
                 let i = normalise_index(i64::from(index), s.borrow().chars().count() as i64)?;
 
-                let (index, _) = s.borrow().char_indices().nth(i).unwrap();
+                let (start_i, end_i) = {
+                    let s = s.borrow();
+                    let mut chars = s.char_indices().skip(i);
+                    (
+                        chars.next().unwrap().0,
+                        chars.next().map(|c| c.0).unwrap_or(s.len()),
+                    )
+                };
+
                 s.borrow_mut()
-                    .replace_range(index..(index + 1), value.as_ref_str().as_str());
+                    .replace_range(start_i..end_i, value.as_ref_str().as_str());
 
                 Ok(self)
             }
