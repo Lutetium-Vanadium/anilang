@@ -113,10 +113,14 @@ impl Repl {
         }
     }
 
-    fn exit(&mut self) -> ! {
+    fn pre_exit(&self) {
         let _ = terminal::disable_raw_mode();
         println!();
         let _ = self.history.write_to_file();
+    }
+
+    fn exit(&self) -> ! {
+        self.pre_exit();
         std::process::exit(0)
     }
 
@@ -444,6 +448,12 @@ impl Repl {
         }
 
         Ok(src)
+    }
+}
+
+impl Drop for Repl {
+    fn drop(&mut self) {
+        self.pre_exit();
     }
 }
 
