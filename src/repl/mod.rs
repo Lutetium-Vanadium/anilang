@@ -201,6 +201,32 @@ impl Repl {
                     {
                         self.exit()
                     }
+                    event::KeyCode::Char(chr)
+                        if e.modifiers.contains(event::KeyModifiers::CONTROL) && chr == 'l' =>
+                    {
+                        let lineno = c.lineno;
+                        c.lineno = 0;
+
+                        queue!(
+                            stdout,
+                            terminal::Clear(terminal::ClearType::All),
+                            cursor::MoveTo(0, 0)
+                        )?;
+                        let lines = self.cur(&c, &lines);
+                        self.print_lines(&mut stdout, &mut c, lines, colour)?;
+                        c.lineno = lineno;
+                        c.charno = min(c.charno, lines[c.lineno].chars().count());
+
+                        if c.lineno > 0 {
+                            queue!(stdout, cursor::MoveDown(lineno as u16))?;
+                        }
+                        queue!(
+                            stdout,
+                            cursor::MoveToColumn((self.continued_leader_len + c.charno) as u16),
+                        )?;
+
+                        self.cur_str(&c, &lines)
+                    }
                     event::KeyCode::Char(chr) => {
                         if c.use_history {
                             self.replace_with_history(&mut lines);
@@ -210,7 +236,7 @@ impl Repl {
                         lines[c.lineno].insert(c.charno, chr);
                         c.charno += 1;
 
-                        &lines[c.lineno] as &str
+                        &lines[c.lineno]
                     }
                     event::KeyCode::Tab => {
                         if c.use_history {
