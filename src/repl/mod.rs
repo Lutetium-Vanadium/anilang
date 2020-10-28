@@ -475,10 +475,12 @@ impl Repl {
 
         let src = self.cur(&c, &lines).join("\n");
 
-        if c.use_history {
-            self.history.push(self.history.cur().unwrap().clone());
-        } else {
-            self.history.push(lines);
+        if src.trim().len() > 0 {
+            if c.use_history {
+                self.history.push(self.history.cur().unwrap().clone());
+            } else {
+                self.history.push(lines);
+            }
         }
 
         Ok(src)
