@@ -1,4 +1,4 @@
-use crate::types::Type;
+use crate::types::{Cast, Type};
 use enumflags2::BitFlags;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -24,6 +24,7 @@ pub enum ErrorKind {
     OutOfBounds { got: i64, start: i64, end: i64 },
     IndexOutOfRange { index: i64, len: i64 },
     Unindexable { val_t: Type, index_t: Type },
+    CannotCompare { left: Type, right: Type },
     DivideByZero,
 }
 
@@ -200,6 +201,7 @@ impl Value {
     }
 }
 
+use std::cmp::Ordering;
 /// impl for the various binary operations
 impl Value {
     /// Binary Addition
@@ -455,32 +457,70 @@ impl Value {
     }
 
     /// <val> != <val>
-    pub fn ne(self, right: Value) -> Value {
-        Value::Bool(self != right)
+    pub fn ne(self, right: Value) -> Result<Value> {
+        match self.type_().cast_type(&right.type_()) {
+            Cast::Implicit(_) => Ok(Value::Bool(self != right)),
+            _ => Err(ErrorKind::CannotCompare {
+                left: self.type_(),
+                right: right.type_(),
+            }),
+        }
     }
 
     /// <val> == <val>
-    pub fn eq(self, right: Value) -> Value {
-        Value::Bool(self == right)
+    pub fn eq(self, right: Value) -> Result<Value> {
+        match self.type_().cast_type(&right.type_()) {
+            Cast::Implicit(_) => Ok(Value::Bool(self == right)),
+            _ => Err(ErrorKind::CannotCompare {
+                left: self.type_(),
+                right: right.type_(),
+            }),
+        }
     }
 
     /// <val> < <val>
-    pub fn lt(self, right: Value) -> Value {
-        Value::Bool(self < right)
+    pub fn lt(self, right: Value) -> Result<Value> {
+        match self.partial_cmp(&right) {
+            Some(ordering) => Ok(Value::Bool(ordering == Ordering::Less)),
+            None => Err(ErrorKind::CannotCompare {
+                left: self.type_(),
+                right: right.type_(),
+            }),
+        }
     }
 
     /// <val> > <val>
-    pub fn gt(self, right: Value) -> Value {
-        Value::Bool(self > right)
+    pub fn gt(self, right: Value) -> Result<Value> {
+        match self.partial_cmp(&right) {
+            Some(ordering) => Ok(Value::Bool(ordering == Ordering::Greater)),
+            None => Err(ErrorKind::CannotCompare {
+                left: self.type_(),
+                right: right.type_(),
+            }),
+        }
     }
 
     /// <val> <= <val>
-    pub fn le(self, right: Value) -> Value {
-        Value::Bool(self <= right)
+    pub fn le(self, right: Value) -> Result<Value> {
+        match self.partial_cmp(&right) {
+            Some(ordering) => Ok(Value::Bool(ordering.then(Ordering::Less) == Ordering::Less)),
+            None => Err(ErrorKind::CannotCompare {
+                left: self.type_(),
+                right: right.type_(),
+            }),
+        }
     }
 
     /// <val> >= <val>
-    pub fn ge(self, right: Value) -> Value {
-        Value::Bool(self >= right)
+    pub fn ge(self, right: Value) -> Result<Value> {
+        match self.partial_cmp(&right) {
+            Some(ordering) => Ok(Value::Bool(
+                ordering.then(Ordering::Greater) == Ordering::Greater,
+            )),
+            None => Err(ErrorKind::CannotCompare {
+                left: self.type_(),
+                right: right.type_(),
+            }),
+        }
     }
 }

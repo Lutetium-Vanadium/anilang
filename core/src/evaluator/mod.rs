@@ -434,13 +434,12 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
             TokenKind::OrOperator => Ok(left.or(right)),
             TokenKind::AndOperator => Ok(left.and(right)),
 
-            TokenKind::NEOperator => Ok(left.ne(right)),
-            TokenKind::EqOperator => Ok(left.eq(right)),
-            TokenKind::LTOperator => Ok(left.lt(right)),
-            TokenKind::GTOperator => Ok(left.gt(right)),
-            TokenKind::LEOperator => Ok(left.le(right)),
-            TokenKind::GEOperator => Ok(left.ge(right)),
-
+            TokenKind::NEOperator => left.ne(right),
+            TokenKind::EqOperator => left.eq(right),
+            TokenKind::LTOperator => left.lt(right),
+            TokenKind::GTOperator => left.gt(right),
+            TokenKind::LEOperator => left.le(right),
+            TokenKind::GEOperator => left.ge(right),
             _ => unreachable!(),
         };
 

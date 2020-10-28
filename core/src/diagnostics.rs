@@ -375,6 +375,9 @@ impl<'a> Diagnostics<'a> {
                 "IndexOutOfRange: index {} out of range, len: {}",
                 index, len,
             ),
+            value::ErrorKind::CannotCompare { left, right } => {
+                format!("Cannot compare values of type <{}> and <{}>", left, right)
+            }
         };
 
         self.report(msg, span)
