@@ -22,6 +22,10 @@ pub fn l(l: Vec<Value>) -> Value {
     Value::List(Rc::new(RefCell::new(l)))
 }
 
+pub fn r(s: i64, e: i64) -> Value {
+    Value::Range(s, e)
+}
+
 pub fn func() -> Value {
     Value::Function(Rc::new(Default::default()))
 }
