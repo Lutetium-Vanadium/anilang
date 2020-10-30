@@ -153,45 +153,34 @@ impl Value {
 mod tests {
     use super::*;
     use crate::syntax_node::BlockNode;
-
-    fn s(s: &str) -> Value {
-        Value::String(Rc::new(RefCell::new(s.to_owned())))
-    }
-
-    fn i(i: i64) -> Value {
-        Value::Int(i)
-    }
-
-    fn l(l: List) -> Value {
-        Value::List(Rc::new(RefCell::new(l)))
-    }
+    use crate::test_helpers::*;
 
     #[test]
     fn val_to_int() {
-        assert_eq!(i64::from(Value::Int(10)), 10);
+        assert_eq!(i64::from(i(10)), 10);
     }
 
     #[test]
     fn val_to_float() {
-        assert_eq!(f64::from(Value::Int(10)), 10.0);
-        assert_eq!(f64::from(Value::Float(10.0)), 10.0);
+        assert_eq!(f64::from(i(10)), 10.0);
+        assert_eq!(f64::from(f(10.0)), 10.0);
     }
 
     #[test]
     fn val_to_bool() {
-        assert_eq!(bool::from(Value::Int(10)), true);
-        assert_eq!(bool::from(Value::Int(0)), false);
+        assert_eq!(bool::from(i(10)), true);
+        assert_eq!(bool::from(i(0)), false);
 
-        assert_eq!(bool::from(Value::Float(10.0)), true);
-        assert_eq!(bool::from(Value::Float(0.0)), false);
+        assert_eq!(bool::from(f(10.0)), true);
+        assert_eq!(bool::from(f(0.0)), false);
 
-        assert_eq!(bool::from(Value::Bool(true)), true);
-        assert_eq!(bool::from(Value::Bool(false)), false);
+        assert_eq!(bool::from(b(true)), true);
+        assert_eq!(bool::from(b(false)), false);
 
         assert_eq!(bool::from(s("s")), true);
         assert_eq!(bool::from(s("")), false);
 
-        assert_eq!(bool::from(Value::Null), false);
+        assert_eq!(bool::from(n()), false);
     }
 
     #[test]

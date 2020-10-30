@@ -1,7 +1,4 @@
 use super::*;
-use crate::value::List;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 #[test]
 fn detect_implicit_cast() {
@@ -104,27 +101,7 @@ fn bitflag_type_to_string() {
     assert_eq!(&BitFlags::from(Type::Bool).to_string(), "bool");
 }
 
-fn i(i: i64) -> Value {
-    Value::Int(i)
-}
-fn f(f: f64) -> Value {
-    Value::Float(f)
-}
-fn b(b: bool) -> Value {
-    Value::Bool(b)
-}
-fn s(s: &str) -> Value {
-    Value::String(Rc::new(RefCell::new(s.to_owned())))
-}
-fn l(l: List) -> Value {
-    Value::List(Rc::new(RefCell::new(l)))
-}
-fn func() -> Value {
-    Value::Function(Rc::new(Default::default()))
-}
-fn n() -> Value {
-    Value::Null
-}
+use crate::test_helpers::*;
 
 #[test]
 fn get_correct_type() {

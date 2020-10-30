@@ -1,28 +1,5 @@
 use super::*;
-use std::cell::RefCell;
-use std::rc::Rc;
-
-fn i(i: i64) -> Value {
-    Value::Int(i)
-}
-fn f(f: f64) -> Value {
-    Value::Float(f)
-}
-fn b(b: bool) -> Value {
-    Value::Bool(b)
-}
-fn s(s: &str) -> Value {
-    Value::String(Rc::new(RefCell::new(s.to_owned())))
-}
-fn l(l: List) -> Value {
-    Value::List(Rc::new(RefCell::new(l)))
-}
-fn func() -> Value {
-    Value::Function(Rc::new(Function::default()))
-}
-fn n() -> Value {
-    Value::Null
-}
+use crate::test_helpers::*;
 
 fn err_it(t: Type) -> Result<Value> {
     Err(ErrorKind::IncorrectType {

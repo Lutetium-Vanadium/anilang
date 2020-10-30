@@ -9,6 +9,9 @@ mod tokens;
 mod types;
 mod value;
 
+#[cfg(test)]
+mod test_helpers;
+
 pub use diagnostics::Diagnostics;
 pub use evaluator::scope::Scope;
 pub use evaluator::Evaluator;
