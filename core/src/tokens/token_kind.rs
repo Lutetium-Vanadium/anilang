@@ -11,6 +11,7 @@ pub enum TokenKind {
     EOF,        // \0
 
     DotOperator,        // '.'
+    RangeOperator,      // '..'
     CommaOperator,      // ','
     AssignmentOperator, // '='
 

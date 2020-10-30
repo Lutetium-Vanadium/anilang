@@ -82,7 +82,14 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
                             add!(self, TokenKind::AssignmentOperator, i => 1);
                         }
                     }
-                    '.' => add!(self, TokenKind::DotOperator, i => 1),
+                    '.' => {
+                        if let Some((_, '.')) = self.chars.peek() {
+                            add!(self, TokenKind::RangeOperator, i => 2);
+                            self.chars.next();
+                        } else {
+                            add!(self, TokenKind::DotOperator, i => 1);
+                        }
+                    }
                     ',' => add!(self, TokenKind::CommaOperator, i => 1),
 
                     '-' => {

@@ -56,6 +56,7 @@ fn lexes_kind_properly() {
     assert_eq!(lex_one("ident").kind, TokenKind::Ident);
 
     assert_eq!(lex_one(".").kind, TokenKind::DotOperator);
+    assert_eq!(lex_one("..").kind, TokenKind::RangeOperator);
     assert_eq!(lex_one(",").kind, TokenKind::CommaOperator);
     assert_eq!(lex_one("=").kind, TokenKind::AssignmentOperator);
     assert_eq!(lex_one("+").kind, TokenKind::PlusOperator);
