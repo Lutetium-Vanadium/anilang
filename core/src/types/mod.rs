@@ -28,13 +28,14 @@ pub enum Cast {
 #[rustfmt::skip]
 #[repr(u8)]
 pub enum Type {
-    Int      = 0b0000001,
-    Float    = 0b0000010,
-    String   = 0b0000100,
-    List     = 0b0001000,
-    Bool     = 0b0010000,
-    Function = 0b0100000,
-    Null     = 0b1000000,
+    Int      = 0b00000001,
+    Float    = 0b00000010,
+    String   = 0b00000100,
+    List     = 0b00001000,
+    Range    = 0b00010000,
+    Bool     = 0b00100000,
+    Function = 0b01000000,
+    Null     = 0b10000000,
 }
 
 impl Type {
@@ -62,6 +63,7 @@ impl fmt::Display for Type {
                 Type::Float => "float",
                 Type::String => "string",
                 Type::List => "list",
+                Type::Range => "range",
                 Type::Bool => "bool",
                 Type::Function => "function",
                 Type::Null => "null",
@@ -99,6 +101,7 @@ impl Value {
             Value::Float(_) => Type::Float,
             Value::String(_) => Type::String,
             Value::List(_) => Type::List,
+            Value::Range(..) => Type::Range,
             Value::Function(_) => Type::Function,
             Value::Null => Type::Null,
         }

@@ -63,6 +63,8 @@ impl From<Value> for bool {
         match val {
             Value::String(s) => s.borrow().len() != 0,
             Value::List(l) => l.borrow().len() != 0,
+            // A range is considered truthy as long as it doesn't have a length of zero
+            Value::Range(s, e) => s != e,
             Value::Int(i) => i != 0,
             Value::Float(f) => f.abs() > f64::EPSILON,
             Value::Bool(b) => b,
@@ -80,12 +82,33 @@ impl From<&Value> for bool {
         match val {
             Value::String(s) => s.borrow().len() != 0,
             Value::List(l) => l.borrow().len() != 0,
+            // A range is considered truthy as long as it doesn't have a length of zero
+            Value::Range(s, e) => s != e,
             Value::Int(i) => i != &0,
             // f64 comparisons are not completely accurate, so check if it is within the threshold
             Value::Float(f) => f.abs() > f64::EPSILON,
             Value::Bool(b) => *b,
             Value::Function(_) => true,
             Value::Null => false,
+        }
+    }
+}
+
+use std::ops::Range;
+impl From<Value> for Range<i64> {
+    fn from(val: Value) -> Range<i64> {
+        match val {
+            Value::Range(s, e) => s..e,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<&Value> for Range<i64> {
+    fn from(val: &Value) -> Range<i64> {
+        match val {
+            Value::Range(s, e) => *s..*e,
+            _ => unreachable!(),
         }
     }
 }

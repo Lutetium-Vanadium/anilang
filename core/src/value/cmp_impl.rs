@@ -21,6 +21,7 @@ impl PartialEq for Value {
             Value::Int(l) => l == r.into(),
             Value::Float(l) => l == r.into(),
             Value::Bool(l) => l == r.into(),
+            Value::Range(s, e) => (s..e) == r.into(),
             Value::String(ref l_rc) => {
                 // Easy to check if both are references to the same string, otherwise check if the
                 // actual strings are equal
@@ -63,6 +64,8 @@ impl PartialOrd for Value {
             Value::Bool(l) => l.partial_cmp(&r.into()),
             Value::String(ref l) => l.borrow().as_str().partial_cmp(r.to_ref_str().as_str()),
             Value::List(ref l) => l.borrow()[..].partial_cmp(&r.to_ref_list()[..]),
+            // There is no real way to compare Ranges
+            Value::Range(..) => None,
             // Functions have no ordering as they are just a container for a `BlockNode`
             Value::Function(_) => None,
             Value::Null => None,

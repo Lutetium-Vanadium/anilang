@@ -46,6 +46,8 @@ pub enum Value {
     /// a `Vec<String>`, therefore a `Rc` is used. Since functions are immutable, `Rc<Function>`
     /// can directly be used.
     Function(Rc<Function>), // Functions are not mutable
+    /// A range value, easy to copy, so it is not placed in a `Rc`
+    Range(i64, i64),
     /// A primitive integer type, easy to copy, so is not placed in a `Rc`
     Int(i64),
     /// A primitive float type, easy to copy, so is not placed in a `Rc`
