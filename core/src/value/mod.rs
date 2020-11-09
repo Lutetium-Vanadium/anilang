@@ -121,12 +121,27 @@ fn normalise_index(index: i64, len: i64) -> Result<usize> {
     }
 }
 
+/// Same as `normalise_index`, except it allows for index to be equal to `len`
+fn normalise_index_len(index: i64, len: i64) -> Result<usize> {
+    if index < 0 {
+        if len + 1 < -index {
+            Err(ErrorKind::IndexOutOfRange { index, len })
+        } else {
+            Ok((len + index) as usize)
+        }
+    } else if len < index {
+        Err(ErrorKind::IndexOutOfRange { index, len })
+    } else {
+        Ok(index as usize)
+    }
+}
+
 /// impl for index operations
 impl Value {
     pub fn indexable(&self, index_type: Type) -> bool {
         match self.type_() {
-            Type::String if index_type == Type::Int => true,
-            Type::List if index_type == Type::Int => true,
+            Type::String if (Type::Int | Type::Range).contains(index_type) => true,
+            Type::List if (Type::Int | Type::Range).contains(index_type) => true,
             _ => false,
         }
     }
@@ -142,19 +157,48 @@ impl Value {
         match self {
             Value::String(s) => {
                 let s = s.borrow();
-                let i = normalise_index(i64::from(index), s.chars().count() as i64)?;
+                let s = match index {
+                    Value::Int(index) => {
+                        let i = normalise_index(index, s.chars().count() as i64)?;
+                        String::from(s.chars().nth(i).unwrap())
+                    }
+                    Value::Range(start, end) => {
+                        let len = s.chars().count() as i64;
 
-                Ok(Value::String(Rc::new(RefCell::new(String::from(
-                    s.chars().nth(i).unwrap(),
-                )))))
+                        let start_i = normalise_index(start, len)?;
+                        let mut chars = s.char_indices().skip(start_i);
+                        let start = chars.next().unwrap().0;
+
+                        let end = chars
+                            .nth(normalise_index_len(end, len)? - start_i - 1)
+                            .unwrap()
+                            .0;
+
+                        String::from(&s[start..end])
+                    }
+                    _ => unreachable!("Unindexable type should be caught by earlier check"),
+                };
+
+                Ok(Value::String(Rc::new(RefCell::new(s))))
             }
             Value::List(l) => {
                 let l = l.borrow();
-                let i = normalise_index(i64::from(index), l.len() as i64)?;
+                match index {
+                    Value::Int(index) => {
+                        let i = normalise_index(index, l.len() as i64)?;
 
-                Ok(l[i].clone())
+                        Ok(l[i].clone())
+                    }
+                    Value::Range(s, e) => {
+                        let s = normalise_index(s, l.len() as i64)?;
+                        let e = normalise_index_len(e, l.len() as i64)?;
+
+                        Ok(Value::List(Rc::new(RefCell::new(Vec::from(&l[s..e])))))
+                    }
+                    _ => unreachable!("Unindexable type should be caught by earlier check"),
+                }
             }
-            _ => unreachable!(),
+            _ => unreachable!("Unindexable type should be caught by earlier check"),
         }
     }
 
@@ -175,31 +219,90 @@ impl Value {
                         expected: Type::String.into(),
                     })?;
 
-                let i = normalise_index(i64::from(index), s.borrow().chars().count() as i64)?;
+                let (start_i, end_i) = match index {
+                    Value::Int(index) => {
+                        let s = s.borrow();
+                        let i = normalise_index(index, s.chars().count() as i64)?;
 
-                let (start_i, end_i) = {
-                    let s = s.borrow();
-                    let mut chars = s.char_indices().skip(i);
-                    (
-                        chars.next().unwrap().0,
-                        chars.next().map(|c| c.0).unwrap_or_else(|| s.len()),
-                    )
+                        let mut chars = s.char_indices().skip(i);
+                        (
+                            chars.next().unwrap().0,
+                            chars.next().map(|c| c.0).unwrap_or_else(|| s.len()),
+                        )
+                    }
+                    Value::Range(start, end) => {
+                        let s = s.borrow();
+                        let len = s.chars().count() as i64;
+                        let start = normalise_index(start, len)?;
+
+                        let mut chars = s.char_indices().skip(start);
+
+                        (
+                            chars.next().unwrap().0,
+                            chars
+                                .nth(normalise_index_len(end, len)? - start - 1)
+                                .map(|c| c.0)
+                                .unwrap_or_else(|| s.len()),
+                        )
+                    }
+                    _ => unreachable!("Unindexable type should be caught by earlier check"),
                 };
 
                 s.borrow_mut()
                     .replace_range(start_i..end_i, value.to_ref_str().as_str());
-
-                Ok(self)
             }
-            Value::List(l) => {
-                let i = normalise_index(i64::from(index), l.borrow().len() as i64)?;
+            Value::List(l) => match index {
+                Value::Int(index) => {
+                    let i = normalise_index(index, l.borrow().len() as i64)?;
 
-                l.borrow_mut()[i] = value;
+                    l.borrow_mut()[i] = value;
+                }
+                Value::Range(s, e) => {
+                    let value =
+                        value
+                            .try_cast(Type::List)
+                            .map_err(|_| ErrorKind::IncorrectType {
+                                got: value.type_(),
+                                expected: Type::List.into(),
+                            })?;
 
-                Ok(self)
-            }
-            _ => unreachable!(),
-        }
+                    let val_len = value.to_ref_list().len();
+                    let len = l.borrow().len() as i64;
+                    let s = normalise_index(s, len)?;
+                    let e = normalise_index_len(e, len)?;
+
+                    let mut diff = val_len as i64 - e as i64 + s as i64;
+
+                    let mut l = l.borrow_mut();
+                    if diff <= 0 {
+                        diff = diff.abs();
+                        for (i, v) in value.to_ref_list().iter().enumerate() {
+                            l[s + i] = v.clone();
+                        }
+
+                        for i in (s + val_len)..((len - diff) as usize) {
+                            l.swap(i, i + diff as usize);
+                        }
+
+                        l.resize((len - diff) as usize, Value::Null);
+                    } else {
+                        l.resize((len + diff) as usize, Value::Null);
+
+                        for i in e..(len as usize) {
+                            l.swap(i, i + diff as usize);
+                        }
+
+                        for (i, v) in value.to_ref_list().iter().enumerate() {
+                            l[s + i] = v.clone();
+                        }
+                    }
+                }
+                _ => unreachable!("Unindexable type should be caught by earlier check"),
+            },
+            _ => unreachable!("Unindexable type should be caught by earlier check"),
+        };
+
+        Ok(self)
     }
 }
 

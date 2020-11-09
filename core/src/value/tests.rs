@@ -131,11 +131,18 @@ fn get_at_valid() {
         s("string").get_at(i(-2)).unwrap().to_ref_str().as_str(),
         "n"
     );
+    assert_eq!(
+        s("string").get_at(r(1, 4)).unwrap().to_ref_str().as_str(),
+        "tri"
+    );
 
     assert_eq!(l(vec![i(0), f(2.0), b(true)]).get_at(i(0)).unwrap(), i(0));
+    assert_eq!(l(vec![i(0), f(2.0), b(true)]).get_at(i(-3)).unwrap(), i(0));
     assert_eq!(
-        l(vec![i(0), f(2.0), b(true)]).get_at(i(-2)).unwrap(),
-        f(2.0)
+        l(vec![i(0), f(2.0), b(true), b(false)])
+            .get_at(r(1, -1))
+            .unwrap(),
+        l(vec![f(2.0), b(true)])
     );
 }
 
@@ -169,6 +176,14 @@ fn set_at_valid() {
             .as_str(),
         "strifg"
     );
+    assert_eq!(
+        s("string")
+            .set_at(r(2, -2), s("zz"))
+            .unwrap()
+            .to_ref_str()
+            .as_str(),
+        "stzzng"
+    );
 
     assert_eq!(
         l(vec![i(0), f(2.0), b(true)])
@@ -183,6 +198,28 @@ fn set_at_valid() {
             .unwrap()
             .to_ref_list()[..],
         [i(0), s("string"), b(true)]
+    );
+
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)])
+            .set_at(r(0, 2), l(vec![s("string")]))
+            .unwrap()
+            .to_ref_list()[..],
+        [s("string"), b(true)]
+    );
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)])
+            .set_at(r(1, 3), l(vec![b(true), s("string")]))
+            .unwrap()
+            .to_ref_list()[..],
+        [i(0), b(true), s("string")]
+    );
+    assert_eq!(
+        l(vec![i(0), f(2.0), b(true)])
+            .set_at(r(1, 2), l(vec![b(false), s("string")]))
+            .unwrap()
+            .to_ref_list()[..],
+        [i(0), b(false), s("string"), b(true)]
     );
 }
 
