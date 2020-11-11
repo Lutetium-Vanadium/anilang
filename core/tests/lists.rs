@@ -42,7 +42,12 @@ fn index_lists() {
         )
         .unwrap(),
         v::l(vec![v::i(50), v::f(123.1), v::s("hello world"),]),
-    )
+    );
+
+    assert_eq!(
+        execute("[123, 1231, 9812][0..23-24]").unwrap(),
+        v::l(vec![v::i(123), v::i(1231)])
+    );
 }
 
 #[test]

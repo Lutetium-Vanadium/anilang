@@ -17,4 +17,7 @@ fn escapes_string() {
 fn index_strings() {
     assert_eq!(execute(r#"'hello'[2]"#).unwrap(), v::s("l"));
     assert_eq!(execute(r#"'hello'[-2]"#).unwrap(), v::s("l"));
+
+    assert_eq!(execute(r#"'hello'[2..5]"#).unwrap(), v::s("llo"));
+    assert_eq!(execute(r#"'hello'[-4..-2]"#).unwrap(), v::s("el"));
 }

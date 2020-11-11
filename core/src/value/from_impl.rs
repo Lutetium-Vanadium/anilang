@@ -184,6 +184,11 @@ mod tests {
     }
 
     #[test]
+    fn val_to_range() {
+        assert_eq!(Range::from(r(0, 1)), 0..1);
+    }
+
+    #[test]
     fn val_to_ref_string() {
         assert_eq!(s("s").to_rc_str().borrow().as_str(), "s");
         assert_eq!(s("s").to_ref_str().as_str(), "s");

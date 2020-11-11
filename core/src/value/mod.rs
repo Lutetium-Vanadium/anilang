@@ -171,8 +171,8 @@ impl Value {
 
                         let end = chars
                             .nth(normalise_index_len(end, len)? - start_i - 1)
-                            .unwrap()
-                            .0;
+                            .map(|c| c.0)
+                            .unwrap_or_else(|| s.len());
 
                         String::from(&s[start..end])
                     }
