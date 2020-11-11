@@ -424,6 +424,8 @@ impl<'diagnostics, 'src> Evaluator<'diagnostics, 'src> {
         let right = self.evaluate_node(*node.right);
 
         let res = match node.operator {
+            TokenKind::RangeOperator => left.range_to(right),
+
             TokenKind::PlusOperator => left.add(right),
             TokenKind::MinusOperator => left.sub(right),
             TokenKind::StarOperator => left.mult(right),

@@ -306,6 +306,35 @@ impl Value {
     }
 }
 
+impl Value {
+    /// Range (s..e)
+    ///
+    /// NOTE currently only int to int Ranges are allowed
+    pub fn range_to(self, right: Value) -> Result<Value> {
+        let right = right
+            .try_cast(self.type_())
+            .map_err(|_| ErrorKind::IncorrectRightType {
+                got: right.type_(),
+                expected: self.type_().into(),
+            })?;
+
+        let left = self
+            .try_cast(right.type_())
+            .map_err(|_| ErrorKind::IncorrectLeftType {
+                got: self.type_(),
+                expected: right.type_().into(),
+            })?;
+
+        match left {
+            Value::Int(start) => Ok(Value::Range(start, i64::from(right))),
+            _ => Err(ErrorKind::IncorrectType {
+                got: right.type_(),
+                expected: Type::Int.into(),
+            }),
+        }
+    }
+}
+
 use std::cmp::Ordering;
 /// impl for the various binary operations
 impl Value {

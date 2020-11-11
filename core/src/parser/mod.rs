@@ -155,7 +155,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     }
 
     fn parse_statement(&self) -> SyntaxNode {
-        match self.cur().kind {
+        let statement = match self.cur().kind {
             TokenKind::LetKeyword => self.parse_declaration_expression(),
             TokenKind::Ident if self.peek(1).kind == TokenKind::AssignmentOperator => {
                 self.parse_assignment_expression()
@@ -186,6 +186,14 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             TokenKind::LoopKeyword => self.parse_loop_statement(),
             TokenKind::WhileKeyword => self.parse_while_statement(),
             _ => self.parse_binary_expression(0),
+        };
+
+        if self.cur().kind == TokenKind::RangeOperator {
+            let range = self.next();
+            let right = self.parse_statement();
+            SyntaxNode::BinaryNode(node::BinaryNode::new(range, statement, right))
+        } else {
+            statement
         }
     }
 
