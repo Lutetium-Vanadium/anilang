@@ -772,6 +772,53 @@ fn parse_variable_properly() {
     );
 }
 
+#[test]
+fn parse_range_properly() {
+    let tokens = vec![
+        Token::new(TokenKind::Number, 0, 1),
+        Token::new(TokenKind::RangeOperator, 1, 2),
+        Token::new(TokenKind::Number, 3, 1),
+        Token::new(TokenKind::PlusOperator, 5, 1),
+        Token::new(TokenKind::Number, 7, 1),
+        Token::new(TokenKind::EOF, 8, 0),
+    ];
+    let root = parse("1..2 + 3", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let bn = match &root.block[0] {
+        SyntaxNode::BinaryNode(bn) if bn.operator == TokenKind::RangeOperator => bn,
+        n => panic!("expected BinaryNode with RangeOperator got {:?}", n),
+    };
+
+    assert!(matches!(
+        *bn.left,
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(1),
+            ..
+        })
+    ));
+
+    let bn = match &*bn.right {
+        SyntaxNode::BinaryNode(bn) if bn.operator == TokenKind::PlusOperator => bn,
+        n => panic!("expected BinaryNode with PlusOperator got {:?}", n),
+    };
+
+    assert!(matches!(
+        *bn.left,
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(2),
+            ..
+        })
+    ));
+    assert!(matches!(
+        *bn.right,
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(3),
+            ..
+        })
+    ));
+}
+
 // Block -> [
 //         +
 //        / \

@@ -465,6 +465,25 @@ fn evaluate_fn_call_properly() {
 }
 
 #[test]
+fn evaluate_range_properly() {
+    assert_eq!(
+        eval(SyntaxNode::BinaryNode(node::BinaryNode {
+            operator: TokenKind::RangeOperator,
+            span: span(),
+            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                value: i(1),
+                span: span(),
+            })),
+            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                value: i(2),
+                span: span(),
+            })),
+        })),
+        r(1, 2),
+    );
+}
+
+#[test]
 fn evaluate_binary_properly() {
     assert_eq!(
         eval(SyntaxNode::BinaryNode(node::BinaryNode {

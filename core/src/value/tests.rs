@@ -2,9 +2,13 @@ use super::*;
 use crate::test_helpers::*;
 
 fn err_it(t: Type) -> Result<Value> {
+    err_ite(t, Type::Int | Type::Float)
+}
+
+fn err_ite(t: Type, e: BitFlags<Type>) -> Result<Value> {
     Err(ErrorKind::IncorrectType {
         got: t,
-        expected: Type::Int | Type::Float,
+        expected: e,
     })
 }
 
@@ -236,6 +240,45 @@ fn set_at_invalid() {
         l(vec![i(0), f(2.0), b(true)]).set_at(i(-12), s("")),
         err_ior(-12, 3)
     );
+}
+
+#[test]
+fn binary_range_valid() {
+    assert_eq!(i(1).range_to(i(2)), Ok(r(1, 2)));
+    assert_eq!(i(-1).range_to(i(2)), Ok(r(-1, 2)));
+}
+
+#[test]
+fn binary_range_invalid() {
+    assert_eq!(
+        f(0.0).range_to(i(10)),
+        err_ite(Type::Float, Type::Int.into())
+    );
+
+    assert_eq!(
+        i(10).range_to(f(0.0)),
+        err_ite(Type::Float, Type::Int.into())
+    );
+
+    let values = vec![
+        b(true),
+        s("a"),
+        l(vec![i(0), f(2.0), b(true)]),
+        r(0, 1),
+        func(),
+        n(),
+    ];
+
+    for val in values {
+        let val_t = val.type_();
+
+        assert_eq!(
+            val.clone().range_to(i(10)),
+            err_ir(Type::Int, val_t.clone().into())
+        );
+
+        assert_eq!(i(10).range_to(val), err_ir(val_t, Type::Int.into()));
+    }
 }
 
 #[test]
