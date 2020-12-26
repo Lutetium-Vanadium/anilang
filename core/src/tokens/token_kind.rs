@@ -7,8 +7,9 @@ pub enum TokenKind {
     Number,     // 213
     Boolean,    // 'true' | 'false'
     String,     // '"string"'
-    Ident,      // A variable
+    Ident,      // A variable, function name etc.
     EOF,        // \0
+    Comment,    // A comment - Either single-line(`// comment`) or multi-line(`/* comment */`)
 
     DotOperator,        // '.'
     RangeOperator,      // '..'

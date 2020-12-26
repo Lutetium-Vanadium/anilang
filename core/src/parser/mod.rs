@@ -50,8 +50,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     ) -> node::BlockNode {
         assert_ne!(tokens.len(), 0);
 
-        // whitespace should be ignored
-        tokens.retain(|val| val.kind != TokenKind::Whitespace);
+        // whitespace and comments should be ignored
+        tokens.retain(|val| val.kind != TokenKind::Whitespace && val.kind != TokenKind::Comment);
 
         let parser = Parser {
             diagnostics,

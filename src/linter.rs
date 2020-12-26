@@ -18,12 +18,14 @@ pub fn print_linted(stdout: &mut io::Stdout, line: &str) -> crossterm::Result<()
                 .peekable();
 
             while let Some(token) = tokens.next() {
-                print_token(
-                    &src[&token.text_span],
-                    &token.kind,
-                    tokens.peek().map(|t| &t.kind),
-                    stdout,
-                )?;
+                if !token.text_span.is_empty() {
+                    print_token(
+                        &src[&token.text_span],
+                        &token.kind,
+                        tokens.peek().map(|t| &t.kind),
+                        stdout,
+                    )?;
+                }
             }
         }
     }
@@ -85,6 +87,8 @@ fn print_token(
         | TokenKind::GTOperator
         | TokenKind::LEOperator
         | TokenKind::GEOperator => RED,
+
+        TokenKind::Comment => Color::DarkGrey,
 
         TokenKind::Bad => {
             return queue!(

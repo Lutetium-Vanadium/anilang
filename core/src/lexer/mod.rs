@@ -109,7 +109,11 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
                         }
                     }
                     '*' => add!(self, TokenKind::StarOperator, i => 1),
-                    '/' => add!(self, TokenKind::SlashOperator, i => 1),
+                    '/' => match self.chars.peek() {
+                        Some((_, '/')) => self.ignore_singleline_comment(i),
+                        Some((_, '*')) => self.ignore_multiline_comment(i),
+                        _ => add!(self, TokenKind::SlashOperator, i => 1),
+                    },
                     '%' => add!(self, TokenKind::ModOperator, i => 1),
                     '^' => add!(self, TokenKind::CaretOperator, i => 1),
 
@@ -279,5 +283,47 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
         }
 
         add!(self, TokenKind::String, start => e - start);
+    }
+
+    fn ignore_singleline_comment(&mut self, start: usize) {
+        // Ignore the second `/`
+        let mut e = self.chars.next().unwrap().0;
+
+        // EOF is alright for end of single line comment
+        while let Some((i, c)) = self.chars.next() {
+            e = i;
+            if c == '\n' || c == '\r' {
+                break;
+            }
+        }
+
+        add!(self, TokenKind::Comment, start => e + 1 - start);
+    }
+
+    fn ignore_multiline_comment(&mut self, start: usize) {
+        // Ignore the `*`
+        let mut e = self.chars.next().unwrap().0;
+
+        loop {
+            match (self.chars.next(), self.chars.peek()) {
+                // Found ending `*/`
+                (Some((_, '*')), Some((i, '/'))) => {
+                    e = *i + 1;
+                    // Ignore the ending `/`
+                    self.chars.next();
+                    break;
+                }
+                // Not an end to the comment: increment `e` in case of EOF
+                (Some((i, _)), _) => e = i,
+                _ => {
+                    let len = self.src.len() - e;
+                    self.diagnostics.unexpected_eof(TextSpan::new(e, len));
+                    e = self.src.len();
+                    break;
+                }
+            }
+        }
+
+        add!(self, TokenKind::Comment, start => e - start);
     }
 }

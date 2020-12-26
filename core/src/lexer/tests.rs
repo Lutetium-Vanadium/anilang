@@ -8,7 +8,7 @@ fn lex(text: &str) -> Vec<Token> {
 
 fn lex_one(text: &str) -> Token {
     let tokens = lex(text);
-    assert_eq!(tokens.len(), 2);
+    assert!(tokens.len() == 2, "Expected 2 tokens, got {:#?}", tokens);
     tokens.into_iter().next().unwrap()
 }
 
@@ -55,6 +55,10 @@ fn lexes_kind_properly() {
     assert_eq!(lex_one("'str'").kind, TokenKind::String);
     assert_eq!(lex_one("ident").kind, TokenKind::Ident);
 
+    assert_eq!(lex_one("// random comment").kind, TokenKind::Comment);
+    assert_eq!(lex_one("/* random comment */").kind, TokenKind::Comment);
+    assert_eq!(lex_one("/* random \n comment */").kind, TokenKind::Comment);
+
     assert_eq!(lex_one(".").kind, TokenKind::DotOperator);
     assert_eq!(lex_one("..").kind, TokenKind::RangeOperator);
     assert_eq!(lex_one(",").kind, TokenKind::CommaOperator);
@@ -93,4 +97,170 @@ fn lexes_kind_properly() {
     assert_eq!(lex_one("fn").kind, TokenKind::FnKeyword);
 
     assert_eq!(lex_one(";").kind, TokenKind::Bad);
+}
+
+#[test]
+fn ignores_singleline_comment() {
+    let mut tokens = lex("1 + 2// + 3").into_iter();
+
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 0, 1));
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 1, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::PlusOperator, 2, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 3, 1)
+    );
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 4, 1));
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Comment, 5, 6));
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::EOF, 11, 0));
+    assert_eq!(tokens.next(), None);
+
+    let mut tokens = lex("1 + 2 // random comment\n + 3").into_iter();
+
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 0, 1));
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 1, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::PlusOperator, 2, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 3, 1)
+    );
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 4, 1));
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 5, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Comment, 6, 18)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 24, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::PlusOperator, 25, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 26, 1)
+    );
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 27, 1));
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::EOF, 28, 0));
+    assert_eq!(tokens.next(), None);
+}
+
+#[test]
+fn ignores_multiline_comment() {
+    let mut tokens = lex("1 + 2/* + 3*/").into_iter();
+
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 0, 1));
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 1, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::PlusOperator, 2, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 3, 1)
+    );
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 4, 1));
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Comment, 5, 8));
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::EOF, 13, 0));
+    assert_eq!(tokens.next(), None);
+
+    let mut tokens = lex("1 + 2 /* random comment */ + 3").into_iter();
+
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 0, 1));
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 1, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::PlusOperator, 2, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 3, 1)
+    );
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 4, 1));
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 5, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Comment, 6, 20)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 26, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::PlusOperator, 27, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 28, 1)
+    );
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 29, 1));
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::EOF, 30, 0));
+    assert_eq!(tokens.next(), None);
+
+    let mut tokens = lex("1 + 2 /* random\n comment */ + 3").into_iter();
+
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 0, 1));
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 1, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::PlusOperator, 2, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 3, 1)
+    );
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 4, 1));
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 5, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Comment, 6, 21)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 27, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::PlusOperator, 28, 1)
+    );
+    assert_eq!(
+        tokens.next().unwrap(),
+        Token::new(TokenKind::Whitespace, 29, 1)
+    );
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 30, 1));
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::EOF, 31, 0));
+    assert_eq!(tokens.next(), None);
 }
