@@ -1,5 +1,7 @@
+const INDENT_WIDTH: usize = 4;
+
 /// Counts the number of open braces, brackets and parans
-pub fn get_indent(lines: &[String]) -> u32 {
+pub fn get_indent(lines: &[String]) -> usize {
     let mut brace = 0;
     let mut bracket = 0;
     let mut paran = 0;
@@ -21,5 +23,5 @@ pub fn get_indent(lines: &[String]) -> u32 {
         }
     }
 
-    brace + bracket + paran
+    (brace + bracket + paran) * INDENT_WIDTH
 }

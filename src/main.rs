@@ -1,14 +1,49 @@
-use crossterm::Result;
+mod get_indent;
+mod linter;
 
-mod repl;
+use crossterm::Result;
+use shelp::LangInterface;
+use std::io;
+use std::path::PathBuf;
+
+pub fn get_persistant_file_path() -> Option<PathBuf> {
+    match app_dirs2::data_root(app_dirs2::AppDataType::UserCache) {
+        Ok(mut p) => {
+            p.push(".anilang-history");
+            Some(p)
+        }
+        Err(_) => None,
+    }
+}
+
+struct AnilangLangInterface;
+impl LangInterface for AnilangLangInterface {
+    fn print_line(stdout: &mut io::Stdout, line: &str) -> shelp::Result<()> {
+        linter::print_linted(stdout, line)
+    }
+
+    fn get_indent(lines: &[String]) -> usize {
+        get_indent::get_indent(lines)
+    }
+}
 
 fn main() -> Result<()> {
-    let mut repl = repl::Repl::new("» ", "· ", repl::get_persistant_file_path());
+    let repl = shelp::Repl::<AnilangLangInterface>::new("» ", "· ", get_persistant_file_path())
+        .iter(shelp::Color::Green);
 
     let mut global_scope = anilang::Scope::new();
+    let mut show_ast = false;
 
-    loop {
-        let line = repl.next(crossterm::style::Color::Green)?;
+    for line in repl {
+        if line == ".tree" {
+            show_ast = !show_ast;
+            if show_ast {
+                println!("Showing Abstract Syntax Tree")
+            } else {
+                println!("Hiding Abstract Syntax Tree")
+            }
+            continue;
+        }
 
         let src = anilang::SourceText::new(&line);
         let diagnostics = anilang::Diagnostics::new(&src);
@@ -17,7 +52,7 @@ fn main() -> Result<()> {
         let root = anilang::Parser::parse(tokens, &src, &diagnostics);
 
         if !diagnostics.any() {
-            if repl.show_tree {
+            if show_ast {
                 root.prt();
             }
             let value =
@@ -29,4 +64,6 @@ fn main() -> Result<()> {
             }
         }
     }
+
+    Ok(())
 }

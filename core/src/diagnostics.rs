@@ -7,7 +7,7 @@ use crate::value;
 use crossterm::{queue, style};
 use node::SyntaxNode;
 use std::cell::Cell;
-use std::io::prelude::*;
+use std::io::{self, prelude::*};
 
 /// A general Error struct for printing errors raised during the
 #[derive(Debug)]
@@ -39,13 +39,23 @@ impl Error {
     fn prt(&self, src: &SourceText) -> crossterm::Result<()> {
         let s = match src.lineno(self.span.start()) {
             Some(s) => s,
-            None => return Err(crossterm::ErrorKind::__Nonexhaustive),
+            None => {
+                return Err(crossterm::ErrorKind::IoError(io::Error::new(
+                    io::ErrorKind::Other,
+                    "Invalid span",
+                )))
+            }
         };
 
         // End is non inclusive
         let e = match src.lineno(self.span.end() - 1) {
             Some(e) => e,
-            None => return Err(crossterm::ErrorKind::__Nonexhaustive),
+            None => {
+                return Err(crossterm::ErrorKind::IoError(io::Error::new(
+                    io::ErrorKind::Other,
+                    "Invalid span",
+                )))
+            }
         };
 
         // get the width of the largest line number so all the '|' line up
