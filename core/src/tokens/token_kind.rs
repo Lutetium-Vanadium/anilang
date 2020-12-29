@@ -24,10 +24,6 @@ pub enum TokenKind {
     ModOperator,   // '%'
     CaretOperator, // '*'
 
-    // Unary operators
-    PlusPlusOperator,   // '++'
-    MinusMinusOperator, // '--'
-
     // Boolean operators
     OrOperator,  // '||'
     AndOperator, // '&&'
@@ -65,7 +61,7 @@ use TokenKind::*;
 impl TokenKind {
     pub fn unary_precedence(&self) -> u8 {
         match self {
-            NotOperator | PlusOperator | MinusOperator | MinusMinusOperator | PlusPlusOperator => 8,
+            NotOperator | PlusOperator | MinusOperator => 8,
             _ => 0,
         }
     }

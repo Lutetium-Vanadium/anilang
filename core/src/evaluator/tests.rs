@@ -1,186 +1,109 @@
 use super::*;
 use crate::test_helpers::*;
-use crate::text_span::*;
+use crate::value::Function;
 use std::rc::Rc;
 
-fn span() -> TextSpan {
-    DEFAULT.clone()
-}
-
-fn eval_b(root: node::BlockNode) -> Value {
+fn eval(mut bytecode: Bytecode) -> Value {
+    bytecode.insert(0, InstructionKind::PushVar.into());
+    bytecode.push(InstructionKind::PopVar.into());
     // The source text is only needed in diagnostics, so can be ignored
     let src = crate::SourceText::new("");
     let diagnostics = Diagnostics::new(&src).no_print();
-    Evaluator::evaluate(root, &diagnostics)
+    Evaluator::evaluate(&bytecode, &diagnostics)
 }
 
-fn eval_sb(root: node::BlockNode, scope: &mut scope::Scope) -> Value {
+fn eval_s(mut bytecode: Bytecode, scope: &mut scope::Scope) -> Value {
+    bytecode.insert(0, InstructionKind::PushVar.into());
+    bytecode.push(InstructionKind::PopVar.into());
     // The source text is only needed in diagnostics, so can be ignored
     let src = crate::SourceText::new("");
     let diagnostics = Diagnostics::new(&src).no_print();
-    Evaluator::evaluate_with_global(root, &diagnostics, scope)
-}
-
-fn eval_s(root: SyntaxNode, scope: &mut scope::Scope) -> Value {
-    eval_sb(node::BlockNode::new(vec![root], span()), scope)
-}
-
-fn eval(root: SyntaxNode) -> Value {
-    eval_b(node::BlockNode::new(vec![root], span()))
+    Evaluator::evaluate_with_global(&bytecode, &diagnostics, scope)
 }
 
 #[test]
 fn evaluate_block_properly() {
     let mut scope = scope::Scope::new();
     scope.insert("global".to_owned(), i(2));
-    assert_eq!(
-        eval_sb(
-            node::BlockNode {
-                span: span(),
-                block: vec![
-                    SyntaxNode::DeclarationNode(node::DeclarationNode {
-                        ident: "a".to_owned(),
-                        span: span(),
-                        value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                            span: span(),
-                            value: i(3),
-                        },)),
-                    }),
-                    SyntaxNode::AssignmentNode(node::AssignmentNode {
-                        ident: "a".to_owned(),
-                        span: span(),
-                        indices: None,
-                        value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
-                            operator: TokenKind::MinusOperator,
-                            span: span(),
-                            left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                                ident: "a".to_owned(),
-                                span: span(),
-                            })),
-                            right: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                                ident: "global".to_owned(),
-                                span: span(),
-                            })),
-                        })),
-                    }),
-                    SyntaxNode::BinaryNode(node::BinaryNode {
-                        operator: TokenKind::PlusOperator,
-                        span: span(),
-                        left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                            ident: "a".to_owned(),
-                            span: span(),
-                        })),
-                        right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                            value: i(1),
-                            span: span(),
-                        })),
-                    }),
-                ],
-            },
-            &mut scope,
-        ),
-        i(2)
-    );
+
+    let bytecode = vec![
+        InstructionKind::PushVar.into(),
+        InstructionKind::Push { value: i(3) }.into(),
+        InstructionKind::Store {
+            ident: "a".to_owned(),
+            declaration: true,
+        }
+        .into(),
+        InstructionKind::Pop.into(),
+        InstructionKind::Load {
+            ident: "global".to_owned(),
+        }
+        .into(),
+        InstructionKind::Load {
+            ident: "a".to_owned(),
+        }
+        .into(),
+        InstructionKind::BinarySubtract.into(),
+        InstructionKind::Store {
+            ident: "a".to_owned(),
+            declaration: false,
+        }
+        .into(),
+        InstructionKind::Pop.into(),
+        InstructionKind::Push { value: i(1) }.into(),
+        InstructionKind::Load {
+            ident: "a".to_owned(),
+        }
+        .into(),
+        InstructionKind::BinaryAdd.into(),
+        InstructionKind::PopVar.into(),
+    ];
+
+    assert_eq!(eval_s(bytecode, &mut scope,), i(2));
 }
 
 #[test]
 fn evaluate_variable_properly() {
     let mut scope = scope::Scope::new();
     scope.insert("a".to_owned(), i(0));
-    assert_eq!(
-        eval_s(
-            SyntaxNode::VariableNode(node::VariableNode {
-                ident: "a".to_owned(),
-                span: span()
-            }),
-            &mut scope
-        ),
-        i(0)
-    );
+    let bytecode = vec![InstructionKind::Load {
+        ident: "a".to_owned(),
+    }
+    .into()];
+    assert_eq!(eval_s(bytecode, &mut scope), i(0));
 
-    assert_eq!(
-        eval_b(node::BlockNode {
-            block: vec![
-                SyntaxNode::DeclarationNode(node::DeclarationNode {
-                    ident: "a".to_owned(),
-                    value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                        value: i(0),
-                        span: span(),
-                    })),
-                    span: span()
-                }),
-                SyntaxNode::VariableNode(node::VariableNode {
-                    ident: "a".to_owned(),
-                    span: span(),
-                }),
-            ],
-            span: span(),
-        }),
-        i(0)
-    );
+    let bytecode = vec![
+        InstructionKind::Push { value: i(0) }.into(),
+        InstructionKind::Store {
+            ident: "a".to_owned(),
+            declaration: true,
+        }
+        .into(),
+        InstructionKind::Load {
+            ident: "a".to_owned(),
+        }
+        .into(),
+    ];
+    assert_eq!(eval(bytecode), i(0));
 }
 
 #[test]
 fn evaluate_index_properly() {
     let mut scope = scope::Scope::new();
     scope.insert("a".to_owned(), s("hello world"));
-    assert_eq!(
-        eval_s(
-            SyntaxNode::IndexNode(node::IndexNode {
-                span: span(),
-                index: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
-                    span: span(),
-                    operator: TokenKind::StarOperator,
-                    left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                        span: span(),
-                        value: i(2),
-                    })),
-                    right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                        span: span(),
-                        value: i(3),
-                    })),
-                })),
-                child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                    ident: "a".to_owned(),
-                    span: span()
-                })),
-            }),
-            &mut scope
-        )
-        .to_ref_str()
-        .as_str(),
-        "w"
-    );
 
-    assert_eq!(
-        eval_b(node::BlockNode {
-            block: vec![
-                SyntaxNode::DeclarationNode(node::DeclarationNode {
-                    ident: "a".to_owned(),
-                    value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                        value: s("hello world"),
-                        span: span(),
-                    })),
-                    span: span()
-                }),
-                SyntaxNode::IndexNode(node::IndexNode {
-                    span: span(),
-                    index: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                        span: span(),
-                        value: i(2),
-                    })),
-                    child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                        ident: "a".to_owned(),
-                        span: span()
-                    })),
-                }),
-            ],
-            span: span(),
-        })
-        .to_ref_str()
-        .as_str(),
-        "l"
-    );
+    let bytecode = vec![
+        InstructionKind::Push { value: i(3) }.into(),
+        InstructionKind::Push { value: i(2) }.into(),
+        InstructionKind::BinaryMultiply.into(),
+        InstructionKind::Load {
+            ident: "a".to_owned(),
+        }
+        .into(),
+        InstructionKind::GetIndex.into(),
+    ];
+
+    assert_eq!(eval_s(bytecode, &mut scope).to_ref_str().as_str(), "w");
 }
 
 // NOTE else if conditions don't need to be checked, since the following
@@ -204,27 +127,19 @@ fn evaluate_index_properly() {
 #[test]
 fn evaluate_if_properly() {
     let if_tree = |cond| {
-        SyntaxNode::IfNode(node::IfNode {
-            span: span(),
-            cond: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(cond),
-                span: span(),
-            })),
-            if_block: node::BlockNode {
-                span: span(),
-                block: vec![SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(0),
-                    span: span(),
-                })],
-            },
-            else_block: Some(node::BlockNode {
-                span: span(),
-                block: vec![SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(1),
-                    span: span(),
-                })],
-            }),
-        })
+        vec![
+            InstructionKind::Push { value: b(cond) }.into(),
+            InstructionKind::PopJumpIfTrue { label: 0 }.into(),
+            InstructionKind::PushVar.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::PopVar.into(),
+            InstructionKind::JumpTo { label: 1 }.into(),
+            InstructionKind::Label { number: 0 }.into(),
+            InstructionKind::PushVar.into(),
+            InstructionKind::Push { value: i(0) }.into(),
+            InstructionKind::PopVar.into(),
+            InstructionKind::Label { number: 1 }.into(),
+        ]
     };
 
     assert_eq!(eval(if_tree(true)), i(0));
@@ -236,52 +151,49 @@ fn evaluate_loop_properly() {
     let mut scope = scope::Scope::new();
     scope.insert("a".to_owned(), i(1));
 
-    assert!(eval_s(
-        SyntaxNode::LoopNode(node::LoopNode {
-            span: span(),
-            block: vec![
-                SyntaxNode::IfNode(node::IfNode {
-                    span: span(),
-                    cond: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
-                        operator: TokenKind::GEOperator,
-                        span: span(),
-                        left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                            ident: "a".to_owned(),
-                            span: span(),
-                        })),
-                        right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                            value: i(100),
-                            span: span(),
-                        })),
-                    })),
-                    if_block: node::BlockNode {
-                        span: span(),
-                        block: vec![SyntaxNode::BreakNode(node::BreakNode::new(span()))],
-                    },
-                    else_block: None,
-                }),
-                SyntaxNode::AssignmentNode(node::AssignmentNode {
-                    ident: "a".to_owned(),
-                    span: span(),
-                    indices: None,
-                    value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
-                        operator: TokenKind::PlusOperator,
-                        span: span(),
-                        left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                            ident: "a".to_owned(),
-                            span: span()
-                        })),
-                        right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                            value: i(5),
-                            span: span(),
-                        })),
-                    })),
-                }),
-            ],
-        }),
-        &mut scope
-    )
-    .is_null());
+    let loop_start = 0;
+    let loop_end = 1;
+    let if_then = 2;
+    let if_end = 3;
+
+    let bytecode = vec![
+        InstructionKind::PushVar.into(),
+        InstructionKind::Label { number: loop_start }.into(),
+        InstructionKind::Push { value: i(100) }.into(),
+        InstructionKind::Load {
+            ident: "a".to_owned(),
+        }
+        .into(),
+        InstructionKind::CompareGE.into(),
+        InstructionKind::PopJumpIfTrue { label: if_then }.into(),
+        InstructionKind::Push { value: n() }.into(),
+        InstructionKind::JumpTo { label: if_end }.into(),
+        InstructionKind::Label { number: if_then }.into(),
+        InstructionKind::PushVar.into(),
+        InstructionKind::PopVar.into(),
+        InstructionKind::JumpTo { label: loop_end }.into(),
+        InstructionKind::PopVar.into(),
+        InstructionKind::Label { number: if_end }.into(),
+        InstructionKind::Pop.into(),
+        InstructionKind::Push { value: i(5) }.into(),
+        InstructionKind::Load {
+            ident: "a".to_owned(),
+        }
+        .into(),
+        InstructionKind::BinaryAdd.into(),
+        InstructionKind::Store {
+            ident: "a".to_owned(),
+            declaration: false,
+        }
+        .into(),
+        InstructionKind::Pop.into(),
+        InstructionKind::JumpTo { label: loop_start }.into(),
+        InstructionKind::Label { number: loop_end }.into(),
+        InstructionKind::PopVar.into(),
+        InstructionKind::Push { value: n() }.into(),
+    ];
+
+    assert!(eval_s(bytecode, &mut scope).is_null());
 
     assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 101);
 }
@@ -291,10 +203,7 @@ fn evaluate_literal_properly() {
     let values = [i(0), f(0.0), b(false), s("a")];
     for val in values.iter() {
         assert_eq!(
-            &eval(SyntaxNode::LiteralNode(node::LiteralNode {
-                span: span(),
-                value: val.clone()
-            })),
+            &eval(vec![InstructionKind::Push { value: val.clone() }.into()]),
             val
         );
     }
@@ -303,23 +212,17 @@ fn evaluate_literal_properly() {
 #[test]
 fn evaluate_list_properly() {
     let elements = [i(0), s("a"), l(vec![f(0.0), b(false)])];
+    let bytecode = vec![
+        InstructionKind::Push {
+            value: l(vec![f(0.0), b(false)]), // This list is not created in the syntax tree
+        }
+        .into(),
+        InstructionKind::Push { value: s("a") }.into(),
+        InstructionKind::Push { value: i(0) }.into(),
+        InstructionKind::MakeList { len: 3 }.into(),
+    ];
 
-    assert_eq!(
-        eval(SyntaxNode::ListNode(node::ListNode {
-            span: span(),
-            elements: elements
-                .iter()
-                .map(|e| {
-                    SyntaxNode::LiteralNode(node::LiteralNode {
-                        span: span(),
-                        value: e.clone(),
-                    })
-                })
-                .collect(),
-        }))
-        .to_ref_list()[..],
-        elements,
-    );
+    assert_eq!(eval(bytecode).to_ref_list()[..], elements);
 }
 
 #[test]
@@ -330,15 +233,14 @@ fn evaluate_assignment_properly() {
     assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 0);
     assert_eq!(
         eval_s(
-            SyntaxNode::AssignmentNode(node::AssignmentNode {
-                ident: "a".to_owned(),
-                span: span(),
-                indices: None,
-                value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: s("world"),
-                    span: span(),
-                })),
-            }),
+            vec![
+                InstructionKind::Push { value: s("world") }.into(),
+                InstructionKind::Store {
+                    ident: "a".to_owned(),
+                    declaration: false
+                }
+                .into(),
+            ],
             &mut scope
         )
         .to_ref_str()
@@ -352,18 +254,20 @@ fn evaluate_assignment_properly() {
 
     assert_eq!(
         eval_s(
-            SyntaxNode::AssignmentNode(node::AssignmentNode {
-                ident: "a".to_owned(),
-                span: span(),
-                indices: Some(vec![SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(1),
-                    span: span(),
-                })]),
-                value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: s("a"),
-                    span: span(),
-                })),
-            }),
+            vec![
+                InstructionKind::Push { value: s("a") }.into(),
+                InstructionKind::Push { value: i(1) }.into(),
+                InstructionKind::Load {
+                    ident: "a".to_owned()
+                }
+                .into(),
+                InstructionKind::SetIndex.into(),
+                InstructionKind::Pop.into(),
+                InstructionKind::Load {
+                    ident: "a".to_owned()
+                }
+                .into(),
+            ],
             &mut scope
         )
         .to_ref_str()
@@ -381,14 +285,14 @@ fn evaluate_declaration_properly() {
     let mut scope = scope::Scope::new();
     assert_eq!(
         eval_s(
-            SyntaxNode::DeclarationNode(node::DeclarationNode {
-                ident: "a".to_owned(),
-                span: span(),
-                value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(0),
-                    span: span(),
-                })),
-            }),
+            vec![
+                InstructionKind::Push { value: i(0) }.into(),
+                InstructionKind::Store {
+                    ident: "a".to_owned(),
+                    declaration: true
+                }
+                .into(),
+            ],
             &mut scope
         ),
         i(0)
@@ -400,21 +304,23 @@ fn evaluate_declaration_properly() {
 fn evaluate_fn_declaration_properly() {
     let mut scope = scope::Scope::new();
     let return_f = eval_s(
-        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
-            ident: "a".to_owned(),
-            span: span(),
-            args: vec!["arg1".to_owned()],
-            block: node::BlockNode {
-                span: span(),
-                block: vec![],
-            },
-        }),
+        vec![
+            InstructionKind::Push {
+                value: Value::Function(Rc::new(Function::new(vec!["arg1".to_owned()], vec![]))),
+            }
+            .into(),
+            InstructionKind::Store {
+                ident: "a".to_owned(),
+                declaration: true,
+            }
+            .into(),
+        ],
         &mut scope,
     );
     let func = scope.try_get_value("a").unwrap().clone().to_rc_fn();
     assert!(Rc::ptr_eq(&return_f.to_rc_fn(), &func));
     assert_eq!(func.args, vec!["arg1".to_owned()]);
-    assert_eq!(func.body.block.len(), 0);
+    assert_eq!(func.body.len(), 0);
 }
 
 #[test]
@@ -424,40 +330,33 @@ fn evaluate_fn_call_properly() {
         "add".to_owned(),
         Value::Function(Rc::new(Function::new(
             vec!["a".to_owned(), "b".to_owned()],
-            node::BlockNode {
-                span: span(),
-                block: vec![SyntaxNode::BinaryNode(node::BinaryNode {
-                    span: span(),
-                    operator: TokenKind::PlusOperator,
-                    left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                        ident: "a".to_owned(),
-                        span: span(),
-                    })),
-                    right: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                        ident: "b".to_owned(),
-                        span: span(),
-                    })),
-                })],
-            },
+            vec![
+                InstructionKind::PushVar.into(),
+                InstructionKind::Load {
+                    ident: "b".to_owned(),
+                }
+                .into(),
+                InstructionKind::Load {
+                    ident: "a".to_owned(),
+                }
+                .into(),
+                InstructionKind::BinaryAdd.into(),
+                InstructionKind::PopVar.into(),
+            ],
         ))),
     );
 
     assert_eq!(
         eval_s(
-            SyntaxNode::FnCallNode(node::FnCallNode {
-                ident: "add".to_owned(),
-                span: span(),
-                args: vec![
-                    SyntaxNode::LiteralNode(node::LiteralNode {
-                        value: i(1),
-                        span: span(),
-                    }),
-                    SyntaxNode::LiteralNode(node::LiteralNode {
-                        value: i(2),
-                        span: span(),
-                    }),
-                ],
-            }),
+            vec![
+                InstructionKind::Push { value: i(2) }.into(),
+                InstructionKind::Push { value: i(1) }.into(),
+                InstructionKind::Load {
+                    ident: "add".to_owned()
+                }
+                .into(),
+                InstructionKind::CallFunction { num_args: 2 }.into(),
+            ],
             &mut scope,
         ),
         i(3)
@@ -467,18 +366,11 @@ fn evaluate_fn_call_properly() {
 #[test]
 fn evaluate_range_properly() {
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::RangeOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::MakeRange.into(),
+        ]),
         r(1, 2),
     );
 }
@@ -486,300 +378,154 @@ fn evaluate_range_properly() {
 #[test]
 fn evaluate_binary_properly() {
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::PlusOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::BinaryAdd.into(),
+        ]),
+        i(3)
+    );
+
+    assert_eq!(
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::BinarySubtract.into(),
+        ]),
+        i(-1)
+    );
+
+    assert_eq!(
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::BinaryMultiply.into(),
+        ]),
+        i(2)
+    );
+
+    assert_eq!(
+        eval(vec![
+            InstructionKind::Push { value: f(2.0) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::BinaryDivide.into(),
+        ]),
+        f(0.5)
+    );
+
+    assert_eq!(
+        eval(vec![
+            InstructionKind::Push { value: i(7) }.into(),
+            InstructionKind::Push { value: i(17) }.into(),
+            InstructionKind::BinaryMod.into(),
+        ]),
         i(3),
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::MinusOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
-        i(-1),
+        eval(vec![
+            InstructionKind::Push { value: i(5) }.into(),
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::BinaryPower.into(),
+        ]),
+        i(32)
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::StarOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
-        i(2),
+        eval(vec![
+            InstructionKind::Push { value: b(true) }.into(),
+            InstructionKind::Push { value: b(false) }.into(),
+            InstructionKind::BinaryOr.into(),
+        ]),
+        b(true)
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::SlashOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: f(2.0),
-                span: span(),
-            })),
-        })),
-        f(0.5),
+        eval(vec![
+            InstructionKind::Push { value: b(true) }.into(),
+            InstructionKind::Push { value: b(false) }.into(),
+            InstructionKind::BinaryAnd.into(),
+        ]),
+        b(false)
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::ModOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(17),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(7),
-                span: span(),
-            })),
-        })),
-        i(3),
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::CompareNE.into(),
+        ]),
+        b(true)
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::CaretOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(5),
-                span: span(),
-            })),
-        })),
-        i(32),
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::CompareEQ.into(),
+        ]),
+        b(false)
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::OrOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(false),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(true),
-                span: span(),
-            })),
-        })),
-        b(true),
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::CompareLT.into(),
+        ]),
+        b(true)
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::AndOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(false),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(true),
-                span: span(),
-            })),
-        })),
-        b(false),
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::CompareGT.into(),
+        ]),
+        b(false)
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::NEOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
-        b(true),
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::CompareLE.into(),
+        ]),
+        b(true)
     );
 
     assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::EqOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
-        b(false),
-    );
-
-    assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::LTOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
-        b(true),
-    );
-
-    assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::GTOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
-        b(false),
-    );
-
-    assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::LEOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
-        b(true),
-    );
-
-    assert_eq!(
-        eval(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::GEOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
-        b(false),
+        eval(vec![
+            InstructionKind::Push { value: i(2) }.into(),
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::CompareGE.into(),
+        ]),
+        b(false)
     );
 }
-
 #[test]
 fn evaluate_unary_properly() {
     assert_eq!(
-        eval(SyntaxNode::UnaryNode(node::UnaryNode {
-            operator: TokenKind::PlusOperator,
-            span: span(),
-            child: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-        })),
+        eval(vec![
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::UnaryPositive.into(),
+        ]),
         i(1),
     );
 
     assert_eq!(
-        eval(SyntaxNode::UnaryNode(node::UnaryNode {
-            operator: TokenKind::MinusOperator,
-            span: span(),
-            child: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-        })),
+        eval(vec![
+            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::UnaryNegative.into(),
+        ]),
         i(-1),
     );
 
     assert_eq!(
-        eval(SyntaxNode::UnaryNode(node::UnaryNode {
-            operator: TokenKind::NotOperator,
-            span: span(),
-            child: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(true),
-                span: span(),
-            })),
-        })),
+        eval(vec![
+            InstructionKind::Push { value: b(true) }.into(),
+            InstructionKind::UnaryNot.into(),
+        ]),
         b(false),
     );
-
-    let mut scope = scope::Scope::new();
-    scope.insert("a".to_owned(), i(1));
-
-    assert_eq!(
-        eval_s(
-            SyntaxNode::UnaryNode(node::UnaryNode {
-                operator: TokenKind::PlusPlusOperator,
-                span: span(),
-                child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                    ident: "a".to_owned(),
-                    span: span(),
-                })),
-            }),
-            &mut scope
-        ),
-        i(1),
-    );
-    assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 2);
-
-    assert_eq!(
-        eval_s(
-            SyntaxNode::UnaryNode(node::UnaryNode {
-                operator: TokenKind::MinusMinusOperator,
-                span: span(),
-                child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                    ident: "a".to_owned(),
-                    span: span(),
-                })),
-            }),
-            &mut scope
-        ),
-        i(2),
-    );
-    assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 1);
 }

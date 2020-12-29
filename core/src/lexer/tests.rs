@@ -69,8 +69,6 @@ fn lexes_kind_properly() {
     assert_eq!(lex_one("/").kind, TokenKind::SlashOperator);
     assert_eq!(lex_one("%").kind, TokenKind::ModOperator);
     assert_eq!(lex_one("^").kind, TokenKind::CaretOperator);
-    assert_eq!(lex_one("++").kind, TokenKind::PlusPlusOperator);
-    assert_eq!(lex_one("--").kind, TokenKind::MinusMinusOperator);
     assert_eq!(lex_one("||").kind, TokenKind::OrOperator);
     assert_eq!(lex_one("&&").kind, TokenKind::AndOperator);
     assert_eq!(lex_one("!").kind, TokenKind::NotOperator);

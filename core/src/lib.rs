@@ -1,6 +1,8 @@
+mod bytecode;
 mod diagnostics;
 mod evaluator;
 mod lexer;
+mod lowerer;
 mod parser;
 mod source_text;
 mod syntax_node;
@@ -12,10 +14,12 @@ mod value;
 #[cfg(test)]
 mod test_helpers;
 
+pub use bytecode::*;
 pub use diagnostics::Diagnostics;
 pub use evaluator::scope::Scope;
 pub use evaluator::Evaluator;
 pub use lexer::Lexer;
+pub use lowerer::Lowerer;
 pub use parser::Parser;
 pub use source_text::SourceText;
 pub use tokens::TokenKind;

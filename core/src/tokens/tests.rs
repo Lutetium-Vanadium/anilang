@@ -11,8 +11,6 @@ fn correct_unary_precedence() {
     assert_eq!(t(NotOperator).unary_precedence(), 8);
     assert_eq!(t(PlusOperator).unary_precedence(), 8);
     assert_eq!(t(MinusOperator).unary_precedence(), 8);
-    assert_eq!(t(MinusMinusOperator).unary_precedence(), 8);
-    assert_eq!(t(PlusPlusOperator).unary_precedence(), 8);
 
     assert_eq!(t(Whitespace).unary_precedence(), 0);
     assert_eq!(t(Number).unary_precedence(), 0);
@@ -72,8 +70,6 @@ fn correct_binary_precedence() {
     assert_eq!(t(OrOperator).binary_precedence(), 1);
 
     assert_eq!(t(NotOperator).binary_precedence(), 0);
-    assert_eq!(t(MinusMinusOperator).binary_precedence(), 0);
-    assert_eq!(t(PlusPlusOperator).binary_precedence(), 0);
     assert_eq!(t(Whitespace).binary_precedence(), 0);
     assert_eq!(t(Number).binary_precedence(), 0);
     assert_eq!(t(Boolean).binary_precedence(), 0);
@@ -119,8 +115,6 @@ fn is_calc_assign() {
     assert_eq!(t(LEOperator).is_calc_assign(), false);
     assert_eq!(t(GEOperator).is_calc_assign(), false);
     assert_eq!(t(NotOperator).is_calc_assign(), false);
-    assert_eq!(t(MinusMinusOperator).is_calc_assign(), false);
-    assert_eq!(t(PlusPlusOperator).is_calc_assign(), false);
     assert_eq!(t(Whitespace).is_calc_assign(), false);
     assert_eq!(t(Number).is_calc_assign(), false);
     assert_eq!(t(Boolean).is_calc_assign(), false);

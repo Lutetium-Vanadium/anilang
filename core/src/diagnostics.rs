@@ -296,6 +296,17 @@ impl<'a> Diagnostics<'a> {
         }
     }
 
+    /// Generated in the lowerer
+    ///
+    /// Is reported when there is a break statement outside a loop.
+    /// see `core/src/lowerer/mod.rs`
+    pub fn break_outside_loop(&self, span: TextSpan) {
+        self.report(
+            format!("BreakOutsideLoop: breaks can only be used in for loops, while loops and regular loops"),
+            span,
+        )
+    }
+
     /// Generated in the evaluator
     ///
     /// Is reported when a variable is used without being previously declared,

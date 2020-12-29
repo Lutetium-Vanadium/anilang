@@ -33,6 +33,7 @@ fn main() -> Result<()> {
 
     let mut global_scope = anilang::Scope::new();
     let mut show_ast = false;
+    let mut show_bytecode = false;
 
     for line in repl {
         if line == ".tree" {
@@ -43,6 +44,14 @@ fn main() -> Result<()> {
                 println!("Hiding Abstract Syntax Tree")
             }
             continue;
+        } else if line == ".bytecode" {
+            show_bytecode = !show_bytecode;
+            if show_ast {
+                println!("Showing Bytecode")
+            } else {
+                println!("Hiding Bytecode")
+            }
+            continue;
         }
 
         let src = anilang::SourceText::new(&line);
@@ -50,13 +59,18 @@ fn main() -> Result<()> {
 
         let tokens = anilang::Lexer::lex(&src, &diagnostics);
         let root = anilang::Parser::parse(tokens, &src, &diagnostics);
+        if show_ast {
+            root.prt();
+        }
+
+        let bytecode = anilang::Lowerer::lower(root, &diagnostics, false);
 
         if !diagnostics.any() {
-            if show_ast {
-                root.prt();
-            }
-            let value =
-                anilang::Evaluator::evaluate_with_global(root, &diagnostics, &mut global_scope);
+            let value = anilang::Evaluator::evaluate_with_global(
+                &bytecode,
+                &diagnostics,
+                &mut global_scope,
+            );
             match value {
                 anilang::Value::Null => {}
                 value if !diagnostics.any() => println!("{:?}", value),

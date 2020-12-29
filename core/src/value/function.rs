@@ -1,13 +1,13 @@
-use crate::syntax_node::BlockNode;
+use crate::bytecode::Bytecode;
 
 #[derive(Debug, Clone)]
 pub struct Function {
     pub args: Vec<String>,
-    pub body: BlockNode,
+    pub body: Bytecode,
 }
 
 impl Function {
-    pub fn new(args: Vec<String>, body: BlockNode) -> Self {
+    pub fn new(args: Vec<String>, body: Bytecode) -> Self {
         Self { args, body }
     }
 }
@@ -39,7 +39,7 @@ impl Default for Function {
     fn default() -> Self {
         Self {
             args: Vec::new(),
-            body: BlockNode::new(Vec::new(), Default::default()),
+            body: Default::default(),
         }
     }
 }

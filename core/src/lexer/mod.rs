@@ -92,22 +92,8 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
                     }
                     ',' => add!(self, TokenKind::CommaOperator, i => 1),
 
-                    '-' => {
-                        if let Some((_, '-')) = self.chars.peek() {
-                            add!(self, TokenKind::MinusMinusOperator, i => 2);
-                            self.chars.next();
-                        } else {
-                            add!(self, TokenKind::MinusOperator, i => 1);
-                        }
-                    }
-                    '+' => {
-                        if let Some((_, '+')) = self.chars.peek() {
-                            add!(self, TokenKind::PlusPlusOperator, i => 2);
-                            self.chars.next();
-                        } else {
-                            add!(self, TokenKind::PlusOperator, i => 1);
-                        }
-                    }
+                    '-' => add!(self, TokenKind::MinusOperator, i => 1),
+                    '+' => add!(self, TokenKind::PlusOperator, i => 1),
                     '*' => add!(self, TokenKind::StarOperator, i => 1),
                     '/' => match self.chars.peek() {
                         Some((_, '/')) => self.ignore_singleline_comment(i),

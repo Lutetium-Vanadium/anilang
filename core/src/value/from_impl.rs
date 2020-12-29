@@ -152,7 +152,6 @@ impl Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::syntax_node::BlockNode;
     use crate::test_helpers::*;
 
     #[test]
@@ -210,7 +209,7 @@ mod tests {
     fn val_to_ref_fn() {
         let rc_f = Rc::new(Function::new(
             vec!["a".to_owned(), "b".to_owned()],
-            BlockNode::new(vec![], Default::default()),
+            Default::default(),
         ));
         let f = Value::Function(Rc::clone(&rc_f));
         assert!(Rc::ptr_eq(&rc_f, &f.to_rc_fn()));

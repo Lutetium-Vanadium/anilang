@@ -565,6 +565,7 @@ fn binary_eq() {
     assert_eq!(b(false), b(false));
     let f = func();
     assert_eq!(f.clone(), f);
+    assert_eq!(n(), n());
 }
 
 #[test]
@@ -582,7 +583,6 @@ fn binary_ne() {
     assert_ne!(b(true), b(false));
     assert_ne!(b(false), b(true));
     assert_ne!(func(), func());
-    assert_ne!(n(), n());
 }
 
 #[test]

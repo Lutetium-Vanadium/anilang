@@ -76,8 +76,6 @@ fn print_token(
         | TokenKind::SlashOperator
         | TokenKind::ModOperator
         | TokenKind::CaretOperator
-        | TokenKind::PlusPlusOperator
-        | TokenKind::MinusMinusOperator
         | TokenKind::OrOperator
         | TokenKind::AndOperator
         | TokenKind::NotOperator

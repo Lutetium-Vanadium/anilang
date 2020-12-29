@@ -7,7 +7,8 @@ fn _execute(code: &str, scope: &mut anilang::Scope) -> Result {
 
     let tokens = anilang::Lexer::lex(&src, &diagnostics);
     let root = anilang::Parser::parse(tokens, &src, &diagnostics);
-    let value = anilang::Evaluator::evaluate_with_global(root, &diagnostics, scope);
+    let bytecode = anilang::Lowerer::lower(root, &diagnostics, false);
+    let value = anilang::Evaluator::evaluate_with_global(&bytecode, &diagnostics, scope);
 
     if diagnostics.any() {
         Err(())

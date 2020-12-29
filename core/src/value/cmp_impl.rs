@@ -37,7 +37,7 @@ impl PartialEq for Value {
             // Functions are only equal if they are references to the same definition, the actual
             // args and function body are not considered.
             Value::Function(ref l) => Rc::ptr_eq(l, &r.to_rc_fn()),
-            Value::Null => false,
+            Value::Null => true,
         }
     }
 }
