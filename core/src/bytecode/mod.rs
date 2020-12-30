@@ -1,5 +1,9 @@
 use crate::text_span::TextSpan;
 use crate::value::Value;
+use std::io::{self, prelude::*};
+
+#[cfg(test)]
+mod tests;
 
 pub type LabelNumber = usize;
 pub type Bytecode = Vec<Instruction>;
@@ -13,6 +17,18 @@ pub struct Instruction {
 impl Instruction {
     pub fn new(kind: InstructionKind, span: TextSpan) -> Self {
         Instruction { kind, span }
+    }
+}
+
+impl Read for Instruction {
+    // Make sure to never use self immutably, otherwise safety argument for Read implementation of
+    // Value::Function is invalidated
+    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
+        let bytes_read = self.kind.read(buf)?;
+        buf = &mut buf[bytes_read..];
+        buf.write_all(&(self.span.start() as u64).to_le_bytes())?;
+        buf.write_all(&(self.span.len() as u64).to_le_bytes())?;
+        Ok(bytes_read + 16)
     }
 }
 
@@ -147,4 +163,86 @@ pub enum InstructionKind {
     PushVar,
     /// Pop the top variable stack
     PopVar,
+}
+
+impl Read for InstructionKind {
+    // Make sure to never use self immutably, otherwise safety argument for Read implementation of
+    // Value::Function is invalidated
+    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
+        match self {
+            InstructionKind::BinaryAdd => buf.write(&[0]),
+            InstructionKind::BinarySubtract => buf.write(&[1]),
+            InstructionKind::BinaryMultiply => buf.write(&[2]),
+            InstructionKind::BinaryDivide => buf.write(&[3]),
+            InstructionKind::BinaryMod => buf.write(&[4]),
+            InstructionKind::BinaryPower => buf.write(&[5]),
+            InstructionKind::BinaryOr => buf.write(&[6]),
+            InstructionKind::BinaryAnd => buf.write(&[7]),
+            InstructionKind::UnaryPositive => buf.write(&[8]),
+            InstructionKind::UnaryNegative => buf.write(&[9]),
+            InstructionKind::UnaryNot => buf.write(&[10]),
+            InstructionKind::CompareLT => buf.write(&[11]),
+            InstructionKind::CompareLE => buf.write(&[12]),
+            InstructionKind::CompareGT => buf.write(&[13]),
+            InstructionKind::CompareGE => buf.write(&[14]),
+            InstructionKind::CompareEQ => buf.write(&[15]),
+            InstructionKind::CompareNE => buf.write(&[16]),
+            InstructionKind::Pop => buf.write(&[17]),
+            InstructionKind::Push { value } => {
+                buf.write_all(&[18])?;
+                let bytes_written = value.read(buf)?;
+                Ok(bytes_written + 1)
+            }
+            InstructionKind::Store { ident, declaration } => {
+                buf.write_all(&[19])?;
+                buf.write_all(&ident.as_bytes())?;
+                buf.write_all(b"\0")?;
+                buf.write_all(&[if *declaration { 1 } else { 0 }])?;
+                Ok(ident.len() + 3)
+            }
+            InstructionKind::Load { ident } => {
+                buf.write_all(&[20])?;
+                buf.write_all(&ident.as_bytes())?;
+                buf.write_all(b"\0")?;
+                Ok(ident.len() + 2)
+            }
+            InstructionKind::GetIndex => buf.write(&[21]),
+            InstructionKind::SetIndex => buf.write(&[22]),
+            InstructionKind::JumpTo { label } => {
+                buf.write_all(&[23])?;
+                buf.write_all(&(*label as u64).to_le_bytes())?;
+                Ok(9)
+            }
+            InstructionKind::PopJumpIfTrue { label } => {
+                buf.write_all(&[24])?;
+                buf.write_all(&(*label as u64).to_le_bytes())?;
+                Ok(9)
+            }
+            InstructionKind::CallFunction { num_args } => {
+                buf.write_all(&[25])?;
+                buf.write_all(&(*num_args as u64).to_le_bytes())?;
+                Ok(9)
+            }
+            InstructionKind::CallInbuilt { ident, num_args } => {
+                buf.write_all(&[26])?;
+                buf.write_all(&ident.as_bytes())?;
+                buf.write_all(b"\0")?;
+                buf.write_all(&(*num_args as u64).to_le_bytes())?;
+                Ok(10 + ident.len())
+            }
+            InstructionKind::Label { number } => {
+                buf.write_all(&[27])?;
+                buf.write_all(&(*number as u64).to_le_bytes())?;
+                Ok(9)
+            }
+            InstructionKind::MakeList { len } => {
+                buf.write_all(&[28])?;
+                buf.write_all(&(*len as u64).to_le_bytes())?;
+                Ok(9)
+            }
+            InstructionKind::MakeRange => buf.write(&[29]),
+            InstructionKind::PushVar => buf.write(&[30]),
+            InstructionKind::PopVar => buf.write(&[31]),
+        }
+    }
 }

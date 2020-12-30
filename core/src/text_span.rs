@@ -6,33 +6,33 @@ pub struct TextSpan {
 }
 
 impl TextSpan {
-    pub fn new(start: usize, len: usize) -> TextSpan {
+    pub const fn new(start: usize, len: usize) -> TextSpan {
         TextSpan { start, len }
     }
 
-    pub fn from_spans(start_span: &TextSpan, end_span: &TextSpan) -> TextSpan {
+    pub const fn from_spans(start_span: &TextSpan, end_span: &TextSpan) -> TextSpan {
         TextSpan {
             start: start_span.start(),
             len: end_span.end() - start_span.start(),
         }
     }
 
-    pub fn start(&self) -> usize {
+    pub const fn start(&self) -> usize {
         self.start
     }
 
     /// End not included in the span
-    pub fn end(&self) -> usize {
+    pub const fn end(&self) -> usize {
         self.start + self.len
     }
 
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.len
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 }
 
-pub static DEFAULT: TextSpan = TextSpan { start: 0, len: 0 };
+pub static DEFAULT: TextSpan = TextSpan::new(0, 0);

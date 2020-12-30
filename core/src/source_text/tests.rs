@@ -57,3 +57,36 @@ fn correct_str_for_span() {
     assert_eq!(&src[&TextSpan::new(21, 6)], "123123");
     assert_eq!(&src[&TextSpan::new(38, 3)], "+ b");
 }
+
+#[test]
+#[rustfmt::skip]
+fn read_correctly() {
+    let test_read = |prog, expected_buf| {
+        let mut src = SourceText::new(prog);
+        let mut buf = [0u8; 59];
+        assert_eq!(src.read(&mut buf).unwrap(), 56);
+        assert_eq!(buf[0..56], expected_buf);
+    };
+
+    test_read(PROG, [
+            b's', b'r', b'c', b's',   // start
+            0, 0, 0, 0, 0, 0, 0, 0,   // line 1 start
+            12, 0, 0, 0, 0, 0, 0, 0,  // line 1 end
+            13, 0, 0, 0, 0, 0, 0, 0,  // line 2 start
+            27, 0, 0, 0, 0, 0, 0, 0,  // line 2 end
+            28, 0, 0, 0, 0, 0, 0, 0,  // line 3 start
+            41, 0, 0, 0, 0, 0, 0, 0,  // line 3 end
+            b's', b'r', b'c', b'e',   // end
+    ]);
+
+    test_read(PROG_CR, [
+            b's', b'r', b'c', b's',   // start
+            0, 0, 0, 0, 0, 0, 0, 0,   // line 1 start
+            12, 0, 0, 0, 0, 0, 0, 0,  // line 1 end
+            14, 0, 0, 0, 0, 0, 0, 0,  // line 2 start
+            28, 0, 0, 0, 0, 0, 0, 0,  // line 2 end
+            30, 0, 0, 0, 0, 0, 0, 0,  // line 3 start
+            43, 0, 0, 0, 0, 0, 0, 0,  // line 3 end
+            b's', b'r', b'c', b'e',   // end
+    ]);
+}

@@ -113,3 +113,22 @@ impl Index<&TextSpan> for SourceText<'_> {
         &self.text[span.start()..span.end()]
     }
 }
+
+use std::io::{self, prelude::*};
+
+impl<'a> Read for SourceText<'a> {
+    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
+        // Source start
+        buf.write_all(b"srcs")?;
+
+        for line in self.lines.iter() {
+            // Convert to u64 since usize is not guaranteed to be 8 bytes long
+            buf.write_all(&(line.0 as u64).to_le_bytes())?;
+            buf.write_all(&(line.1 as u64).to_le_bytes())?;
+        }
+
+        // Source end
+        buf.write_all(b"srce")?;
+        Ok(8 + self.lines.len() * 16)
+    }
+}

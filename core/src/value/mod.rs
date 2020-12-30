@@ -6,6 +6,7 @@ mod cmp_impl;
 mod fmt_impl;
 mod from_impl;
 mod function;
+mod read_impl;
 
 #[cfg(test)]
 mod tests;
