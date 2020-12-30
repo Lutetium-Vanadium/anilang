@@ -32,6 +32,10 @@ impl BlockNode {
             self.block[i]._prt(indent.clone(), i == self.block.len() - 1, stdout);
         }
     }
+
+    pub(super) fn can_const_eval(&self) -> bool {
+        self.block.iter().fold(true, |a, n| a && n.can_const_eval())
+    }
 }
 
 use std::fmt;

@@ -148,10 +148,16 @@ impl SyntaxNode {
     pub fn can_const_eval(&self) -> bool {
         match self {
             SyntaxNode::BinaryNode(ref n) => n.left.can_const_eval() && n.right.can_const_eval(),
-            SyntaxNode::BlockNode(ref n) => {
-                n.block.iter().fold(true, |a, n| a && n.can_const_eval())
+            SyntaxNode::BlockNode(ref n) => n.can_const_eval(),
+            SyntaxNode::IfNode(ref n) => {
+                n.cond.can_const_eval()
+                    && n.if_block.can_const_eval()
+                    && if let Some(ref block) = n.else_block {
+                        block.can_const_eval()
+                    } else {
+                        true
+                    }
             }
-            SyntaxNode::IfNode(ref n) => n.cond.can_const_eval(),
             SyntaxNode::IndexNode(ref n) => n.child.can_const_eval() && n.index.can_const_eval(),
             SyntaxNode::ListNode(ref n) => {
                 n.elements.iter().fold(true, |a, n| a && n.can_const_eval())

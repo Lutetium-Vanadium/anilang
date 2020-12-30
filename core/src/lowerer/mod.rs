@@ -7,10 +7,22 @@ use crate::Diagnostics;
 use node::SyntaxNode;
 use std::mem;
 
+mod const_evaluator;
+use const_evaluator::ConstEvaluator;
+
 #[cfg(test)]
-mod tests;
+mod no_optimize_tests;
+#[cfg(test)]
+mod optimize_tests;
 
 /// Lowers the AST into Bytecode.
+///
+/// The last argument is whether to perform optimizations based on
+/// constant expressions. For example the expression `a = 1 + 2` can be optimized to `a = 3` since
+/// the result of `1 + 2` is independent of all variables. These optimizations however may require
+/// traversing a subtree multiple times and hence is slower than just lowering everything and
+/// executing the lowered code. Therefore the optimization should only be enabled when the code is
+/// being 'compiled' and written to a file, instead of being 'interpreted'.
 ///
 /// # Examples
 /// Evaluate from a node
@@ -45,13 +57,38 @@ mod tests;
 ///
 /// assert_eq!(bytecode_kind, expected);
 /// ```
+///
+/// The same program but with optimization leads to smaller bytecode:
+/// ```
+/// use anilang::{SourceText, Diagnostics, Lexer, Parser, Lowerer, Evaluator, Value, InstructionKind};
+///
+/// let src = SourceText::new("1 + 2 + 3");
+/// let diagnostics = Diagnostics::new(&src);
+///
+/// let tokens = Lexer::lex(&src, &diagnostics);
+/// let root_node = Parser::parse(tokens, &src, &diagnostics);
+/// let bytecode_kind: Vec<_> = Lowerer::lower(root_node, &diagnostics, true)
+///     .into_iter()
+///     .map(|instr| instr.kind)
+///     .collect();
+///
+/// let expected = vec![
+///     InstructionKind::PushVar,
+///     InstructionKind::Push {
+///         value: Value::Int(6)
+///     },
+///     InstructionKind::PopVar,
+/// ];
+///
+/// assert_eq!(bytecode_kind, expected);
+/// ```
 pub struct Lowerer<'diagnostics, 'src> {
-    diagnostics: &'diagnostics Diagnostics<'src>, // Todo use for const evaluator
+    diagnostics: &'diagnostics Diagnostics<'src>,
     bytecode: Bytecode,
     label_maker: LabelMaker,
     scopes_since_loop: usize,
     break_label: Option<LabelNumber>,
-    should_optimize: bool, // Todo use for const evaluator
+    should_optimize: bool,
 }
 
 impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
@@ -80,7 +117,15 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
 
     fn lower_node(&mut self, node: SyntaxNode) {
         if self.should_optimize && node.can_const_eval() {
-            unimplemented!("TODO constant evaluation")
+            // The code represented by this tree is independent of all variables, so it can directly
+            // be evaluated and added as a push Instruction
+            let span = node.span().clone();
+            self.bytecode.push(Instruction::new(
+                InstructionKind::Push {
+                    value: ConstEvaluator::evaluate(node, self.diagnostics),
+                },
+                span,
+            ))
         } else {
             match node {
                 SyntaxNode::BlockNode(block) => self.lower_block(block),
@@ -106,6 +151,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         if block.block.len() == 0 {
             return;
         }
+
         let last_index = block.block.len() - 1;
 
         self.bytecode.push(Instruction::new(
@@ -175,6 +221,24 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
     //   <then-block>
     // <end-label>
     fn lower_if(&mut self, if_node: node::IfNode) {
+        // For the full if condition to be constant, not only the condition, but the if and else
+        // blocks must also be constant. If the condition is constant (but one of the blocks is not)
+        // it can be optimized out into just the block.
+        if self.should_optimize && if_node.cond.can_const_eval() {
+            if bool::from(ConstEvaluator::evaluate(*if_node.cond, self.diagnostics)) {
+                self.lower_block(if_node.if_block);
+            } else if let Some(block) = if_node.else_block {
+                self.lower_block(block);
+            } else {
+                self.bytecode.push(Instruction::new(
+                    InstructionKind::Push { value: Value::Null },
+                    if_node.span,
+                ));
+            }
+
+            return;
+        }
+
         let then_label = self.next_label();
         let end_label = self.next_label();
 
