@@ -58,97 +58,119 @@ impl Error {
             }
         };
 
-        // get the width of the largest line number so all the '|' line up
-        let w = if e > 0 {
-            let mut e2 = e;
-            let mut w = 0;
-            while e2 > 0 {
-                w += 1;
-                e2 /= 10;
-            }
-            w
-        } else {
-            1
-        };
-
         let mut stdout = std::io::stdout();
 
         queue!(
             stdout,
             style::SetForegroundColor(style::Color::White),
             style::Print(&self.message),
-            style::Print("\n"),
-            style::SetForegroundColor(style::Color::DarkBlue),
-            style::Print(" ".repeat(w)),
-            style::Print(" |\n"),
+            style::Print('\n'),
         )?;
 
-        if s == e {
+        if !src.has_text() {
             queue!(
                 stdout,
-                style::Print(s),
-                style::Print(" | "),
                 style::ResetColor,
-                style::Print(&src.text[src.line(s).0..self.span.start()]),
-                style::SetForegroundColor(style::Color::DarkRed),
-                style::SetAttribute(style::Attribute::Underlined),
-                style::Print(&src[&self.span]),
-                style::ResetColor,
-                style::SetAttribute(style::Attribute::NoUnderline),
-                style::Print(&src.text[self.span.end()..src.line(s).1]),
-                style::Print("\n"),
-            )?;
+                style::Print("The error occurred in "),
+                style::Print(if s == e {
+                    format!(
+                        " line: {}  character: {}",
+                        s,
+                        self.span.start() - src.line(s).0
+                    )
+                } else {
+                    format!(" lines: {} - {}", s, e)
+                }),
+                style::Print('\n'),
+            )
         } else {
+            // get the width of the largest line number so all the '|' line up
+            let w = if e > 0 {
+                let mut e2 = e;
+                let mut w = 0;
+                while e2 > 0 {
+                    w += 1;
+                    e2 /= 10;
+                }
+                w
+            } else {
+                1
+            };
+
             queue!(
                 stdout,
                 style::SetForegroundColor(style::Color::DarkBlue),
-                style::Print(format!("{: >w$} | ", s, w = w)),
-                style::ResetColor,
-                style::Print(&src.text[src.line(s).0..self.span.start()]),
-                style::SetForegroundColor(style::Color::DarkRed),
-                style::SetAttribute(style::Attribute::Underlined),
-                style::Print(&src.text[self.span.start()..src.line(s).1]),
-                style::Print("\n"),
+                style::Print(" ".repeat(w)),
+                style::Print(" |\n"),
             )?;
 
-            for i in (s + 1)..e {
+            if s == e {
+                queue!(
+                    stdout,
+                    style::Print(s),
+                    style::Print(" | "),
+                    style::ResetColor,
+                    style::Print(&src.text[src.line(s).0..self.span.start()]),
+                    style::SetForegroundColor(style::Color::DarkRed),
+                    style::SetAttribute(style::Attribute::Underlined),
+                    style::Print(&src[&self.span]),
+                    style::ResetColor,
+                    style::SetAttribute(style::Attribute::NoUnderline),
+                    style::Print(&src.text[self.span.end()..src.line(s).1]),
+                    style::Print('\n'),
+                )?;
+            } else {
+                queue!(
+                    stdout,
+                    style::SetForegroundColor(style::Color::DarkBlue),
+                    style::Print(format!("{: >w$} | ", s, w = w)),
+                    style::ResetColor,
+                    style::Print(&src.text[src.line(s).0..self.span.start()]),
+                    style::SetForegroundColor(style::Color::DarkRed),
+                    style::SetAttribute(style::Attribute::Underlined),
+                    style::Print(&src.text[self.span.start()..src.line(s).1]),
+                    style::Print('\n'),
+                )?;
+
+                for i in (s + 1)..e {
+                    queue!(
+                        stdout,
+                        style::SetForegroundColor(style::Color::DarkBlue),
+                        style::SetAttribute(style::Attribute::NoUnderline),
+                        style::Print(format!("{: >w$} | ", i, w = w)),
+                        style::SetForegroundColor(style::Color::DarkRed),
+                        style::SetAttribute(style::Attribute::Underlined),
+                        style::Print(&src.text[src.line(i).0..src.line(i).1]),
+                        style::Print('\n'),
+                    )?;
+                }
+
                 queue!(
                     stdout,
                     style::SetForegroundColor(style::Color::DarkBlue),
                     style::SetAttribute(style::Attribute::NoUnderline),
-                    style::Print(format!("{: >w$} | ", i, w = w)),
+                    style::Print(e),
+                    style::Print(" | "),
                     style::SetForegroundColor(style::Color::DarkRed),
                     style::SetAttribute(style::Attribute::Underlined),
-                    style::Print(&src.text[src.line(i).0..src.line(i).1]),
-                    style::Print("\n"),
+                    style::Print(&src.text[src.line(e).0..self.span.end()]),
+                    style::ResetColor,
+                    style::SetAttribute(style::Attribute::NoUnderline),
+                    style::Print(&src.text[self.span.end()..src.line(e).1]),
+                    style::Print('\n'),
                 )?;
             }
 
             queue!(
                 stdout,
                 style::SetForegroundColor(style::Color::DarkBlue),
-                style::SetAttribute(style::Attribute::NoUnderline),
-                style::Print(e),
-                style::Print(" | "),
-                style::SetForegroundColor(style::Color::DarkRed),
-                style::SetAttribute(style::Attribute::Underlined),
-                style::Print(&src.text[src.line(e).0..self.span.end()]),
+                style::Print(" ".repeat(w)),
+                style::Print(" |\n"),
                 style::ResetColor,
-                style::SetAttribute(style::Attribute::NoUnderline),
-                style::Print(&src.text[self.span.end()..src.line(e).1]),
-                style::Print("\n"),
             )?;
+
+            stdout.flush().map_err(crossterm::ErrorKind::IoError)
         }
-
-        queue!(
-            stdout,
-            style::SetForegroundColor(style::Color::DarkBlue),
-            style::Print(" ".repeat(w)),
-            style::Print(" |\n"),
-            style::ResetColor,
-        )?;
-
-        stdout.flush().map_err(crossterm::ErrorKind::IoError)
     }
 }
 

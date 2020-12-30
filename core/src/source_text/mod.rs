@@ -97,6 +97,10 @@ impl<'a> SourceText<'a> {
         None
     }
 
+    pub fn has_text(&self) -> bool {
+        self.text.len() > 0 || self.lines.len() == 0
+    }
+
     pub fn len(&self) -> usize {
         self.text.len()
     }
@@ -114,21 +118,58 @@ impl Index<&TextSpan> for SourceText<'_> {
     }
 }
 
+use crate::serialize::Serialize;
 use std::io::{self, prelude::*};
 
-impl<'a> Read for SourceText<'a> {
-    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
+impl<'a> Serialize for SourceText<'a> {
+    fn serialize<W: Write>(&self, buf: &mut W) -> io::Result<usize> {
         // Source start
         buf.write_all(b"srcs")?;
+        self.offset.serialize(buf)?;
+        self.lines.len().serialize(buf)?;
 
         for line in self.lines.iter() {
-            // Convert to u64 since usize is not guaranteed to be 8 bytes long
-            buf.write_all(&(line.0 as u64).to_le_bytes())?;
-            buf.write_all(&(line.1 as u64).to_le_bytes())?;
+            line.0.serialize(buf)?;
+            line.1.serialize(buf)?;
         }
 
         // Source end
         buf.write_all(b"srce")?;
-        Ok(8 + self.lines.len() * 16)
+        Ok(24 + self.lines.len() * 16)
+    }
+
+    fn deserialize<R: BufRead>(data: &mut R) -> io::Result<Self> {
+        let mut tag = [0; 4];
+        data.read_exact(&mut tag)?;
+        if tag != *b"srcs" {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Expected tag [115, 114, 99, 115] found {:?}", tag),
+            ));
+        }
+
+        let offset = usize::deserialize(data)?;
+        let lines_len = usize::deserialize(data)?;
+        let mut lines = Vec::with_capacity(lines_len);
+
+        for _ in 0..lines_len {
+            let s = usize::deserialize(data)?;
+            let e = usize::deserialize(data)?;
+            lines.push((s, e));
+        }
+
+        data.read_exact(&mut tag)?;
+        if tag != *b"srce" {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Expected tag [115, 114, 99, 101] found {:?}", tag),
+            ));
+        }
+
+        Ok(SourceText {
+            text: "",
+            lines,
+            offset,
+        })
     }
 }

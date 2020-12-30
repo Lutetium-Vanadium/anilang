@@ -1,3 +1,4 @@
+use crate::serialize::Serialize;
 use crate::text_span::TextSpan;
 use crate::value::Value;
 use std::io::{self, prelude::*};
@@ -20,15 +21,19 @@ impl Instruction {
     }
 }
 
-impl Read for Instruction {
-    // Make sure to never use self immutably, otherwise safety argument for Read implementation of
-    // Value::Function is invalidated
-    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
-        let bytes_read = self.kind.read(buf)?;
-        buf = &mut buf[bytes_read..];
-        buf.write_all(&(self.span.start() as u64).to_le_bytes())?;
-        buf.write_all(&(self.span.len() as u64).to_le_bytes())?;
+impl Serialize for Instruction {
+    fn serialize<W: Write>(&self, buf: &mut W) -> io::Result<usize> {
+        let bytes_read = self.kind.serialize(buf)?;
+        self.span.start().serialize(buf)?;
+        self.span.len().serialize(buf)?;
         Ok(bytes_read + 16)
+    }
+
+    fn deserialize<R: BufRead>(data: &mut R) -> io::Result<Self> {
+        let kind = InstructionKind::deserialize(data)?;
+        let span_start = usize::deserialize(data)?;
+        let span_len = usize::deserialize(data)?;
+        Ok(Instruction::new(kind, TextSpan::new(span_start, span_len)))
     }
 }
 
@@ -165,10 +170,8 @@ pub enum InstructionKind {
     PopVar,
 }
 
-impl Read for InstructionKind {
-    // Make sure to never use self immutably, otherwise safety argument for Read implementation of
-    // Value::Function is invalidated
-    fn read(&mut self, mut buf: &mut [u8]) -> io::Result<usize> {
+impl Serialize for InstructionKind {
+    fn serialize<W: Write>(&self, buf: &mut W) -> io::Result<usize> {
         match self {
             InstructionKind::BinaryAdd => buf.write(&[0]),
             InstructionKind::BinarySubtract => buf.write(&[1]),
@@ -190,59 +193,131 @@ impl Read for InstructionKind {
             InstructionKind::Pop => buf.write(&[17]),
             InstructionKind::Push { value } => {
                 buf.write_all(&[18])?;
-                let bytes_written = value.read(buf)?;
+                let bytes_written = value.serialize(buf)?;
                 Ok(bytes_written + 1)
             }
             InstructionKind::Store { ident, declaration } => {
                 buf.write_all(&[19])?;
-                buf.write_all(&ident.as_bytes())?;
-                buf.write_all(b"\0")?;
-                buf.write_all(&[if *declaration { 1 } else { 0 }])?;
+                ident.serialize(buf)?;
+                declaration.serialize(buf)?;
                 Ok(ident.len() + 3)
             }
             InstructionKind::Load { ident } => {
                 buf.write_all(&[20])?;
-                buf.write_all(&ident.as_bytes())?;
-                buf.write_all(b"\0")?;
+                ident.serialize(buf)?;
                 Ok(ident.len() + 2)
             }
             InstructionKind::GetIndex => buf.write(&[21]),
             InstructionKind::SetIndex => buf.write(&[22]),
             InstructionKind::JumpTo { label } => {
                 buf.write_all(&[23])?;
-                buf.write_all(&(*label as u64).to_le_bytes())?;
+                label.serialize(buf)?;
                 Ok(9)
             }
             InstructionKind::PopJumpIfTrue { label } => {
                 buf.write_all(&[24])?;
-                buf.write_all(&(*label as u64).to_le_bytes())?;
+                label.serialize(buf)?;
                 Ok(9)
             }
             InstructionKind::CallFunction { num_args } => {
                 buf.write_all(&[25])?;
-                buf.write_all(&(*num_args as u64).to_le_bytes())?;
+                num_args.serialize(buf)?;
                 Ok(9)
             }
             InstructionKind::CallInbuilt { ident, num_args } => {
                 buf.write_all(&[26])?;
-                buf.write_all(&ident.as_bytes())?;
-                buf.write_all(b"\0")?;
-                buf.write_all(&(*num_args as u64).to_le_bytes())?;
+                ident.serialize(buf)?;
+                num_args.serialize(buf)?;
                 Ok(10 + ident.len())
             }
             InstructionKind::Label { number } => {
                 buf.write_all(&[27])?;
-                buf.write_all(&(*number as u64).to_le_bytes())?;
+                number.serialize(buf)?;
                 Ok(9)
             }
             InstructionKind::MakeList { len } => {
                 buf.write_all(&[28])?;
-                buf.write_all(&(*len as u64).to_le_bytes())?;
+                len.serialize(buf)?;
                 Ok(9)
             }
             InstructionKind::MakeRange => buf.write(&[29]),
             InstructionKind::PushVar => buf.write(&[30]),
             InstructionKind::PopVar => buf.write(&[31]),
         }
+    }
+
+    fn deserialize<R: BufRead>(data: &mut R) -> io::Result<Self> {
+        let mut tag = 0;
+        data.read_exact(std::slice::from_mut(&mut tag))?;
+
+        Ok(match tag {
+            0 => InstructionKind::BinaryAdd,
+            1 => InstructionKind::BinarySubtract,
+            2 => InstructionKind::BinaryMultiply,
+            3 => InstructionKind::BinaryDivide,
+            4 => InstructionKind::BinaryMod,
+            5 => InstructionKind::BinaryPower,
+            6 => InstructionKind::BinaryOr,
+            7 => InstructionKind::BinaryAnd,
+            8 => InstructionKind::UnaryPositive,
+            9 => InstructionKind::UnaryNegative,
+            10 => InstructionKind::UnaryNot,
+            11 => InstructionKind::CompareLT,
+            12 => InstructionKind::CompareLE,
+            13 => InstructionKind::CompareGT,
+            14 => InstructionKind::CompareGE,
+            15 => InstructionKind::CompareEQ,
+            16 => InstructionKind::CompareNE,
+            17 => InstructionKind::Pop,
+            18 => {
+                let value = Value::deserialize(data)?;
+                InstructionKind::Push { value }
+            }
+            19 => {
+                let ident = String::deserialize(data)?;
+                let declaration = bool::deserialize(data)?;
+                InstructionKind::Store { ident, declaration }
+            }
+            20 => {
+                let ident = String::deserialize(data)?;
+                InstructionKind::Load { ident }
+            }
+            21 => InstructionKind::GetIndex,
+            22 => InstructionKind::SetIndex,
+            23 => {
+                let label = usize::deserialize(data)?;
+                InstructionKind::JumpTo { label }
+            }
+            24 => {
+                let label = usize::deserialize(data)?;
+                InstructionKind::PopJumpIfTrue { label }
+            }
+            25 => {
+                let num_args = usize::deserialize(data)?;
+                InstructionKind::CallFunction { num_args }
+            }
+            26 => {
+                let ident = String::deserialize(data)?;
+                let num_args = usize::deserialize(data)?;
+                InstructionKind::CallInbuilt { ident, num_args }
+            }
+            27 => {
+                let number = usize::deserialize(data)?;
+                InstructionKind::Label { number }
+            }
+            28 => {
+                let len = usize::deserialize(data)?;
+                InstructionKind::MakeList { len }
+            }
+            29 => InstructionKind::MakeRange,
+            30 => InstructionKind::PushVar,
+            31 => InstructionKind::PopVar,
+            n => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Tag of {} is not a valid instruction tag", n),
+                ))
+            }
+        })
     }
 }

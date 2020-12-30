@@ -60,16 +60,23 @@ fn correct_str_for_span() {
 
 #[test]
 #[rustfmt::skip]
-fn read_correctly() {
-    let test_read = |prog, expected_buf| {
-        let mut src = SourceText::new(prog);
-        let mut buf = [0u8; 59];
-        assert_eq!(src.read(&mut buf).unwrap(), 56);
-        assert_eq!(buf[0..56], expected_buf);
+fn serialize_correctly() {
+    let test_serialize = |prog, expected_buf: Vec<u8>| {
+        let src = SourceText::new(prog);
+        let mut buf = Vec::new();
+        assert_eq!(src.serialize(&mut buf).unwrap(), expected_buf.len());
+        assert_eq!(buf[..expected_buf.len()], expected_buf[..]);
+
+        // Can't assert_eq directly since there won't be text in the deserialized SourceText
+        let desrc = SourceText::deserialize(&mut &expected_buf[..]).unwrap();
+        assert_eq!(desrc.offset, src.offset);
+        assert_eq!(desrc.lines, src.lines);
     };
 
-    test_read(PROG, [
+    test_serialize(PROG, vec![
             b's', b'r', b'c', b's',   // start
+            0, 0, 0, 0, 0, 0, 0, 0,   // offset
+            3, 0, 0, 0, 0, 0, 0, 0,   // length
             0, 0, 0, 0, 0, 0, 0, 0,   // line 1 start
             12, 0, 0, 0, 0, 0, 0, 0,  // line 1 end
             13, 0, 0, 0, 0, 0, 0, 0,  // line 2 start
@@ -79,8 +86,10 @@ fn read_correctly() {
             b's', b'r', b'c', b'e',   // end
     ]);
 
-    test_read(PROG_CR, [
+    test_serialize(PROG_CR, vec![
             b's', b'r', b'c', b's',   // start
+            0, 0, 0, 0, 0, 0, 0, 0,   // offset
+            3, 0, 0, 0, 0, 0, 0, 0,   // length
             0, 0, 0, 0, 0, 0, 0, 0,   // line 1 start
             12, 0, 0, 0, 0, 0, 0, 0,  // line 1 end
             14, 0, 0, 0, 0, 0, 0, 0,  // line 2 start

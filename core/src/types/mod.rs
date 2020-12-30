@@ -52,6 +52,25 @@ impl Type {
     }
 }
 
+impl From<u8> for Type {
+    fn from(value: u8) -> Type {
+        match value {
+            0b00000001 => Type::Int,
+            0b00000010 => Type::Float,
+            0b00000100 => Type::String,
+            0b00001000 => Type::List,
+            0b00010000 => Type::Range,
+            0b00100000 => Type::Bool,
+            0b01000000 => Type::Function,
+            0b10000000 => Type::Null,
+            n => panic!(
+                "Invalid u8 {}, this method is only meant to be called with valid tags.",
+                n
+            ),
+        }
+    }
+}
+
 use std::fmt;
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
