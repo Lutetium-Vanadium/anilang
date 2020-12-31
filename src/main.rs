@@ -43,7 +43,7 @@ struct Opt {
     )]
     bin_file: Option<PathBuf>,
 
-    /// To print a quick guide through the syntax
+    /// Prints a quick guide through the syntax
     #[structopt(long, short)]
     syntax: bool,
 }
