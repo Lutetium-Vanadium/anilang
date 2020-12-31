@@ -3,7 +3,7 @@ use std::io::{self, prelude::*};
 
 pub fn print_linted(stdout: &mut io::Stdout, line: &str) -> crossterm::Result<()> {
     match line.trim() {
-        "exit" | ".tree" | "clear" => {
+        "exit" | ".tree" | ".bytecode" | "clear" => {
             queue!(
                 stdout,
                 style::SetForegroundColor(style::Color::DarkGreen),

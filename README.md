@@ -10,19 +10,19 @@ You will need to install the [`cargo`](https://www.rust-lang.org/learn/get-start
 
 To start the `repl`, run
 ```sh
-cargo run
+cargo run -- --help
 ```
 
 You can alternatively build the project, and the binary will be
 available in `target/release/anilang`.
 ```sh
-cargo build --release &&
-./target/release/anilang
+cargo build --release
+./target/release/anilang --help
 ```
 
 To install the binary using `cargo`, run
 ```sh
-cargo install
+cargo install --path .
 ```
 
 Run tests:
@@ -45,24 +45,22 @@ a = <val>
 ```
 
 Basic arithmetic and boolean operators exist:
-| operator | purpose                           |
-| -------- | --------------------------------- |
-| `+`      | Addition and String concatenation |
-| `-`      | Subtraction                       |
-| `*`      | Multiplication                    |
-| `/`      | Division                          |
-| `%`      | Modulo                            |
-| `^`      | Power                             |
-| `++`     | Add 1                             |
-| `--`     | Subtract 1                        |
-| `\|\|`   | Boolean Or                        |
-| `&&`     | Boolean And                       |
-| `==`     | Equality                          |
-| `!=`     | Not equal                         |
-| `>`      | Greater than                      |
-| `>=`     | Greater than equal to             |
-| `<`      | Less than                         |
-| `<=`     | Less than equal to                |
+| operator | purpose                                    |
+| -------- | ------------------------------------------ |
+| `+`      | Addition and String and List concatenation |
+| `-`      | Subtraction                                |
+| `*`      | Multiplication                             |
+| `/`      | Division                                   |
+| `%`      | Modulo                                     |
+| `^`      | Power                                      |
+| `\|\|`   | Boolean Or                                 |
+| `&&`     | Boolean And                                |
+| `==`     | Equality                                   |
+| `!=`     | Not equal                                  |
+| `>`      | Greater than                               |
+| `>=`     | Greater than equal to                      |
+| `<`      | Less than                                  |
+| `<=`     | Less than equal to                         |
 
 There are also conditionals
 ```rust
@@ -75,7 +73,7 @@ if <cond> {
 }
 ```
 
-Currently there are 2 kind of loops, `loop` provides and infinite loop.
+Currently there are 2 kind of loops, `loop` provides an infinite loop.
 ```rust
 loop {
     ...
@@ -106,3 +104,7 @@ variable[1] = "ab" // variable is "-aba-"
 ```
 Strings larger than 1 character will remove the character at that index
 and insert the characters given
+
+There are also comments -
+- Single line: `// comment`
+- Multi line: `/* comment */`

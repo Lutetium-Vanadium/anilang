@@ -70,19 +70,20 @@ impl Error {
         if !src.has_text() {
             queue!(
                 stdout,
-                style::ResetColor,
+                style::SetForegroundColor(style::Color::DarkRed),
                 style::Print("The error occurred in "),
                 style::Print(if s == e {
                     format!(
-                        " line: {}  character: {}",
+                        "line: {}  character: {}",
                         s,
                         self.span.start() - src.line(s).0
                     )
                 } else {
-                    format!(" lines: {} - {}", s, e)
+                    format!("lines: {} - {}", s, e)
                 }),
                 style::Print('\n'),
-            )
+                style::ResetColor,
+            )?;
         } else {
             // get the width of the largest line number so all the '|' line up
             let w = if e > 0 {
@@ -168,9 +169,9 @@ impl Error {
                 style::Print(" |\n"),
                 style::ResetColor,
             )?;
-
-            stdout.flush().map_err(crossterm::ErrorKind::IoError)
         }
+
+        stdout.flush().map_err(crossterm::ErrorKind::IoError)
     }
 }
 

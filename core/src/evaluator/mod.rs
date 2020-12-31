@@ -457,6 +457,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                     print!("{} ", self.stack.pop().expect(&e_msg));
                 }
                 println!("{}", self.stack.pop().expect(&e_msg));
+                self.stack.push(Value::Null);
             }
             "input" => {
                 if num_args > 1 {

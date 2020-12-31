@@ -1,83 +1,123 @@
-mod get_indent;
-mod linter;
-
-use crossterm::Result;
-use shelp::LangInterface;
-use std::io;
+use crossterm::style::Colorize;
+use crossterm::ErrorKind as CEK;
+use std::io::ErrorKind as IEK;
 use std::path::PathBuf;
+use structopt::StructOpt;
 
-pub fn get_persistant_file_path() -> Option<PathBuf> {
-    match app_dirs2::data_root(app_dirs2::AppDataType::UserCache) {
-        Ok(mut p) => {
-            p.push(".anilang-history");
-            Some(p)
-        }
-        Err(_) => None,
-    }
+mod compiler;
+mod repl;
+mod runtime;
+mod syntax;
+
+#[derive(Debug, StructOpt)]
+/// Anilang is a programming language written for fun in rust. Details about it can be found at
+/// `https://github.com/Lutetium-Vanadium/anilang#readme`
+struct Opt {
+    /// The file to compile. If `BIN FILE` not given, the binary will be written to a file with same
+    /// name as FILE but no extension.
+    #[structopt(
+        name = "SRC FILE",
+        short = "c",
+        long = "compile",
+        parse(from_os_str),
+        conflicts_with("interpret_file")
+    )]
+    compile_file: Option<PathBuf>,
+
+    /// The file to interpret.
+    #[structopt(
+        name = "FILE",
+        short = "i",
+        long = "interpret",
+        parse(from_os_str),
+        conflicts_with("compile_file")
+    )]
+    interpret_file: Option<PathBuf>,
+
+    /// The file name for the binary to be written to or executed based on the whether the compile
+    /// argument is given.
+    #[structopt(
+        name = "BIN FILE",
+        parse(from_os_str),
+        conflicts_with("interpret_file")
+    )]
+    bin_file: Option<PathBuf>,
+
+    /// To print a quick guide through the syntax
+    #[structopt(long, short)]
+    syntax: bool,
 }
 
-struct AnilangLangInterface;
-impl LangInterface for AnilangLangInterface {
-    fn print_line(stdout: &mut io::Stdout, line: &str) -> shelp::Result<()> {
-        linter::print_linted(stdout, line)
-    }
+fn main() {
+    let opt = Opt::from_args();
 
-    fn get_indent(lines: &[String]) -> usize {
-        get_indent::get_indent(lines)
-    }
-}
+    if opt.syntax {
+        syntax::print();
+    } else if let Some(input_file) = opt.compile_file {
+        let output_file = opt.bin_file.unwrap_or_else(|| {
+            let mut output_file = input_file.clone();
+            output_file.set_extension("");
+            output_file
+        });
 
-fn main() -> Result<()> {
-    let repl = shelp::Repl::<AnilangLangInterface>::new("» ", "· ", get_persistant_file_path())
-        .iter(shelp::Color::Green);
-
-    let mut global_scope = anilang::Scope::new();
-    let mut show_ast = false;
-    let mut show_bytecode = false;
-
-    for line in repl {
-        if line == ".tree" {
-            show_ast = !show_ast;
-            if show_ast {
-                println!("Showing Abstract Syntax Tree")
-            } else {
-                println!("Hiding Abstract Syntax Tree")
+        compiler::compile(input_file, output_file).unwrap_or_else(|e| {
+            print!("{} ", "ERROR".dark_red());
+            match e {
+                CEK::Utf8Error(_) => {
+                    println!("Found non utf-8 bytes while trying to process a string.");
+                    println!(
+                        "Make sure the file you are trying to compile is a utf-8 encoded text file"
+                    );
+                }
+                CEK::IoError(e) => {
+                    println!(
+                        "An error occurred while compiling the file\nError message: {}",
+                        e
+                    )
+                }
+                e => println!(
+                    "An unknown error occurred, could not compile the program.\nError message: {}",
+                    e
+                ),
             }
-            continue;
-        } else if line == ".bytecode" {
-            show_bytecode = !show_bytecode;
-            if show_ast {
-                println!("Showing Bytecode")
-            } else {
-                println!("Hiding Bytecode")
-            }
-            continue;
-        }
-
-        let src = anilang::SourceText::new(&line);
-        let diagnostics = anilang::Diagnostics::new(&src);
-
-        let tokens = anilang::Lexer::lex(&src, &diagnostics);
-        let root = anilang::Parser::parse(tokens, &src, &diagnostics);
-        if show_ast {
-            root.prt();
-        }
-
-        let bytecode = anilang::Lowerer::lower(root, &diagnostics, false);
-
-        if !diagnostics.any() {
-            let value = anilang::Evaluator::evaluate_with_global(
-                &bytecode,
-                &diagnostics,
-                &mut global_scope,
-            );
-            match value {
-                anilang::Value::Null => {}
-                value if !diagnostics.any() => println!("{:?}", value),
+        });
+    } else if let Some(bin_file) = opt.bin_file {
+        // .into() doesn't work to convert io::Result to crossterm::Result
+        runtime::run(bin_file).unwrap_or_else(|e| {
+            print!("{} ", "ERROR".dark_red());
+            match e.kind() {
+                IEK::InvalidData => {
+                    println!(
+                        "Unable to process the file, make sure to supply the correct compiled file"
+                    );
+                }
                 _ => {}
             }
-        }
+            println!("Error message: {}", e);
+        });
+    } else if let Some(file) = opt.interpret_file {
+        runtime::interpret(file).unwrap_or_else(|e| {
+            print!("{} ", "ERROR".dark_red());
+            match e {
+                CEK::Utf8Error(_) => {
+                    println!("Found non utf-8 bytes while trying to process a string.");
+                    println!(
+                        "Make sure the file you are trying to compile is a utf-8 encoded text file"
+                    );
+                }
+                CEK::IoError(e) => {
+                    println!(
+                        "An error occurred while compiling the file\nError message: {}",
+                        e
+                    )
+                }
+                e => println!(
+                    "An unknown error occurred, could not compile the program.\nError message: {}",
+                    e
+                ),
+            }
+        });
+    } else {
+        repl::run();
     }
-
-    Ok(())
 }

@@ -11,3 +11,4 @@ app_dirs2 = "2.3"
 shelp = "0.1.1"
 anilang-core = { path="core" }
 crossterm = "0.18.2"
+structopt = { version = "0.3" }

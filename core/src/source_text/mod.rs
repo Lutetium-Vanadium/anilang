@@ -77,7 +77,7 @@ impl<'a> SourceText<'a> {
 
     /// Binary search for index through the stored lines
     pub fn lineno(&self, index: usize) -> Option<usize> {
-        if index >= self.text.len() {
+        if index >= self.lines.last().map(|l| l.1).unwrap_or(0) {
             return None;
         }
 
