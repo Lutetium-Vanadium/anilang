@@ -71,7 +71,7 @@ pub fn run(mut show_ast: bool, mut show_bytecode: bool) {
 
         if !diagnostics.any() {
             let value = anilang::Evaluator::evaluate_with_global(
-                &bytecode,
+                &bytecode[..],
                 &diagnostics,
                 &mut global_scope,
             );

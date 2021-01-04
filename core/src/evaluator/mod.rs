@@ -24,7 +24,7 @@ mod tests;
 /// let tokens = Lexer::lex(&src, &diagnostics);
 /// let root_node = Parser::parse(tokens, &src, &diagnostics);
 /// let bytecode = Lowerer::lower(root_node, &diagnostics, false);
-/// let value = Evaluator::evaluate(&bytecode, &diagnostics);
+/// let value = Evaluator::evaluate(&bytecode[..], &diagnostics);
 ///
 /// assert_eq!(value, Value::Int(6));
 /// ```
@@ -42,7 +42,7 @@ mod tests;
 /// let tokens = Lexer::lex(&src, &diagnostics);
 /// let root_node = Parser::parse(tokens, &src, &diagnostics);
 /// let bytecode = Lowerer::lower(root_node, &diagnostics, false);
-/// let value = Evaluator::evaluate_with_global(&bytecode, &diagnostics, &mut scope);
+/// let value = Evaluator::evaluate_with_global(&bytecode[..], &diagnostics, &mut scope);
 ///
 /// assert_eq!(value, Value::Int(6));
 /// ```
@@ -65,7 +65,7 @@ pub struct Evaluator<'diagnostics, 'src, 'bytecode> {
 impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
     /// Given a root node and diagnostics to report to, this will execute the parsed AST
     pub fn evaluate(
-        bytecode: &'bytecode Bytecode,
+        bytecode: &'bytecode [Instruction],
         diagnostics: &'diagnostics Diagnostics<'src>,
     ) -> Value {
         let mut evaluator = Self {
@@ -84,14 +84,14 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
     /// Given a root node and diagnostics to report to, this will execute the parsed AST, with a
     /// given global scope changes to which will be reflected in the global scope
     pub fn evaluate_with_global(
-        bytecode: &'bytecode Bytecode,
+        bytecode: &'bytecode [Instruction],
         diagnostics: &'diagnostics Diagnostics<'src>,
         global_scope: &mut scope::Scope,
     ) -> Value {
         // Due to the optimization of empty blocks generating no PushVar and PopVar statements, the
         // bytecode could be empty if only a empty block is processed. This check is necessary so
         // that while trying to remove the surrounding PushVar and PopVar, 0 is not subtracted from
-        if bytecode.len() == 0 {
+        if bytecode.is_empty() {
             return Value::Null;
         }
 
@@ -182,7 +182,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 InstructionKind::Pop => self.evaluate_pop(),
                 InstructionKind::Push { value } => self.evaluate_push(value.clone()),
                 InstructionKind::Store { ident, declaration } => {
-                    self.evaluate_store(ident.clone(), declaration.clone())
+                    self.evaluate_store(ident.clone(), *declaration)
                 }
                 InstructionKind::Load { ident } => self.evaluate_load(ident),
                 InstructionKind::GetIndex => self.evaluate_get_index(),
@@ -213,7 +213,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 ..
             } = instr
             {
-                if *number > self.labels.len() {
+                if *number + 1 > self.labels.len() {
                     self.labels.resize(*number + 1, usize::MAX);
                 }
 
@@ -336,10 +336,12 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
     }
 
     fn evaluate_pop(&mut self) {
-        self.stack.pop().expect(&format!(
-            "Failed pop because of empty stack - instr_i: {}",
-            self.instr_i
-        ));
+        self.stack.pop().unwrap_or_else(|| {
+            panic!(
+                "Failed pop because of empty stack - instr_i: {}",
+                self.instr_i
+            )
+        });
     }
 
     fn evaluate_push(&mut self, value: Value) {
@@ -375,7 +377,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             }
         };
 
-        self.stack.push(v.clone());
+        self.stack.push(v);
     }
 
     fn evaluate_get_index(&mut self) {
@@ -405,12 +407,14 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
     }
 
     fn evaluate_call_function(&mut self, num_args: usize) {
-        let e_msg = format!(
-            "Expect {} value{} on the stack",
-            num_args + 1,
-            if num_args == 0 { "" } else { "s" }
-        );
-        let v = self.stack.pop().expect(&e_msg);
+        let e_msg = || {
+            panic!(
+                "Expect {} value{} on the stack",
+                num_args + 1,
+                if num_args == 0 { "" } else { "s" }
+            );
+        };
+        let v = self.stack.pop().unwrap_or_else(e_msg);
         if v.type_() != Type::Function {
             self.diagnostics.from_value_error(
                 ErrorKind::IncorrectType {
@@ -434,7 +438,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
 
         let mut scope = scope::Scope::new();
         for arg in func.args.iter() {
-            scope.insert(arg.clone(), self.stack.pop().expect(&e_msg));
+            scope.insert(arg.clone(), self.stack.pop().unwrap_or_else(e_msg));
         }
 
         self.stack.push(Evaluator::evaluate_with_global(
@@ -447,16 +451,18 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
     fn evaluate_call_inbuilt(&mut self, ident: &str, num_args: usize) {
         match ident {
             "print" => {
-                let e_msg = format!(
-                    "Expect {} value{} on stack",
-                    num_args,
-                    if num_args == 1 { "" } else { "s" }
-                );
+                let e_msg = || {
+                    panic!(
+                        "Expect {} value{} on stack",
+                        num_args,
+                        if num_args == 1 { "" } else { "s" }
+                    );
+                };
 
                 for _ in 0..(num_args - 1) {
-                    print!("{} ", self.stack.pop().expect(&e_msg));
+                    print!("{} ", self.stack.pop().unwrap_or_else(e_msg));
                 }
-                println!("{}", self.stack.pop().expect(&e_msg));
+                println!("{}", self.stack.pop().unwrap_or_else(e_msg));
                 self.stack.push(Value::Null);
             }
             "input" => {
@@ -490,15 +496,17 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
     }
 
     fn evaluate_make_list(&mut self, len: usize) {
-        let e_msg = format!(
-            "Expect {} value{} on the stack",
-            len,
-            if len == 1 { "" } else { "s" }
-        );
+        let e_msg = || {
+            panic!(
+                "Expect {} value{} on the stack",
+                len,
+                if len == 1 { "" } else { "s" }
+            );
+        };
 
         let mut list = Vec::with_capacity(len);
         for _ in 0..len {
-            list.push(self.stack.pop().expect(&e_msg));
+            list.push(self.stack.pop().unwrap_or_else(e_msg));
         }
 
         self.stack.push(Value::List(Rc::new(RefCell::new(list))));

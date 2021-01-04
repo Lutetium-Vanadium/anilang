@@ -148,7 +148,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
     }
 
     fn lower_block(&mut self, block: node::BlockNode) {
-        if block.block.len() == 0 {
+        if block.block.is_empty() {
             return;
         }
 

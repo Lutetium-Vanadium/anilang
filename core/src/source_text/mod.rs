@@ -97,12 +97,18 @@ impl<'a> SourceText<'a> {
         None
     }
 
+    /// Whether the line numbers correspond to the text, or the text is invalid and line numbers
+    /// have been manually entered (through deserialization)
     pub fn has_text(&self) -> bool {
-        self.text.len() > 0 || self.lines.len() == 0
+        !self.is_empty() || self.lines.is_empty()
     }
 
     pub fn len(&self) -> usize {
         self.text.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.text.is_empty()
     }
 
     pub fn line(&self, index: usize) -> (usize, usize) {

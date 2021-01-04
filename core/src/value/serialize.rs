@@ -9,7 +9,7 @@ use std::slice;
 
 impl Serialize for Value {
     fn serialize<W: Write>(&self, buf: &mut W) -> io::Result<usize> {
-        buf.write(&[self.type_() as u8])?;
+        buf.write_all(&[self.type_() as u8])?;
         match self {
             Value::Int(i) => {
                 i.serialize(buf)?;

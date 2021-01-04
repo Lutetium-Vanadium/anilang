@@ -5,7 +5,7 @@ use std::io::prelude::*;
 pub fn print_bytecode(bytecode: &[Instruction]) -> Result<()> {
     let stdout = &mut std::io::stdout();
 
-    if bytecode.len() == 0 {
+    if bytecode.is_empty() {
         return Ok(());
     }
 
@@ -35,7 +35,7 @@ pub fn print_bytecode(bytecode: &[Instruction]) -> Result<()> {
             style::ResetColor,
         )?;
         print_instr(&instr.kind, stdout, &labels[..])?;
-        stdout.write(b"\n");
+        stdout.write_all(b"\n")?;
     }
 
     stdout.flush()?;

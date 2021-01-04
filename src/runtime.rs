@@ -24,7 +24,7 @@ pub fn run(bin_file: PathBuf, show_bytecode: bool) -> io::Result<()> {
         }
     }
 
-    anilang::Evaluator::evaluate(&bytecode, &diagnostics);
+    anilang::Evaluator::evaluate(&bytecode[..], &diagnostics);
 
     Ok(())
 }
@@ -49,7 +49,7 @@ pub fn interpret(file: PathBuf, show_ast: bool, show_bytecode: bool) -> crosster
     }
 
     if !diagnostics.any() {
-        anilang::Evaluator::evaluate(&bytecode, &diagnostics);
+        anilang::Evaluator::evaluate(&bytecode[..], &diagnostics);
     }
 
     Ok(())

@@ -159,9 +159,7 @@ impl SyntaxNode {
                     }
             }
             SyntaxNode::IndexNode(ref n) => n.child.can_const_eval() && n.index.can_const_eval(),
-            SyntaxNode::ListNode(ref n) => {
-                n.elements.iter().fold(true, |a, n| a && n.can_const_eval())
-            }
+            SyntaxNode::ListNode(ref n) => n.elements.iter().all(|n| n.can_const_eval()),
             SyntaxNode::UnaryNode(ref n) => n.child.can_const_eval(),
             SyntaxNode::LiteralNode(_) => true,
 

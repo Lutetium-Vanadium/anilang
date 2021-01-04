@@ -9,7 +9,7 @@ fn eval(mut bytecode: Bytecode) -> Value {
     // The source text is only needed in diagnostics, so can be ignored
     let src = crate::SourceText::new("");
     let diagnostics = Diagnostics::new(&src).no_print();
-    Evaluator::evaluate(&bytecode, &diagnostics)
+    Evaluator::evaluate(&bytecode[..], &diagnostics)
 }
 
 fn eval_s(mut bytecode: Bytecode, scope: &mut scope::Scope) -> Value {
@@ -18,7 +18,7 @@ fn eval_s(mut bytecode: Bytecode, scope: &mut scope::Scope) -> Value {
     // The source text is only needed in diagnostics, so can be ignored
     let src = crate::SourceText::new("");
     let diagnostics = Diagnostics::new(&src).no_print();
-    Evaluator::evaluate_with_global(&bytecode, &diagnostics, scope)
+    Evaluator::evaluate_with_global(&bytecode[..], &diagnostics, scope)
 }
 
 #[test]

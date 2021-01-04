@@ -325,7 +325,8 @@ impl<'a> Diagnostics<'a> {
     /// see `core/src/lowerer/mod.rs`
     pub fn break_outside_loop(&self, span: TextSpan) {
         self.report(
-            format!("BreakOutsideLoop: breaks can only be used in for loops, while loops and regular loops"),
+            "BreakOutsideLoop: breaks can only be used in for loops, while loops and regular loops"
+                .to_owned(),
             span,
         )
     }
