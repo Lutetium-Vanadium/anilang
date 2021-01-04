@@ -3,6 +3,9 @@ use crate::text_span::TextSpan;
 use crate::value::Value;
 use std::io::{self, prelude::*};
 
+mod print_bytecode;
+pub use print_bytecode::print_bytecode;
+
 #[cfg(test)]
 mod tests;
 
@@ -163,7 +166,7 @@ pub enum InstructionKind {
     ///
     /// stack = `[(a..b), c, d, ...]`
     MakeRange,
-    // NOTE next to aren't great solutions, and possibly temporary
+    // NOTE next two aren't great solutions, and possibly temporary
     /// Push a new variable stack
     PushVar,
     /// Pop the top variable stack

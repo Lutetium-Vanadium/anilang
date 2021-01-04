@@ -1,6 +1,7 @@
 mod get_indent;
 mod linter;
 
+use crossterm::style::Colorize;
 use shelp::LangInterface;
 use std::io;
 use std::path::PathBuf;
@@ -26,16 +27,14 @@ impl LangInterface for AnilangLangInterface {
     }
 }
 
-pub fn run() {
+pub fn run(mut show_ast: bool, mut show_bytecode: bool) {
     let repl = shelp::Repl::<AnilangLangInterface>::new("» ", "· ", get_persistant_file_path())
         .iter(shelp::Color::Green);
 
     let mut global_scope = anilang::Scope::new();
-    let mut show_ast = false;
-    let mut show_bytecode = false;
 
     for line in repl {
-        if line == ".tree" {
+        if line.trim() == ".tree" {
             show_ast = !show_ast;
             if show_ast {
                 println!("Showing Abstract Syntax Tree")
@@ -43,9 +42,9 @@ pub fn run() {
                 println!("Hiding Abstract Syntax Tree")
             }
             continue;
-        } else if line == ".bytecode" {
+        } else if line.trim() == ".bytecode" {
             show_bytecode = !show_bytecode;
-            if show_ast {
+            if show_bytecode {
                 println!("Showing Bytecode")
             } else {
                 println!("Hiding Bytecode")
@@ -63,6 +62,12 @@ pub fn run() {
         }
 
         let bytecode = anilang::Lowerer::lower(root, &diagnostics, false);
+        if show_bytecode {
+            anilang::print_bytecode(&bytecode[..]).unwrap_or_else(|e| {
+                println!("{} Failed to print bytecode", "ERROR".dark_red());
+                println!("Error Message: {}", e)
+            });
+        }
 
         if !diagnostics.any() {
             let value = anilang::Evaluator::evaluate_with_global(

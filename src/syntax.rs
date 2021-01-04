@@ -19,7 +19,7 @@ pub fn print() {
     print_block(stdout, "let a = <val>");
     println!("\nVariables can be reassigned to any other value");
     print_block(stdout, "a = <val>");
-    println!("");
+    println!();
 
     println!(
         r##"Basic arithmetic and boolean operators exist:

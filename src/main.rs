@@ -14,7 +14,7 @@ mod syntax;
 /// `https://github.com/Lutetium-Vanadium/anilang#readme`
 struct Opt {
     /// The file to compile. If `BIN FILE` not given, the binary will be written to a file with same
-    /// name as FILE but no extension.
+    /// name as `SRC FILE` but no extension.
     #[structopt(
         name = "SRC FILE",
         short = "c",
@@ -43,6 +43,14 @@ struct Opt {
     )]
     bin_file: Option<PathBuf>,
 
+    /// Whether to print out the AST produced from the source code
+    #[structopt(long, short = "a")]
+    show_ast: bool,
+
+    /// Whether to print out the bytecode produced from the source code
+    #[structopt(long, short = "b")]
+    show_bytecode: bool,
+
     /// Prints a quick guide through the syntax
     #[structopt(long, short)]
     syntax: bool,
@@ -60,30 +68,32 @@ fn main() {
             output_file
         });
 
-        compiler::compile(input_file, output_file).unwrap_or_else(|e| {
-            print!("{} ", "ERROR".dark_red());
-            match e {
-                CEK::Utf8Error(_) => {
-                    println!("Found non utf-8 bytes while trying to process a string.");
-                    println!(
+        compiler::compile(input_file, output_file, opt.show_ast, opt.show_bytecode).unwrap_or_else(
+            |e| {
+                print!("{} ", "ERROR".dark_red());
+                match e {
+                    CEK::Utf8Error(_) => {
+                        println!("Found non utf-8 bytes while trying to process a string.");
+                        println!(
                         "Make sure the file you are trying to compile is a utf-8 encoded text file"
                     );
-                }
-                CEK::IoError(e) => {
-                    println!(
-                        "An error occurred while compiling the file\nError message: {}",
-                        e
-                    )
-                }
-                e => println!(
+                    }
+                    CEK::IoError(e) => {
+                        println!(
+                            "An error occurred while compiling the file\nError message: {}",
+                            e
+                        )
+                    }
+                    e => println!(
                     "An unknown error occurred, could not compile the program.\nError message: {}",
                     e
                 ),
-            }
-        });
+                }
+            },
+        );
     } else if let Some(bin_file) = opt.bin_file {
         // .into() doesn't work to convert io::Result to crossterm::Result
-        runtime::run(bin_file).unwrap_or_else(|e| {
+        runtime::run(bin_file, opt.show_bytecode).unwrap_or_else(|e| {
             print!("{} ", "ERROR".dark_red());
             match e.kind() {
                 IEK::InvalidData => {
@@ -96,7 +106,7 @@ fn main() {
             println!("Error message: {}", e);
         });
     } else if let Some(file) = opt.interpret_file {
-        runtime::interpret(file).unwrap_or_else(|e| {
+        runtime::interpret(file, opt.show_ast, opt.show_bytecode).unwrap_or_else(|e| {
             print!("{} ", "ERROR".dark_red());
             match e {
                 CEK::Utf8Error(_) => {
@@ -118,6 +128,6 @@ fn main() {
             }
         });
     } else {
-        repl::run();
+        repl::run(opt.show_ast, opt.show_bytecode);
     }
 }

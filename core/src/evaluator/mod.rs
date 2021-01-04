@@ -213,7 +213,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 ..
             } = instr
             {
-                if *number + 1 > self.labels.len() {
+                if *number > self.labels.len() {
                     self.labels.resize(*number + 1, usize::MAX);
                 }
 
