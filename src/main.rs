@@ -95,13 +95,10 @@ fn main() {
         // .into() doesn't work to convert io::Result to crossterm::Result
         runtime::run(bin_file, opt.show_bytecode).unwrap_or_else(|e| {
             print!("{} ", "ERROR".dark_red());
-            match e.kind() {
-                IEK::InvalidData => {
-                    println!(
-                        "Unable to process the file, make sure to supply the correct compiled file"
-                    );
-                }
-                _ => {}
+            if let IEK::InvalidData = e.kind() {
+                println!(
+                    "Unable to process the file, make sure to supply the correct compiled file"
+                );
             }
             println!("Error message: {}", e);
         });

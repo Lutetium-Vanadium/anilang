@@ -1,5 +1,4 @@
 use super::Value;
-use crate::bytecode::Instruction;
 use crate::serialize::Serialize;
 use crate::types::Type;
 use std::cell::RefCell;

@@ -1,11 +1,9 @@
 use crate::source_text::SourceText;
-use crate::syntax_node as node;
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 use crate::types::ToString;
 use crate::value;
 use crossterm::{queue, style};
-use node::SyntaxNode;
 use std::cell::Cell;
 use std::io::{self, prelude::*};
 
