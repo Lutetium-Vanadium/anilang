@@ -18,13 +18,21 @@ use std::collections::HashMap;
 /// ```
 #[derive(Clone, Default, Debug)]
 pub struct Scope {
+    pub(crate) id: usize,
     vars: HashMap<String, value::Value>,
+}
+
+impl PartialEq for Scope {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 impl Scope {
     /// Creates a new Scope
     pub fn new() -> Self {
         Self {
+            id: 0,
             vars: HashMap::new(),
         }
     }

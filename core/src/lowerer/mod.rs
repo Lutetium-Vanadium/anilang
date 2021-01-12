@@ -1,4 +1,5 @@
 use crate::bytecode::*;
+use crate::scope::Scope;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
 use crate::value::Function;
@@ -6,6 +7,7 @@ use crate::value::Value;
 use crate::Diagnostics;
 use node::SyntaxNode;
 use std::mem;
+use std::rc::Rc;
 
 mod const_evaluator;
 use const_evaluator::ConstEvaluator;
@@ -27,7 +29,8 @@ mod optimize_tests;
 /// # Examples
 /// Evaluate from a node
 /// ```
-/// use anilang::{SourceText, Diagnostics, Lexer, Parser, Lowerer, Evaluator, Value, InstructionKind};
+/// use anilang::{SourceText, Diagnostics, Value, InstructionKind, Scope};
+/// use anilang::{Lexer, Parser, Lowerer, Evaluator};
 ///
 /// let src = SourceText::new("1 + 2 + 3");
 /// let diagnostics = Diagnostics::new(&src);
@@ -40,7 +43,7 @@ mod optimize_tests;
 ///     .collect();
 ///
 /// let expected = vec![
-///     InstructionKind::PushVar,
+///     InstructionKind::PushVar { scope: std::rc::Rc::new(Scope::new()) },
 ///     InstructionKind::Push {
 ///         value: Value::Int(3)
 ///     },
@@ -60,7 +63,8 @@ mod optimize_tests;
 ///
 /// The same program but with optimization leads to smaller bytecode:
 /// ```
-/// use anilang::{SourceText, Diagnostics, Lexer, Parser, Lowerer, Evaluator, Value, InstructionKind};
+/// use anilang::{SourceText, Diagnostics, Value, InstructionKind, Scope};
+/// use anilang::{Lexer, Parser, Lowerer, Evaluator};
 ///
 /// let src = SourceText::new("1 + 2 + 3");
 /// let diagnostics = Diagnostics::new(&src);
@@ -73,7 +77,7 @@ mod optimize_tests;
 ///     .collect();
 ///
 /// let expected = vec![
-///     InstructionKind::PushVar,
+///     InstructionKind::PushVar { scope: std::rc::Rc::new(Scope::new() )},
 ///     InstructionKind::Push {
 ///         value: Value::Int(6)
 ///     },
@@ -155,7 +159,9 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         let last_index = block.block.len() - 1;
 
         self.bytecode.push(Instruction::new(
-            InstructionKind::PushVar,
+            InstructionKind::PushVar {
+                scope: Rc::new(Scope::new()),
+            },
             block.span.clone(),
         ));
         self.scopes_since_loop += 1;
@@ -299,7 +305,9 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         self.scopes_since_loop = 0;
 
         self.bytecode.push(Instruction::new(
-            InstructionKind::PushVar,
+            InstructionKind::PushVar {
+                scope: Rc::new(Scope::new()),
+            },
             loop_node.span.clone(),
         ));
         self.bytecode.push(Instruction::new(

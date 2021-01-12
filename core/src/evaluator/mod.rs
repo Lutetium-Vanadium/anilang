@@ -1,12 +1,11 @@
 use crate::bytecode::*;
 use crate::diagnostics::Diagnostics;
+use crate::scope;
 use crate::types::Type;
 use crate::value::{ErrorKind, Value};
 use std::cell::RefCell;
 use std::io::{self, prelude::*};
 use std::rc::Rc;
-
-pub mod scope;
 
 #[cfg(test)]
 mod tests;
@@ -198,7 +197,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 InstructionKind::Label { .. } => {}
                 InstructionKind::MakeList { len } => self.evaluate_make_list(*len),
                 InstructionKind::MakeRange => self.evaluate_make_range(),
-                InstructionKind::PushVar => self.evaluate_push_var(),
+                InstructionKind::PushVar { .. } => self.evaluate_push_var(),
                 InstructionKind::PopVar => self.evaluate_pop_var(),
             }
 

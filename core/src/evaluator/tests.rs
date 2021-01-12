@@ -3,8 +3,12 @@ use crate::test_helpers::*;
 use crate::value::Function;
 use std::rc::Rc;
 
+fn gen_scope() -> Rc<scope::Scope> {
+    Rc::new(scope::Scope::new())
+}
+
 fn eval(mut bytecode: Bytecode) -> Value {
-    bytecode.insert(0, InstructionKind::PushVar.into());
+    bytecode.insert(0, InstructionKind::PushVar { scope: gen_scope() }.into());
     bytecode.push(InstructionKind::PopVar.into());
     // The source text is only needed in diagnostics, so can be ignored
     let src = crate::SourceText::new("");
@@ -13,7 +17,7 @@ fn eval(mut bytecode: Bytecode) -> Value {
 }
 
 fn eval_s(mut bytecode: Bytecode, scope: &mut scope::Scope) -> Value {
-    bytecode.insert(0, InstructionKind::PushVar.into());
+    bytecode.insert(0, InstructionKind::PushVar { scope: gen_scope() }.into());
     bytecode.push(InstructionKind::PopVar.into());
     // The source text is only needed in diagnostics, so can be ignored
     let src = crate::SourceText::new("");
@@ -27,7 +31,7 @@ fn evaluate_block_properly() {
     scope.insert("global".to_owned(), i(2));
 
     let bytecode = vec![
-        InstructionKind::PushVar.into(),
+        InstructionKind::PushVar { scope: gen_scope() }.into(),
         InstructionKind::Push { value: i(3) }.into(),
         InstructionKind::Store {
             ident: "a".to_owned(),
@@ -130,12 +134,12 @@ fn evaluate_if_properly() {
         vec![
             InstructionKind::Push { value: b(cond) }.into(),
             InstructionKind::PopJumpIfTrue { label: 0 }.into(),
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar { scope: gen_scope() }.into(),
             InstructionKind::Push { value: i(1) }.into(),
             InstructionKind::PopVar.into(),
             InstructionKind::JumpTo { label: 1 }.into(),
             InstructionKind::Label { number: 0 }.into(),
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar { scope: gen_scope() }.into(),
             InstructionKind::Push { value: i(0) }.into(),
             InstructionKind::PopVar.into(),
             InstructionKind::Label { number: 1 }.into(),
@@ -157,7 +161,7 @@ fn evaluate_loop_properly() {
     let if_end = 3;
 
     let bytecode = vec![
-        InstructionKind::PushVar.into(),
+        InstructionKind::PushVar { scope: gen_scope() }.into(),
         InstructionKind::Label { number: loop_start }.into(),
         InstructionKind::Push { value: i(100) }.into(),
         InstructionKind::Load {
@@ -169,7 +173,7 @@ fn evaluate_loop_properly() {
         InstructionKind::Push { value: n() }.into(),
         InstructionKind::JumpTo { label: if_end }.into(),
         InstructionKind::Label { number: if_then }.into(),
-        InstructionKind::PushVar.into(),
+        InstructionKind::PushVar { scope: gen_scope() }.into(),
         InstructionKind::PopVar.into(),
         InstructionKind::JumpTo { label: loop_end }.into(),
         InstructionKind::PopVar.into(),
@@ -331,7 +335,7 @@ fn evaluate_fn_call_properly() {
         Value::Function(Rc::new(Function::new(
             vec!["a".to_owned(), "b".to_owned()],
             vec![
-                InstructionKind::PushVar.into(),
+                InstructionKind::PushVar { scope: gen_scope() }.into(),
                 InstructionKind::Load {
                     ident: "b".to_owned(),
                 }

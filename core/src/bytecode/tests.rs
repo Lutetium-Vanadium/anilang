@@ -2,11 +2,13 @@ use super::*;
 use crate::test_helpers::*;
 
 fn test_serialize(instr: InstructionKind, expected_bytes: Vec<u8>) {
+    let mut context = DeserializationContext::new(1);
+    context.add_scope(0, None);
     let mut buf = Vec::new();
     assert_eq!(instr.serialize(&mut buf).unwrap(), expected_bytes.len());
     assert_eq!(buf[..expected_bytes.len()], expected_bytes[..]);
     assert_eq!(
-        InstructionKind::deserialize(&mut &expected_bytes[..]).unwrap(),
+        InstructionKind::deserialize_with_context(&mut &expected_bytes[..], &mut context).unwrap(),
         instr
     );
 }
@@ -218,7 +220,12 @@ fn serialize_instr_make_range() {
 
 #[test]
 fn serialize_instr_push_var() {
-    test_serialize(InstructionKind::PushVar, vec![30]);
+    test_serialize(
+        InstructionKind::PushVar {
+            scope: Rc::new(Scope::new()),
+        },
+        vec![30, 0, 0, 0, 0, 0, 0, 0, 0],
+    );
 }
 
 #[test]

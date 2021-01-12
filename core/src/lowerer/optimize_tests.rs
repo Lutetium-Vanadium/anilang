@@ -2,6 +2,10 @@ use super::*;
 use crate::test_helpers::*;
 use crate::text_span::*;
 
+fn gen_scope() -> Rc<Scope> {
+    Rc::new(Scope::new())
+}
+
 fn span() -> TextSpan {
     Default::default()
 }
@@ -46,7 +50,7 @@ fn optimize_arithmetic_expr() {
     assert_eq!(
         bytecode,
         vec![
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar { scope: gen_scope() }.into(),
             InstructionKind::Push { value: i(12) }.into(),
             InstructionKind::Store {
                 ident: "a".to_owned(),
@@ -103,7 +107,7 @@ fn optimize_index() {
     assert_eq!(
         bytecode,
         vec![
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar { scope: gen_scope() }.into(),
             InstructionKind::Push { value: i(12) }.into(),
             InstructionKind::Store {
                 ident: "a".to_owned(),
@@ -226,8 +230,8 @@ fn optimize_const_if_condition() {
     assert_eq!(
         generate_bytecode(true),
         vec![
-            InstructionKind::PushVar.into(),
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar { scope: gen_scope() }.into(),
+            InstructionKind::PushVar { scope: gen_scope() }.into(),
             InstructionKind::Push { value: i(2) }.into(),
             InstructionKind::Load {
                 ident: "a".to_owned()
@@ -247,8 +251,8 @@ fn optimize_const_if_condition() {
     assert_eq!(
         generate_bytecode(false),
         vec![
-            InstructionKind::PushVar.into(),
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar { scope: gen_scope() }.into(),
+            InstructionKind::PushVar { scope: gen_scope() }.into(),
             InstructionKind::Push { value: i(4) }.into(),
             InstructionKind::Load {
                 ident: "b".to_owned()

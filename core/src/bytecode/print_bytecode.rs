@@ -125,7 +125,11 @@ fn print_instr(
             style::Print(format!("len: {}", len))
         ),
         InstructionKind::MakeRange => queue!(stdout, style::Print("MakeRange\t\t")),
-        InstructionKind::PushVar => queue!(stdout, style::Print("PushVar\t\t\t")),
+        InstructionKind::PushVar { scope } => queue!(
+            stdout,
+            style::Print("PushVar\t\t\tScope id: "),
+            style::Print(scope.id)
+        ),
         InstructionKind::PopVar => queue!(stdout, style::Print("PopVar\t\t\t")),
     }
 }
