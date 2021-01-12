@@ -65,3 +65,32 @@ impl Serialize for String {
         Ok(Self::from_utf8(bytes).unwrap())
     }
 }
+
+impl<T: Serialize> Serialize for Vec<T> {
+    fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
+        let mut written = self.len().serialize(buf)?;
+        for e in self {
+            written += e.serialize(buf)?;
+        }
+        Ok(written)
+    }
+
+    fn deserialize<R: BufRead>(data: &mut R) -> Result<Self> {
+        let len = usize::deserialize(data)?;
+        let mut vec = Self::with_capacity(len);
+        for _ in 0..len {
+            vec.push(T::deserialize(data)?);
+        }
+        Ok(vec)
+    }
+}
+
+impl<T1: Serialize, T2: Serialize> Serialize for (T1, T2) {
+    fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
+        Ok(self.0.serialize(buf)? + self.1.serialize(buf)?)
+    }
+
+    fn deserialize<R: BufRead>(data: &mut R) -> Result<Self> {
+        Ok((T1::deserialize(data)?, T2::deserialize(data)?))
+    }
+}

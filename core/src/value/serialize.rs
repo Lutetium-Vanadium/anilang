@@ -28,43 +28,14 @@ impl Serialize for Value {
                 e.serialize(buf)?;
                 Ok(17)
             }
-            Value::List(l) => {
-                let mut l = l.borrow_mut();
-                l.len().serialize(buf)?;
-                let mut bytes_written = 9;
-
-                for v in l.iter_mut() {
-                    let bytes_read = v.serialize(buf)?;
-                    bytes_written += bytes_read;
-                }
-
-                Ok(bytes_written)
-            }
+            Value::List(l) => Ok(1 + l.borrow().serialize(buf)?),
             Value::String(s) => {
                 let s = s.borrow();
 
                 s.serialize(buf)?;
                 Ok(2 + s.len())
             }
-            Value::Function(f) => {
-                // Initial Tag + 8 for len of args + 8 for len bytecode
-                let mut bytes_written = 17;
-
-                f.args.len().serialize(buf)?;
-
-                for arg in f.args.iter() {
-                    arg.serialize(buf)?;
-                    bytes_written += arg.len() + 1;
-                }
-
-                f.body.len().serialize(buf)?;
-                for instr in f.body.iter() {
-                    let bytes_read = instr.serialize(buf)?;
-                    bytes_written += bytes_read;
-                }
-
-                Ok(bytes_written)
-            }
+            Value::Function(f) => Ok(1 + f.args.serialize(buf)? + f.body.serialize(buf)?),
             Value::Null => Ok(1),
         }
     }
@@ -82,31 +53,11 @@ impl Serialize for Value {
                 let e = i64::deserialize(data)?;
                 Value::Range(s, e)
             }
-            Type::List => {
-                let len = usize::deserialize(data)?;
-                let mut elements = Vec::with_capacity(len);
-
-                for _ in 0..len {
-                    elements.push(Value::deserialize(data)?);
-                }
-
-                Value::List(Rc::new(RefCell::new(elements)))
-            }
+            Type::List => Value::List(Rc::new(RefCell::new(Vec::deserialize(data)?))),
             Type::String => Value::String(Rc::new(RefCell::new(String::deserialize(data)?))),
             Type::Function => {
-                let args_len = usize::deserialize(data)?;
-                let mut args = Vec::with_capacity(args_len);
-
-                for _ in 0..args_len {
-                    args.push(String::deserialize(data)?);
-                }
-
-                let body_len = usize::deserialize(data)?;
-                let mut body = Vec::with_capacity(body_len);
-
-                for _ in 0..body_len {
-                    body.push(Instruction::deserialize(data)?);
-                }
+                let args = Vec::deserialize(data)?;
+                let body = Vec::deserialize(data)?;
 
                 Value::Function(Rc::new(super::Function::new(args, body)))
             }

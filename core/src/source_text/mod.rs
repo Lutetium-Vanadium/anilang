@@ -132,12 +132,7 @@ impl<'a> Serialize for SourceText<'a> {
         // Source start
         buf.write_all(b"srcs")?;
         self.offset.serialize(buf)?;
-        self.lines.len().serialize(buf)?;
-
-        for line in self.lines.iter() {
-            line.0.serialize(buf)?;
-            line.1.serialize(buf)?;
-        }
+        self.lines.serialize(buf)?;
 
         // Source end
         buf.write_all(b"srce")?;
@@ -155,14 +150,7 @@ impl<'a> Serialize for SourceText<'a> {
         }
 
         let offset = usize::deserialize(data)?;
-        let lines_len = usize::deserialize(data)?;
-        let mut lines = Vec::with_capacity(lines_len);
-
-        for _ in 0..lines_len {
-            let s = usize::deserialize(data)?;
-            let e = usize::deserialize(data)?;
-            lines.push((s, e));
-        }
+        let lines = Vec::deserialize(data)?;
 
         data.read_exact(&mut tag)?;
         if tag != *b"srce" {
