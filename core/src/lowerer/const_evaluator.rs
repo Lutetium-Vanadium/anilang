@@ -71,14 +71,19 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
         }
     }
 
-    fn evaluate_block(&self, mut block: node::BlockNode) -> Value {
-        // Since this is this will only evaluate constants, other statements will have no effect, so
-        // we only need to execute the final one
-        block
-            .block
-            .pop()
-            .map(|node| self.evaluate_node(node))
-            .unwrap_or(Value::Null)
+    fn evaluate_block(&self, block: node::BlockNode) -> Value {
+        let last_i = block.block.len() - 1;
+        for (i, node) in block.block.into_iter().enumerate() {
+            // Since this is this will only evaluate constants, other statements will have no effect,
+            // so we only need to execute the final one
+            if i != last_i {
+                self.diagnostics.unused_statement(node.span().clone());
+            } else {
+                return self.evaluate_node(node);
+            }
+        }
+
+        Value::Null
     }
 
     fn evaluate_if(&self, node: node::IfNode) -> Value {

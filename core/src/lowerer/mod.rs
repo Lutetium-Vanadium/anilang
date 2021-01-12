@@ -162,10 +162,16 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
 
         for (i, node) in block.block.into_iter().enumerate() {
             let node_span = node.span().clone();
-            self.lower_node(node);
             if i < last_index {
+                if self.should_optimize && node.can_const_eval() {
+                    self.diagnostics.unused_statement(node_span);
+                    continue;
+                }
+                self.lower_node(node);
                 self.bytecode
                     .push(Instruction::new(InstructionKind::Pop, node_span));
+            } else {
+                self.lower_node(node);
             }
         }
 

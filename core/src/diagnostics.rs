@@ -11,14 +11,33 @@ use std::io::{self, prelude::*};
 
 /// A general Error struct for printing errors raised during the
 #[derive(Debug)]
-struct Error {
+struct Diagnostic {
     message: String,
     span: TextSpan,
+    level: DiagnosticLevel,
 }
 
-impl Error {
-    fn new(message: String, span: TextSpan) -> Error {
-        Error { message, span }
+#[derive(Debug)]
+enum DiagnosticLevel {
+    Error,
+    Warning,
+}
+
+impl Diagnostic {
+    fn warning(message: String, span: TextSpan) -> Self {
+        Self {
+            message,
+            span,
+            level: DiagnosticLevel::Warning,
+        }
+    }
+
+    fn error(message: String, span: TextSpan) -> Self {
+        Self {
+            message,
+            span,
+            level: DiagnosticLevel::Error,
+        }
     }
 
     /// For the following code sample;
@@ -59,18 +78,26 @@ impl Error {
         };
 
         let mut stdout = std::io::stdout();
+        let (color, msg) = match self.level {
+            DiagnosticLevel::Error => (style::Color::DarkRed, "error: "),
+            DiagnosticLevel::Warning => (style::Color::Yellow, "warning: "),
+        };
 
         queue!(
             stdout,
+            style::SetForegroundColor(color),
+            style::SetAttribute(style::Attribute::Bold),
+            style::Print(msg),
             style::SetForegroundColor(style::Color::White),
             style::Print(&self.message),
+            style::SetAttribute(style::Attribute::NoBold),
             style::Print('\n'),
         )?;
 
         if !src.has_text() {
             queue!(
                 stdout,
-                style::SetForegroundColor(style::Color::DarkRed),
+                style::SetForegroundColor(color),
                 style::Print("The error occurred in "),
                 style::Print(if s == e {
                     format!(
@@ -112,7 +139,7 @@ impl Error {
                     style::Print(" | "),
                     style::ResetColor,
                     style::Print(&src.text[src.line(s).0..self.span.start()]),
-                    style::SetForegroundColor(style::Color::DarkRed),
+                    style::SetForegroundColor(color),
                     style::SetAttribute(style::Attribute::Underlined),
                     style::Print(&src[&self.span]),
                     style::ResetColor,
@@ -127,7 +154,7 @@ impl Error {
                     style::Print(format!("{: >w$} | ", s, w = w)),
                     style::ResetColor,
                     style::Print(&src.text[src.line(s).0..self.span.start()]),
-                    style::SetForegroundColor(style::Color::DarkRed),
+                    style::SetForegroundColor(color),
                     style::SetAttribute(style::Attribute::Underlined),
                     style::Print(&src.text[self.span.start()..src.line(s).1]),
                     style::Print('\n'),
@@ -139,7 +166,7 @@ impl Error {
                         style::SetForegroundColor(style::Color::DarkBlue),
                         style::SetAttribute(style::Attribute::NoUnderline),
                         style::Print(format!("{: >w$} | ", i, w = w)),
-                        style::SetForegroundColor(style::Color::DarkRed),
+                        style::SetForegroundColor(color),
                         style::SetAttribute(style::Attribute::Underlined),
                         style::Print(&src.text[src.line(i).0..src.line(i).1]),
                         style::Print('\n'),
@@ -152,7 +179,7 @@ impl Error {
                     style::SetAttribute(style::Attribute::NoUnderline),
                     style::Print(e),
                     style::Print(" | "),
-                    style::SetForegroundColor(style::Color::DarkRed),
+                    style::SetForegroundColor(color),
                     style::SetAttribute(style::Attribute::Underlined),
                     style::Print(&src.text[src.line(e).0..self.span.end()]),
                     style::ResetColor,
@@ -201,6 +228,11 @@ pub struct Diagnostics<'a> {
     /// clones required in the parser, since if a mutable reference to the `diagnostics` is needed,
     /// the an immutable reference to a token cannot simultaneously be held
     num_errors: Cell<usize>,
+    /// To keep track of the number of warnings generated
+    /// A Cell is used so that `diagnostics` can be passed immutably, which reduces the number of
+    /// clones required in the parser, since if a mutable reference to the `diagnostics` is needed,
+    /// the an immutable reference to a token cannot simultaneously be held
+    num_warnings: Cell<usize>,
     /// If enabled, errors are just counted and not printed, this can be used for dummy Diagnostics,
     /// like if you need to look at the tokens generated from some code, but are not actually going
     /// to run it, and so don't need to print errors
@@ -212,6 +244,7 @@ impl<'a> Diagnostics<'a> {
         Diagnostics {
             src,
             num_errors: Cell::new(0),
+            num_warnings: Cell::new(0),
             no_print: false,
         }
     }
@@ -229,12 +262,25 @@ impl<'a> Diagnostics<'a> {
         self.num_errors.get()
     }
 
+    pub fn num_warnings(&self) -> usize {
+        self.num_warnings.get()
+    }
+
     /// base function which constructs errors and prints them as long as `no_print` is disabled
-    fn report(&self, message: String, span: TextSpan) {
-        self.num_errors.set(self.num_errors.get() + 1);
+    fn report_err(&self, message: String, span: TextSpan) {
+        self.num_errors.set(self.num_errors() + 1);
 
         if !self.no_print {
-            let _ = Error::new(message, span).prt(self.src);
+            let _ = Diagnostic::error(message, span).prt(self.src);
+        }
+    }
+
+    /// base function which constructs warnings and prints them as long as `no_print` is disabled
+    fn report_warning(&self, message: String, span: TextSpan) {
+        self.num_warnings.set(self.num_warnings() + 1);
+
+        if !self.no_print {
+            let _ = Diagnostic::warning(message, span).prt(self.src);
         }
     }
 
@@ -250,7 +296,7 @@ impl<'a> Diagnostics<'a> {
     /// let a = "~1213"
     /// Completely legal code
     pub fn bad_char(&self, span: TextSpan) {
-        self.report(
+        self.report_err(
             format!("BadChar: Unknown character '{}'", &self.src[&span]),
             span,
         );
@@ -264,7 +310,7 @@ impl<'a> Diagnostics<'a> {
     ///         ^
     /// A block of code, or the close brace is expected
     pub fn unexpected_eof(&self, span: TextSpan) {
-        self.report("UnexpectedEOF".to_owned(), span);
+        self.report_err("UnexpectedEOF".to_owned(), span);
     }
 
     /// Generated in the parser
@@ -278,7 +324,7 @@ impl<'a> Diagnostics<'a> {
     /// parsed into rust representation, so this will error
     pub fn failed_parse(&self, token: &Token) {
         if token.kind != TokenKind::Bad {
-            self.report(
+            self.report_err(
                 format!(
                     "FailedParse: Couldn't parse the value into a '{}'",
                     match token.kind {
@@ -303,7 +349,7 @@ impl<'a> Diagnostics<'a> {
     pub fn unexpected_token(&self, unexpected: &Token, expected: Option<&TokenKind>) {
         if unexpected.kind != TokenKind::Bad {
             if let Some(correct) = expected {
-                self.report(
+                self.report_err(
                     format!(
                         "IncorrectToken: {:?}, expected {:?}",
                         unexpected.kind, correct,
@@ -311,7 +357,7 @@ impl<'a> Diagnostics<'a> {
                     unexpected.text_span.clone(),
                 );
             } else {
-                self.report(
+                self.report_err(
                     format!("UnexpectedToken: {:?}", unexpected.kind),
                     unexpected.text_span.clone(),
                 );
@@ -324,10 +370,31 @@ impl<'a> Diagnostics<'a> {
     /// Is reported when there is a break statement outside a loop.
     /// see `core/src/lowerer/mod.rs`
     pub fn break_outside_loop(&self, span: TextSpan) {
-        self.report(
+        self.report_err(
             "BreakOutsideLoop: breaks can only be used in for loops, while loops and regular loops"
                 .to_owned(),
             span,
+        )
+    }
+
+    /// Generated in the lowerer
+    ///
+    /// Is reported when a statement is const evaluable, but does not occur at the end of the block
+    /// see `core/src/lowerer/mod.rs`
+    /// Examples:
+    /// {
+    ///     let a = 1231
+    ///     1231 + 12313
+    ///     ^^^^^^^^^^^^
+    ///     a + 2131
+    /// }
+    /// Computing 1231 + 12313 is futile since it doesn't change a variable or get used anywhere.
+    /// Note this is only checked for when the should_optimize flag is enabled in the lowerer.
+    pub fn unused_statement(&self, span: TextSpan) {
+        self.report_warning(
+            "UnusedStatement: this statement has no side effects and the value produced by it is not used"
+                .to_owned(),
+            span
         )
     }
 
@@ -340,7 +407,7 @@ impl<'a> Diagnostics<'a> {
     ///         ^
     /// `a` wasn't not declared before
     pub fn unknown_reference(&self, ident: &str, span: TextSpan) {
-        self.report(
+        self.report_err(
             format!("UnknownReference: Variable `{}` not found", ident),
             span,
         )
@@ -356,27 +423,9 @@ impl<'a> Diagnostics<'a> {
     /// ^^^^^^^^^^^^^^^
     /// `a` was already declared in the previous line
     pub fn already_declared(&self, ident: &str, span: TextSpan) {
-        self.report(
+        self.report_err(
             format!("SyntaxError: Variable `{}` was already declared", ident),
             span,
-        )
-    }
-
-    /// Generated in the evaluator
-    ///
-    /// Is reported when a variable is expected, but a value is gotten, it is mainly raised with
-    /// the `++` and `--` operators, see `core/src/evaluator/mod.rs`
-    /// Examples:
-    /// ++123
-    /// ^^
-    /// `++` stores the value back in the variable, so cannot be performed on a literal
-    pub fn expected_variable(&self, got: &SyntaxNode) {
-        self.report(
-            format!(
-                "ExpectedVariable: `++` and `--` can only be performed on variables, got `{}`",
-                got
-            ),
-            got.span().clone(),
         )
     }
 
@@ -425,11 +474,11 @@ impl<'a> Diagnostics<'a> {
             }
         };
 
-        self.report(msg, span)
+        self.report_err(msg, span)
     }
 
     pub fn incorrect_arg_count(&self, expected: usize, got: usize, span: TextSpan) {
-        self.report(
+        self.report_err(
             format!("TypeError: expected {} args, got {} args", expected, got),
             span,
         )

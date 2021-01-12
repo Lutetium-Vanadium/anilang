@@ -35,6 +35,14 @@ pub fn compile(
         for instr in bytecode.into_iter() {
             instr.serialize(&mut output_file)?;
         }
+
+        println!("Compiled with {} warnings", diagnostics.num_warnings());
+    } else {
+        println!(
+            "Aborted with {} errors and {} warnings",
+            diagnostics.num_errors(),
+            diagnostics.num_warnings()
+        );
     }
 
     Ok(())
