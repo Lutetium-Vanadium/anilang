@@ -154,9 +154,10 @@ impl DeserializationContext {
         // While generating scopes, the children blocks always come after their parent, hence their
         // id must be greater that their parent. Thus when adding a child, its parent must already
         // be added
-        // self.scopes
-        //     .push(Rc::new(Scope::new(id, parent_id.map(|id| self.scopes[id]))))
-        self.scopes.push(Rc::new(Scope::new()))
+        self.scopes.push(Rc::new(Scope::new(
+            id,
+            parent_id.map(|id| Rc::clone(&self.scopes[id])),
+        )))
     }
 
     pub fn get_scope(&mut self, id: usize) -> Rc<Scope> {

@@ -151,7 +151,7 @@ mod tests {
         let f = Value::Function(Rc::new(Function::new(
             vec!["a".to_owned(), "b".to_owned()],
             vec![
-                InstructionKind::PushVar { scope: Rc::new(crate::Scope::new()) }.into(),
+                InstructionKind::PushVar { scope: Rc::new(crate::Scope::new(0, None)) }.into(),
                 InstructionKind::Load {
                     ident: "b".to_owned(),
                 }

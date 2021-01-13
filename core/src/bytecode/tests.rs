@@ -222,7 +222,7 @@ fn serialize_instr_make_range() {
 fn serialize_instr_push_var() {
     test_serialize(
         InstructionKind::PushVar {
-            scope: Rc::new(Scope::new()),
+            scope: Rc::new(Scope::new(0, None)),
         },
         vec![30, 0, 0, 0, 0, 0, 0, 0, 0],
     );

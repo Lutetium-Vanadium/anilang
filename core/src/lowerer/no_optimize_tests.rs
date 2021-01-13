@@ -2,8 +2,10 @@ use super::*;
 use crate::test_helpers::*;
 use crate::text_span::*;
 
-fn gen_scope() -> Rc<Scope> {
-    Rc::new(Scope::new())
+// These tests are leveraging the fact that scopes are compared through id only, in a real world
+// environment, this would be erroneous
+fn gen_scope(id: usize) -> Rc<Scope> {
+    Rc::new(Scope::new(id, None))
 }
 
 fn span() -> TextSpan {
@@ -73,7 +75,10 @@ fn lower_block_properly() {
     assert_eq!(
         bytecode,
         vec![
-            InstructionKind::PushVar { scope: gen_scope() }.into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(0)
+            }
+            .into(),
             InstructionKind::Push { value: i(3) }.into(),
             InstructionKind::Store {
                 ident: "a".to_owned(),
@@ -205,12 +210,18 @@ fn lower_if_properly() {
         vec![
             InstructionKind::Push { value: b(true) }.into(),
             InstructionKind::PopJumpIfTrue { label: 0 }.into(),
-            InstructionKind::PushVar { scope: gen_scope() }.into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(1)
+            }
+            .into(),
             InstructionKind::Push { value: i(1) }.into(),
             InstructionKind::PopVar.into(),
             InstructionKind::JumpTo { label: 1 }.into(),
             InstructionKind::Label { number: 0 }.into(),
-            InstructionKind::PushVar { scope: gen_scope() }.into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(2)
+            }
+            .into(),
             InstructionKind::Push { value: i(0) }.into(),
             InstructionKind::PopVar.into(),
             InstructionKind::Label { number: 1 }.into(),
@@ -269,7 +280,10 @@ fn lower_loop_properly() {
     let if_end = 3;
 
     let temp = vec![
-        InstructionKind::PushVar { scope: gen_scope() }.into(),
+        InstructionKind::PushVar {
+            scope: gen_scope(1),
+        }
+        .into(),
         InstructionKind::Label { number: loop_start }.into(),
         InstructionKind::Push { value: i(100) }.into(),
         InstructionKind::Load {
@@ -281,7 +295,10 @@ fn lower_loop_properly() {
         InstructionKind::Push { value: n() }.into(),
         InstructionKind::JumpTo { label: if_end }.into(),
         InstructionKind::Label { number: if_then }.into(),
-        InstructionKind::PushVar { scope: gen_scope() }.into(),
+        InstructionKind::PushVar {
+            scope: gen_scope(2),
+        }
+        .into(),
         InstructionKind::PopVar.into(),
         InstructionKind::JumpTo { label: loop_end }.into(),
         InstructionKind::PopVar.into(),

@@ -1,14 +1,16 @@
+use std::rc::Rc;
+
 type Result = std::result::Result<anilang::Value, ()>;
 
 #[allow(dead_code)]
-fn _execute(code: &str, scope: &mut anilang::Scope) -> Result {
+fn _execute(code: &str, scope: Rc<anilang::Scope>) -> Result {
     let src = anilang::SourceText::new(code);
     let diagnostics = anilang::Diagnostics::new(&src).no_print();
 
     let tokens = anilang::Lexer::lex(&src, &diagnostics);
     let root = anilang::Parser::parse(tokens, &src, &diagnostics);
-    let bytecode = anilang::Lowerer::lower(root, &diagnostics, false);
-    let value = anilang::Evaluator::evaluate_with_global(&bytecode, &diagnostics, scope);
+    let bytecode = anilang::Lowerer::lower_with_global(root, &diagnostics, scope, false);
+    let value = anilang::Evaluator::evaluate(&bytecode, &diagnostics);
 
     if diagnostics.any() {
         Err(())
@@ -19,14 +21,16 @@ fn _execute(code: &str, scope: &mut anilang::Scope) -> Result {
 #[allow(dead_code)]
 /// Executes one statement
 pub fn execute(code: &str) -> Result {
-    _execute(code, &mut anilang::Scope::new())
+    _execute(code, Rc::new(anilang::Scope::new(0, None)))
 }
 
 #[allow(dead_code)]
 /// Executes many statements, with the same global scope
 pub fn execute_many(code: Vec<&str>) -> Vec<Result> {
-    let mut scope = anilang::Scope::new();
-    code.iter().map(|code| _execute(code, &mut scope)).collect()
+    let scope = Rc::new(anilang::Scope::new(0, None));
+    code.iter()
+        .map(|code| _execute(code, Rc::clone(&scope)))
+        .collect()
 }
 
 #[macro_export]

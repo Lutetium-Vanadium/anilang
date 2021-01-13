@@ -9,7 +9,19 @@ pub fn run(bin_file: PathBuf, show_bytecode: bool) -> io::Result<()> {
     let src = anilang::SourceText::deserialize(&mut bin)?;
     let diagnostics = anilang::Diagnostics::new(&src);
 
-    let mut ctx = anilang::DeserializationContext::new(16);
+    let num_scopes = usize::deserialize(&mut bin)?;
+    let mut ctx = anilang::DeserializationContext::new(num_scopes);
+    for i in 0..num_scopes {
+        let parent_id = usize::deserialize(&mut bin)?;
+
+        let parent_id = if parent_id > 0 {
+            Some(parent_id - 1)
+        } else {
+            None
+        };
+
+        ctx.add_scope(i, parent_id);
+    }
 
     let bytecode = Vec::deserialize_with_context(&mut bin, &mut ctx)?;
 

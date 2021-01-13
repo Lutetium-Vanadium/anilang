@@ -20,10 +20,10 @@ pub fn print_bytecode(bytecode: &[Instruction]) -> Result<()> {
 
     for (i, instr) in bytecode.iter().enumerate() {
         if let InstructionKind::Label { number } = instr.kind {
-            if number > labels.len() {
+            if number >= labels.len() {
                 labels.resize(number + 1, usize::MAX);
-                labels[number] = i;
             }
+            labels[number] = i;
         }
     }
 
@@ -128,7 +128,12 @@ fn print_instr(
         InstructionKind::PushVar { scope } => queue!(
             stdout,
             style::Print("PushVar\t\t\tScope id: "),
-            style::Print(scope.id)
+            style::Print(scope.id),
+            if let Some(parent_id) = scope.parent_id() {
+                style::Print(format!("\tParent: {}", parent_id))
+            } else {
+                style::Print("".to_owned())
+            }
         ),
         InstructionKind::PopVar => queue!(stdout, style::Print("PopVar\t\t\t")),
     }

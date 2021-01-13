@@ -3,12 +3,24 @@ use crate::test_helpers::*;
 use crate::value::Function;
 use std::rc::Rc;
 
-fn gen_scope() -> Rc<scope::Scope> {
-    Rc::new(scope::Scope::new())
+macro_rules! par {
+    ($parent:expr) => {
+        Some(Rc::clone(&$parent))
+    };
+}
+
+fn gen_scope(id: usize, parent: Option<Rc<scope::Scope>>) -> Rc<scope::Scope> {
+    Rc::new(scope::Scope::new(id, parent))
 }
 
 fn eval(mut bytecode: Bytecode) -> Value {
-    bytecode.insert(0, InstructionKind::PushVar { scope: gen_scope() }.into());
+    bytecode.insert(
+        0,
+        InstructionKind::PushVar {
+            scope: gen_scope(0, None),
+        }
+        .into(),
+    );
     bytecode.push(InstructionKind::PopVar.into());
     // The source text is only needed in diagnostics, so can be ignored
     let src = crate::SourceText::new("");
@@ -16,22 +28,25 @@ fn eval(mut bytecode: Bytecode) -> Value {
     Evaluator::evaluate(&bytecode[..], &diagnostics)
 }
 
-fn eval_s(mut bytecode: Bytecode, scope: &mut scope::Scope) -> Value {
-    bytecode.insert(0, InstructionKind::PushVar { scope: gen_scope() }.into());
+fn eval_s(mut bytecode: Bytecode, scope: Rc<scope::Scope>) -> Value {
+    bytecode.insert(0, InstructionKind::PushVar { scope }.into());
     bytecode.push(InstructionKind::PopVar.into());
     // The source text is only needed in diagnostics, so can be ignored
     let src = crate::SourceText::new("");
     let diagnostics = Diagnostics::new(&src).no_print();
-    Evaluator::evaluate_with_global(&bytecode[..], &diagnostics, scope)
+    Evaluator::evaluate(&bytecode[..], &diagnostics)
 }
 
 #[test]
 fn evaluate_block_properly() {
-    let mut scope = scope::Scope::new();
-    scope.insert("global".to_owned(), i(2));
+    let scope = gen_scope(0, None);
+    scope.declare("global".to_owned(), i(2));
 
     let bytecode = vec![
-        InstructionKind::PushVar { scope: gen_scope() }.into(),
+        InstructionKind::PushVar {
+            scope: gen_scope(1, par!(scope)),
+        }
+        .into(),
         InstructionKind::Push { value: i(3) }.into(),
         InstructionKind::Store {
             ident: "a".to_owned(),
@@ -63,18 +78,18 @@ fn evaluate_block_properly() {
         InstructionKind::PopVar.into(),
     ];
 
-    assert_eq!(eval_s(bytecode, &mut scope,), i(2));
+    assert_eq!(eval_s(bytecode, scope), i(2));
 }
 
 #[test]
 fn evaluate_variable_properly() {
-    let mut scope = scope::Scope::new();
-    scope.insert("a".to_owned(), i(0));
+    let scope = Rc::new(scope::Scope::new(0, None));
+    scope.declare("a".to_owned(), i(0));
     let bytecode = vec![InstructionKind::Load {
         ident: "a".to_owned(),
     }
     .into()];
-    assert_eq!(eval_s(bytecode, &mut scope), i(0));
+    assert_eq!(eval_s(bytecode, Rc::clone(&scope)), i(0));
 
     let bytecode = vec![
         InstructionKind::Push { value: i(0) }.into(),
@@ -93,8 +108,8 @@ fn evaluate_variable_properly() {
 
 #[test]
 fn evaluate_index_properly() {
-    let mut scope = scope::Scope::new();
-    scope.insert("a".to_owned(), s("hello world"));
+    let scope = gen_scope(0, None);
+    scope.declare("a".to_owned(), s("hello world"));
 
     let bytecode = vec![
         InstructionKind::Push { value: i(3) }.into(),
@@ -107,7 +122,10 @@ fn evaluate_index_properly() {
         InstructionKind::GetIndex.into(),
     ];
 
-    assert_eq!(eval_s(bytecode, &mut scope).to_ref_str().as_str(), "w");
+    assert_eq!(
+        eval_s(bytecode, Rc::clone(&scope)).to_ref_str().as_str(),
+        "w"
+    );
 }
 
 // NOTE else if conditions don't need to be checked, since the following
@@ -130,30 +148,43 @@ fn evaluate_index_properly() {
 // ```
 #[test]
 fn evaluate_if_properly() {
+    let root = gen_scope(0, None);
+    let if_scope = gen_scope(1, par!(root));
+    let else_scope = gen_scope(2, par!(root));
+
     let if_tree = |cond| {
         vec![
             InstructionKind::Push { value: b(cond) }.into(),
             InstructionKind::PopJumpIfTrue { label: 0 }.into(),
-            InstructionKind::PushVar { scope: gen_scope() }.into(),
+            InstructionKind::PushVar {
+                scope: Rc::clone(&else_scope),
+            }
+            .into(),
             InstructionKind::Push { value: i(1) }.into(),
             InstructionKind::PopVar.into(),
             InstructionKind::JumpTo { label: 1 }.into(),
             InstructionKind::Label { number: 0 }.into(),
-            InstructionKind::PushVar { scope: gen_scope() }.into(),
+            InstructionKind::PushVar {
+                scope: Rc::clone(&if_scope),
+            }
+            .into(),
             InstructionKind::Push { value: i(0) }.into(),
             InstructionKind::PopVar.into(),
             InstructionKind::Label { number: 1 }.into(),
         ]
     };
 
-    assert_eq!(eval(if_tree(true)), i(0));
-    assert_eq!(eval(if_tree(false)), i(1));
+    assert_eq!(eval_s(if_tree(true), Rc::clone(&root)), i(0));
+    assert_eq!(eval_s(if_tree(false), root), i(1));
 }
 
 #[test]
 fn evaluate_loop_properly() {
-    let mut scope = scope::Scope::new();
-    scope.insert("a".to_owned(), i(1));
+    let scope = gen_scope(0, None);
+    scope.declare("a".to_owned(), i(1));
+
+    let loop_scope = gen_scope(1, par!(scope));
+    let if_scope = gen_scope(2, par!(loop_scope));
 
     let loop_start = 0;
     let loop_end = 1;
@@ -161,7 +192,7 @@ fn evaluate_loop_properly() {
     let if_end = 3;
 
     let bytecode = vec![
-        InstructionKind::PushVar { scope: gen_scope() }.into(),
+        InstructionKind::PushVar { scope: loop_scope }.into(),
         InstructionKind::Label { number: loop_start }.into(),
         InstructionKind::Push { value: i(100) }.into(),
         InstructionKind::Load {
@@ -173,7 +204,7 @@ fn evaluate_loop_properly() {
         InstructionKind::Push { value: n() }.into(),
         InstructionKind::JumpTo { label: if_end }.into(),
         InstructionKind::Label { number: if_then }.into(),
-        InstructionKind::PushVar { scope: gen_scope() }.into(),
+        InstructionKind::PushVar { scope: if_scope }.into(),
         InstructionKind::PopVar.into(),
         InstructionKind::JumpTo { label: loop_end }.into(),
         InstructionKind::PopVar.into(),
@@ -197,7 +228,7 @@ fn evaluate_loop_properly() {
         InstructionKind::Push { value: n() }.into(),
     ];
 
-    assert!(eval_s(bytecode, &mut scope).is_null());
+    assert!(eval_s(bytecode, Rc::clone(&scope)).is_null());
 
     assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 101);
 }
@@ -231,8 +262,8 @@ fn evaluate_list_properly() {
 
 #[test]
 fn evaluate_assignment_properly() {
-    let mut scope = scope::Scope::new();
-    scope.insert("a".to_owned(), i(0));
+    let scope = gen_scope(0, None);
+    scope.declare("a".to_owned(), i(0));
 
     assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 0);
     assert_eq!(
@@ -245,7 +276,7 @@ fn evaluate_assignment_properly() {
                 }
                 .into(),
             ],
-            &mut scope
+            Rc::clone(&scope)
         )
         .to_ref_str()
         .as_str(),
@@ -272,7 +303,7 @@ fn evaluate_assignment_properly() {
                 }
                 .into(),
             ],
-            &mut scope
+            Rc::clone(&scope)
         )
         .to_ref_str()
         .as_str(),
@@ -286,7 +317,7 @@ fn evaluate_assignment_properly() {
 
 #[test]
 fn evaluate_declaration_properly() {
-    let mut scope = scope::Scope::new();
+    let scope = gen_scope(0, None);
     assert_eq!(
         eval_s(
             vec![
@@ -297,7 +328,7 @@ fn evaluate_declaration_properly() {
                 }
                 .into(),
             ],
-            &mut scope
+            Rc::clone(&scope)
         ),
         i(0)
     );
@@ -306,7 +337,7 @@ fn evaluate_declaration_properly() {
 
 #[test]
 fn evaluate_fn_declaration_properly() {
-    let mut scope = scope::Scope::new();
+    let scope = gen_scope(0, None);
     let return_f = eval_s(
         vec![
             InstructionKind::Push {
@@ -319,7 +350,7 @@ fn evaluate_fn_declaration_properly() {
             }
             .into(),
         ],
-        &mut scope,
+        Rc::clone(&scope),
     );
     let func = scope.try_get_value("a").unwrap().clone().to_rc_fn();
     assert!(Rc::ptr_eq(&return_f.to_rc_fn(), &func));
@@ -329,13 +360,16 @@ fn evaluate_fn_declaration_properly() {
 
 #[test]
 fn evaluate_fn_call_properly() {
-    let mut scope = scope::Scope::new();
-    scope.insert(
+    let scope = gen_scope(0, None);
+    scope.declare(
         "add".to_owned(),
         Value::Function(Rc::new(Function::new(
             vec!["a".to_owned(), "b".to_owned()],
             vec![
-                InstructionKind::PushVar { scope: gen_scope() }.into(),
+                InstructionKind::PushVar {
+                    scope: gen_scope(1, par!(scope)),
+                }
+                .into(),
                 InstructionKind::Load {
                     ident: "b".to_owned(),
                 }
@@ -361,7 +395,7 @@ fn evaluate_fn_call_properly() {
                 .into(),
                 InstructionKind::CallFunction { num_args: 2 }.into(),
             ],
-            &mut scope,
+            scope,
         ),
         i(3)
     );
