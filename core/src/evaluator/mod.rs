@@ -54,8 +54,6 @@ pub struct Evaluator<'diagnostics, 'src, 'bytecode> {
     /// This are the variable scopes, the root scope is at index 0, and subsequent scopes can check
     /// the scopes at a previous index, once a scope is over, it is popped of
     scopes: Vec<Rc<scope::Scope>>,
-    /// The values of the arguments of a function call
-    args: Option<Rc<scope::Scope>>,
     /// The stack of values
     stack: Vec<Value>,
     /// The bytecode to execute
@@ -70,27 +68,6 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         bytecode: &'bytecode [Instruction],
         diagnostics: &'diagnostics Diagnostics<'src>,
     ) -> Value {
-        Self::_evaluate(bytecode, diagnostics, None)
-    }
-
-    /// Meant to be used for evaluating functions only, in case a global scope is required, use
-    /// `Lowerer::lower_with_global` as this binds the global scope with the rest of the scopes.
-    ///
-    /// The reasons args needs to be separate is so that during recursion, separate instances of
-    /// args is produced
-    fn evaluate_with_args(
-        bytecode: &'bytecode [Instruction],
-        diagnostics: &'diagnostics Diagnostics<'src>,
-        args: Rc<scope::Scope>,
-    ) -> Value {
-        Self::_evaluate(bytecode, diagnostics, Some(args))
-    }
-
-    fn _evaluate(
-        bytecode: &'bytecode [Instruction],
-        diagnostics: &'diagnostics Diagnostics<'src>,
-        args: Option<Rc<scope::Scope>>,
-    ) -> Value {
         let mut evaluator = Self {
             diagnostics,
             labels: Vec::new(),
@@ -98,7 +75,6 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             instr_i: 0,
             stack: Vec::new(),
             scopes: Vec::new(),
-            args,
         };
 
         evaluator.register_labels();
@@ -106,52 +82,8 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         evaluator.stack.pop().unwrap_or(Value::Null)
     }
 
-    /// Creates the variable `key` with value `value` in this scope.
-    fn declare(&self, key: String, value: Value) {
-        if self.scope().can_declare(&key) {
-            self.scope().declare(key, value);
-        } else {
-            self.diagnostics
-                .already_declared(&key, self.bytecode[self.instr_i].span.clone());
-        }
-    }
-
-    /// Sets the value for the variable. If the variable is not found, it recurses to its parent.
-    fn set(&self, key: String, value: Value) {
-        if self.scope().can_set(&key) {
-            return self.scope().set(key, value);
-        } else if let Some(ref args) = self.args {
-            if args.can_set(&key) {
-                return args.set(key, value);
-            }
-        }
-
-        self.diagnostics
-            .unknown_reference(&key, self.bytecode[self.instr_i].span.clone());
-    }
-
-    /// Returns a copy of the value stored at key.
-    fn try_get_value(&self, key: &str) -> Value {
-        if let Some(value) = self.scope().try_get_value(key) {
-            return value;
-        }
-
-        let value = if let Some(ref global) = self.args {
-            global.try_get_value(key)
-        } else {
-            None
-        };
-        value.unwrap_or_else(|| {
-            self.diagnostics
-                .unknown_reference(key, self.bytecode[self.instr_i].span.clone());
-            Value::Null
-        })
-    }
-
     fn scope(&self) -> &Rc<scope::Scope> {
-        self.scopes
-            .last()
-            .unwrap_or_else(|| self.args.as_ref().expect("Scope must be non empty"))
+        self.scopes.last().expect("Scope must be non empty")
     }
 
     #[inline]
@@ -367,14 +299,29 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             .expect("Expect value on stack to store")
             .clone();
         if declaration {
-            self.declare(ident, v);
+            if self.scope().can_declare(&ident) {
+                self.scope().declare(ident, v);
+            } else {
+                self.diagnostics
+                    .already_declared(&ident, self.bytecode[self.instr_i].span.clone());
+            }
         } else {
-            self.set(ident, v);
+            if self.scope().can_set(&ident) {
+                self.scope().set(ident, v);
+            } else {
+                self.diagnostics
+                    .unknown_reference(&ident, self.bytecode[self.instr_i].span.clone());
+            }
         }
     }
 
     fn evaluate_load(&mut self, ident: &str) {
-        self.stack.push(self.try_get_value(ident));
+        if let Some(value) = self.scope().try_get_value(ident) {
+            self.stack.push(value);
+        } else {
+            self.diagnostics
+                .unknown_reference(ident, self.bytecode[self.instr_i].span.clone());
+        }
     }
 
     fn evaluate_get_index(&mut self) {
@@ -433,20 +380,31 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             return;
         }
 
-        let scope = Rc::new(scope::Scope::new(
-            self.scope().id + 1,
-            Some(Rc::clone(self.scope())),
-        ));
-
-        for arg in func.args.iter() {
-            scope.declare(arg.clone(), self.stack.pop().unwrap_or_else(e_msg));
+        // Is empty, nothing to execute
+        if func.body.is_empty() {
+            if !func.args.is_empty() {
+                // pop the arguments off the stack
+                self.stack.truncate(self.stack.len() - func.args.len() + 1);
+                *self.stack.last_mut().unwrap_or_else(|| {
+                    panic!("Expected {} values on the stack", func.args.len())
+                }) = Value::Null;
+            }
+            return;
         }
 
-        self.stack.push(Evaluator::evaluate_with_args(
-            &func.body,
-            self.diagnostics,
-            scope,
-        ));
+        let fn_body = func.duplicate_body();
+
+        let fn_scope = match &fn_body[0].kind {
+            InstructionKind::PushVar { scope } => scope,
+            _ => unreachable!("Function body must start with a PushVar"),
+        };
+
+        for arg in func.args.iter() {
+            fn_scope.declare(arg.clone(), self.stack.pop().unwrap_or_else(e_msg));
+        }
+
+        self.stack
+            .push(Evaluator::evaluate(&fn_body, self.diagnostics));
     }
 
     fn evaluate_call_inbuilt(&mut self, ident: &str, num_args: usize) {

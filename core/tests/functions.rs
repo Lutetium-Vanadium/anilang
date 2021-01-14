@@ -78,7 +78,7 @@ fn functions_recurse() {
 }
 
 #[test]
-fn functions_use_parent_scope() {
+fn functions_use_proper_scope() {
     assert_eq!(
         execute(
             "fn create_fact() {
@@ -101,5 +101,33 @@ fn functions_use_parent_scope() {
         )
         .unwrap(),
         v::i(362880)
-    )
+    );
+
+    assert_eq!(
+        execute(
+            "fn outer(a) {
+                fn inner() {
+                    a + 1
+                }
+            }
+
+            let five = outer(4)
+            let four = outer(3)
+            five() + four()"
+        )
+        .unwrap(),
+        v::i(9)
+    );
+
+    assert_eq!(
+        execute(
+            "let a = 100
+            fn f(a) {
+                a + 123
+            }
+            f(10)"
+        )
+        .unwrap(),
+        v::i(133)
+    );
 }

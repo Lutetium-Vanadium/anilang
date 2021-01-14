@@ -44,6 +44,14 @@ impl Scope {
         }
     }
 
+    pub fn duplicate(&self) -> Self {
+        Self {
+            id: self.id,
+            vars: Default::default(),
+            parent: self.parent.clone(),
+        }
+    }
+
     /////////////////////       UNSAFETY        /////////////////////
 
     // SAFETY: The safety is very similar to the safety of `std::cell::Cell`. Since no references
@@ -72,8 +80,6 @@ impl Scope {
         let vars = self.vars_mut();
         if !vars.contains_key(&key) {
             vars.insert(key, value);
-        } else {
-            panic!("REDECLARE: TODO remove this panic")
         }
     }
 
