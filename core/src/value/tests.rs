@@ -59,42 +59,42 @@ fn unary_plus_invalid() {
 
 #[test]
 fn unary_minus_valid() {
-    assert_eq!(i(10).minus(), Ok(i(-10)));
-    assert_eq!(f(10.0).minus(), Ok(f(-10.0)));
+    assert_eq!(-i(10), Ok(i(-10)));
+    assert_eq!(-f(10.0), Ok(f(-10.0)));
 }
 
 #[test]
 fn unary_minus_invalid() {
-    assert_eq!(b(true).minus(), err_it(Type::Bool));
-    assert_eq!(s("a").minus(), err_it(Type::String));
-    assert_eq!(l(vec![]).minus(), err_it(Type::List));
-    assert_eq!(r(0, 1).minus(), err_it(Type::Range));
-    assert_eq!(func().minus(), err_it(Type::Function));
-    assert_eq!(n().minus(), err_it(Type::Null));
+    assert_eq!(-b(true), err_it(Type::Bool));
+    assert_eq!(-s("a"), err_it(Type::String));
+    assert_eq!(-l(vec![]), err_it(Type::List));
+    assert_eq!(-r(0, 1), err_it(Type::Range));
+    assert_eq!(-func(), err_it(Type::Function));
+    assert_eq!(-n(), err_it(Type::Null));
 }
 
 #[test]
 fn unary_not() {
-    assert_eq!(bool::from(i(10).not()), false);
-    assert_eq!(bool::from(i(0).not()), true);
+    assert_eq!(bool::from(!i(10)), false);
+    assert_eq!(bool::from(!i(0)), true);
 
-    assert_eq!(bool::from(f(10.0).not()), false);
-    assert_eq!(bool::from(f(0.0).not()), true);
+    assert_eq!(bool::from(!f(10.0)), false);
+    assert_eq!(bool::from(!f(0.0)), true);
 
-    assert_eq!(bool::from(b(true).not()), false);
-    assert_eq!(bool::from(b(false).not()), true);
+    assert_eq!(bool::from(!b(true)), false);
+    assert_eq!(bool::from(!b(false)), true);
 
-    assert_eq!(bool::from(s("s").not()), false);
-    assert_eq!(bool::from(s("").not()), true);
+    assert_eq!(bool::from(!s("s")), false);
+    assert_eq!(bool::from(!s("")), true);
 
-    assert_eq!(bool::from(l(vec![i(0)]).not()), false);
-    assert_eq!(bool::from(l(vec![]).not()), true);
+    assert_eq!(bool::from(!l(vec![i(0)])), false);
+    assert_eq!(bool::from(!l(vec![])), true);
 
-    assert_eq!(bool::from(r(0, 1).not()), false);
-    assert_eq!(bool::from(r(0, 0).not()), true);
+    assert_eq!(bool::from(!r(0, 1)), false);
+    assert_eq!(bool::from(!r(0, 0)), true);
 
-    assert_eq!(bool::from(func().not()), false);
-    assert_eq!(bool::from(n().not()), true);
+    assert_eq!(bool::from(!func()), false);
+    assert_eq!(bool::from(!n()), true);
 }
 
 #[test]
@@ -283,12 +283,12 @@ fn binary_range_invalid() {
 
 #[test]
 fn binary_add_valid() {
-    assert_eq!(i(1).add(i(2)), Ok(i(3)));
-    assert_eq!(i(1).add(f(2.0)), Ok(f(3.0)));
-    assert_eq!(f(1.0).add(i(2)), Ok(f(3.0)));
-    assert_eq!(f(1.0).add(f(2.0)), Ok(f(3.0)));
+    assert_eq!(i(1) + i(2), Ok(i(3)));
+    assert_eq!(i(1) + f(2.0), Ok(f(3.0)));
+    assert_eq!(f(1.0) + i(2), Ok(f(3.0)));
+    assert_eq!(f(1.0) + f(2.0), Ok(f(3.0)));
     assert_eq!(
-        l(vec![i(0), f(2.0)]).add(l(vec![b(true)])),
+        l(vec![i(0), f(2.0)]) + l(vec![b(true)]),
         Ok(l(vec![i(0), f(2.0), b(true)]))
     );
 }
@@ -307,21 +307,18 @@ fn binary_add_invalid() {
     for val in values {
         let val_t = val.type_();
 
-        assert_eq!(
-            val.clone().add(i(10)),
-            err_ir(Type::Int, val_t.clone().into())
-        );
+        assert_eq!(val.clone() + i(10), err_ir(Type::Int, val_t.clone().into()));
 
-        assert_eq!(i(10).add(val), err_ir(val_t, Type::Int.into()));
+        assert_eq!(i(10) + val, err_ir(val_t, Type::Int.into()));
     }
 }
 
 #[test]
 fn binary_sub_valid() {
-    assert_eq!(i(1).sub(i(2)), Ok(i(-1)));
-    assert_eq!(i(1).sub(f(2.0)), Ok(f(-1.0)));
-    assert_eq!(f(1.0).sub(i(2)), Ok(f(-1.0)));
-    assert_eq!(f(1.0).sub(f(2.0)), Ok(f(-1.0)));
+    assert_eq!(i(1) - i(2), Ok(i(-1)));
+    assert_eq!(i(1) - f(2.0), Ok(f(-1.0)));
+    assert_eq!(f(1.0) - i(2), Ok(f(-1.0)));
+    assert_eq!(f(1.0) - f(2.0), Ok(f(-1.0)));
 }
 
 #[test]
@@ -338,21 +335,18 @@ fn binary_sub_invalid() {
     for val in values {
         let val_t = val.type_();
 
-        assert_eq!(
-            val.clone().sub(i(10)),
-            err_ir(Type::Int, val_t.clone().into())
-        );
+        assert_eq!(val.clone() - i(10), err_ir(Type::Int, val_t.clone().into()));
 
-        assert_eq!(i(10).sub(val), err_ir(val_t, Type::Int.into()));
+        assert_eq!(i(10) - val, err_ir(val_t, Type::Int.into()));
     }
 }
 
 #[test]
 fn binary_mult_valid() {
-    assert_eq!(i(1).mult(i(2)), Ok(i(2)));
-    assert_eq!(i(1).mult(f(2.0)), Ok(f(2.0)));
-    assert_eq!(f(1.0).mult(i(2)), Ok(f(2.0)));
-    assert_eq!(f(1.0).mult(f(2.0)), Ok(f(2.0)));
+    assert_eq!(i(1) * i(2), Ok(i(2)));
+    assert_eq!(i(1) * f(2.0), Ok(f(2.0)));
+    assert_eq!(f(1.0) * i(2), Ok(f(2.0)));
+    assert_eq!(f(1.0) * f(2.0), Ok(f(2.0)));
 }
 
 #[test]
@@ -369,21 +363,18 @@ fn binary_mult_invalid() {
     for val in values {
         let val_t = val.type_();
 
-        assert_eq!(
-            val.clone().mult(i(10)),
-            err_ir(Type::Int, val_t.clone().into())
-        );
+        assert_eq!(val.clone() * i(10), err_ir(Type::Int, val_t.clone().into()));
 
-        assert_eq!(i(10).mult(val), err_ir(val_t, Type::Int.into()));
+        assert_eq!(i(10) * val, err_ir(val_t, Type::Int.into()));
     }
 }
 
 #[test]
 fn binary_div_valid() {
-    assert_eq!(i(1).div(i(2)), Ok(i(0)));
-    assert_eq!(i(1).div(f(2.0)), Ok(f(0.5)));
-    assert_eq!(f(1.0).div(i(2)), Ok(f(0.5)));
-    assert_eq!(f(1.0).div(f(2.0)), Ok(f(0.5)));
+    assert_eq!(i(1) / i(2), Ok(i(0)));
+    assert_eq!(i(1) / f(2.0), Ok(f(0.5)));
+    assert_eq!(f(1.0) / i(2), Ok(f(0.5)));
+    assert_eq!(f(1.0) / f(2.0), Ok(f(0.5)));
 }
 
 #[test]
@@ -400,23 +391,20 @@ fn binary_div_invalid() {
     for val in values {
         let val_t = val.type_();
 
-        assert_eq!(
-            val.clone().div(i(10)),
-            err_ir(Type::Int, val_t.clone().into())
-        );
+        assert_eq!(val.clone() / i(10), err_ir(Type::Int, val_t.clone().into()));
 
-        assert_eq!(i(10).div(val), err_ir(val_t, Type::Int.into()));
+        assert_eq!(i(10) / val, err_ir(val_t, Type::Int.into()));
     }
 
-    assert_eq!(i(10).div(i(0)), Err(ErrorKind::DivideByZero));
+    assert_eq!(i(10) / i(0), Err(ErrorKind::DivideByZero));
 }
 
 #[test]
 fn binary_mod_valid() {
-    assert_eq!(i(19).modulo(i(12)), Ok(i(7)));
-    assert_eq!(i(19).modulo(f(12.0)), Ok(f(7.0)));
-    assert_eq!(f(19.0).modulo(i(12)), Ok(f(7.0)));
-    assert_eq!(f(19.0).modulo(f(12.0)), Ok(f(7.0)));
+    assert_eq!(i(19) % i(12), Ok(i(7)));
+    assert_eq!(i(19) % f(12.0), Ok(f(7.0)));
+    assert_eq!(f(19.0) % i(12), Ok(f(7.0)));
+    assert_eq!(f(19.0) % f(12.0), Ok(f(7.0)));
 }
 
 #[test]
@@ -433,15 +421,12 @@ fn binary_mod_invalid() {
     for val in values {
         let val_t = val.type_();
 
-        assert_eq!(
-            val.clone().modulo(i(10)),
-            err_ir(Type::Int, val_t.clone().into())
-        );
+        assert_eq!(val.clone() % i(10), err_ir(Type::Int, val_t.clone().into()));
 
-        assert_eq!(i(10).modulo(val), err_ir(val_t, Type::Int.into()));
+        assert_eq!(i(10) % val, err_ir(val_t, Type::Int.into()));
     }
 
-    assert_eq!(i(10).modulo(i(0)), Err(ErrorKind::DivideByZero));
+    assert_eq!(i(10) % i(0), Err(ErrorKind::DivideByZero));
 }
 
 #[test]

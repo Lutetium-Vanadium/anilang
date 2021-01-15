@@ -43,11 +43,11 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
         let res = match node.operator {
             TokenKind::RangeOperator => left.range_to(right),
 
-            TokenKind::PlusOperator => left.add(right),
-            TokenKind::MinusOperator => left.sub(right),
-            TokenKind::StarOperator => left.mult(right),
-            TokenKind::SlashOperator => left.div(right),
-            TokenKind::ModOperator => left.modulo(right),
+            TokenKind::PlusOperator => left + right,
+            TokenKind::MinusOperator => left - right,
+            TokenKind::StarOperator => left * right,
+            TokenKind::SlashOperator => left / right,
+            TokenKind::ModOperator => left % right,
             TokenKind::CaretOperator => left.pow(right),
 
             TokenKind::OrOperator => Ok(left.or(right)),
@@ -120,8 +120,8 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
     fn evaluate_unary(&self, node: node::UnaryNode) -> Value {
         let res = match node.operator {
             TokenKind::PlusOperator => self.evaluate_node(*node.child).plus(),
-            TokenKind::MinusOperator => self.evaluate_node(*node.child).minus(),
-            TokenKind::NotOperator => Ok(self.evaluate_node(*node.child).not()),
+            TokenKind::MinusOperator => -self.evaluate_node(*node.child),
+            TokenKind::NotOperator => Ok(!self.evaluate_node(*node.child)),
             _ => unreachable!(),
         };
 

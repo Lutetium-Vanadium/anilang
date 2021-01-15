@@ -77,9 +77,14 @@ impl Value {
             }),
         }
     }
+}
 
-    /// Unary Minus -<num>
-    pub fn minus(self) -> Result<Value> {
+use std::ops::{Add, Div, Mul, Neg, Not, Rem, Sub};
+
+impl Neg for Value {
+    type Output = Result<Self>;
+
+    fn neg(self) -> Result<Self> {
         match self {
             Value::Int(i) => Ok(Value::Int(-i)),
             Value::Float(f) => Ok(Value::Float(-f)),
@@ -89,9 +94,12 @@ impl Value {
             }),
         }
     }
+}
 
-    /// Unary Not !<val>
-    pub fn not(self) -> Value {
+impl Not for Value {
+    type Output = Self;
+
+    fn not(self) -> Value {
         Value::Bool(!bool::from(self))
     }
 }
@@ -338,12 +346,14 @@ impl Value {
 
 use std::cmp::Ordering;
 /// impl for the various binary operations
-impl Value {
+impl Add for Value {
+    type Output = Result<Self>;
+
     /// Binary Addition
     ///   * Arithmetic: <num> + <num>
     ///   * Concatenation: <str1> + <str2> = "<str1><str2>" |
     ///                    <lst1> + <lst2> = [...<lst1>, ...<lst2>]
-    pub fn add(self, right: Value) -> Result<Value> {
+    fn add(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
             .map_err(|_| ErrorKind::IncorrectRightType {
@@ -403,9 +413,13 @@ impl Value {
             }),
         }
     }
+}
+
+impl Sub for Value {
+    type Output = Result<Self>;
 
     /// Binary subtraction <num> - <num>
-    pub fn sub(self, right: Value) -> Result<Value> {
+    fn sub(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
             .map_err(|_| ErrorKind::IncorrectRightType {
@@ -429,9 +443,13 @@ impl Value {
             }),
         }
     }
+}
+
+impl Mul for Value {
+    type Output = Result<Self>;
 
     /// Binary multiplication <num> * <num>
-    pub fn mult(self, right: Value) -> Result<Value> {
+    fn mul(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
             .map_err(|_| ErrorKind::IncorrectRightType {
@@ -455,9 +473,13 @@ impl Value {
             }),
         }
     }
+}
+
+impl Div for Value {
+    type Output = Result<Self>;
 
     /// Binary division <num> / <num>
-    pub fn div(self, right: Value) -> Result<Value> {
+    fn div(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
             .map_err(|_| ErrorKind::IncorrectRightType {
@@ -495,9 +517,13 @@ impl Value {
             }),
         }
     }
+}
+
+impl Rem for Value {
+    type Output = Result<Self>;
 
     /// Binary mod <num> % <num>
-    pub fn modulo(self, right: Value) -> Result<Value> {
+    fn rem(self, right: Value) -> Result<Value> {
         let right = right
             .try_cast(self.type_())
             .map_err(|_| ErrorKind::IncorrectRightType {
@@ -535,7 +561,9 @@ impl Value {
             }),
         }
     }
+}
 
+impl Value {
     /// Binary exponentiation <num>^<num>
     pub fn pow(self, right: Value) -> Result<Value> {
         let right = right

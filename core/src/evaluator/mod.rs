@@ -169,35 +169,35 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
     fn evaluate_binary_add(&mut self) {
         let left = self.stack.pop().expect("Expect 2 values on the stack");
         let right = self.stack.pop().expect("Expect 2 values on the stack");
-        let v = self.handle_result(left.add(right));
+        let v = self.handle_result(left + right);
         self.stack.push(v);
     }
 
     fn evaluate_binary_subtract(&mut self) {
         let left = self.stack.pop().expect("Expect 2 values on the stack");
         let right = self.stack.pop().expect("Expect 2 values on the stack");
-        let v = self.handle_result(left.sub(right));
+        let v = self.handle_result(left - right);
         self.stack.push(v);
     }
 
     fn evaluate_binary_multiply(&mut self) {
         let left = self.stack.pop().expect("Expect 2 values on the stack");
         let right = self.stack.pop().expect("Expect 2 values on the stack");
-        let v = self.handle_result(left.mult(right));
+        let v = self.handle_result(left * right);
         self.stack.push(v);
     }
 
     fn evaluate_binary_divide(&mut self) {
         let left = self.stack.pop().expect("Expect 2 values on the stack");
         let right = self.stack.pop().expect("Expect 2 values on the stack");
-        let v = self.handle_result(left.div(right));
+        let v = self.handle_result(left / right);
         self.stack.push(v);
     }
 
     fn evaluate_binary_mod(&mut self) {
         let left = self.stack.pop().expect("Expect 2 values on the stack");
         let right = self.stack.pop().expect("Expect 2 values on the stack");
-        let v = self.handle_result(left.modulo(right));
+        let v = self.handle_result(left % right);
         self.stack.push(v);
     }
 
@@ -228,13 +228,13 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
 
     fn evaluate_unary_negative(&mut self) {
         let value = self.stack.pop().expect("Expect value on the stack");
-        let value = self.handle_result(value.minus());
+        let value = self.handle_result(-value);
         self.stack.push(value);
     }
 
     fn evaluate_unary_not(&mut self) {
         let value = self.stack.pop().expect("Expect value on the stack");
-        self.stack.push(value.not());
+        self.stack.push(!value);
     }
 
     fn evaluate_compare_lt(&mut self) {
