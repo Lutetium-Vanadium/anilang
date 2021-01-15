@@ -76,9 +76,9 @@ fn serialize_scopes(bytecode: &[Instruction], output_file: &mut fs::File) -> Res
         match &instr.kind {
             InstructionKind::PushVar { scope } => {
                 if let Some(parent_id) = scope.parent_id() {
-                    (parent_id + 1).serialize(output_file)?;
+                    parent_id.serialize(output_file)?;
                 } else {
-                    0usize.serialize(output_file)?;
+                    usize::MAX.serialize(output_file)?;
                 }
             }
             InstructionKind::Push { value } => {

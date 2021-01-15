@@ -396,8 +396,8 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         for arg in func.args.iter() {
             fn_scope
                 .declare(arg.clone(), self.stack.pop().unwrap_or_else(e_msg))
-                // Since this is a cloned scope, it should be, so there shouldn't be any issues in
-                // declaring the variable
+                // Since this is a cloned scope, it should be empty, so there shouldn't be any
+                // issues in declaring the variable
                 .unwrap();
         }
 

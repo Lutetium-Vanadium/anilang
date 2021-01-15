@@ -60,9 +60,9 @@ impl Scope {
     //
     // Comparison to Cell<T>: The principle which a cell works on is that no references are possible
     // since the only way value is accessible is to copy the whole value. Similarly, here no
-    // references are possible since the value which of the key, is copied.
+    // references are possible since the value for the key is copied.
 
-    fn vars_ref(&self) -> &HashMap<String, value::Value> {
+    fn vars(&self) -> &HashMap<String, value::Value> {
         unsafe { &*self.vars.get() }
     }
 
@@ -77,7 +77,7 @@ impl Scope {
     ///
     /// If the variable could be declared, it returns Ok(()), otherwise it errors with the key
     pub fn declare(&self, key: String, value: value::Value) -> Result<(), String> {
-        if !self.vars_ref().contains_key(&key) {
+        if !self.vars().contains_key(&key) {
             self.insert(key, value);
             Ok(())
         } else {
@@ -89,7 +89,7 @@ impl Scope {
     ///
     /// If the variable could be set, it returns Ok(()), otherwise it errors with the key
     pub fn set(&self, key: String, value: value::Value) -> Result<(), String> {
-        if self.vars_ref().contains_key(&key) {
+        if self.vars().contains_key(&key) {
             self.insert(key, value);
             Ok(())
         } else if let Some(ref parent) = self.parent {
@@ -101,7 +101,7 @@ impl Scope {
 
     /// Returns a copy of the value stored at key.
     pub fn try_get_value(&self, key: &str) -> Option<value::Value> {
-        if let Some(value) = self.vars_ref().get(key) {
+        if let Some(value) = self.vars().get(key) {
             // The value must be cloned so that the safety argument holds
             Some(value.clone())
         } else if let Some(ref parent) = self.parent {
