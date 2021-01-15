@@ -362,7 +362,7 @@ impl Value {
             Value::Int(left) => Ok(Value::Int(left + i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left + f64::from(right))),
             Value::String(left) => {
-                let right = right.to_rc_str();
+                let right = right.into_rc_str();
 
                 Ok(Value::String(if Rc::strong_count(&left) == 1 {
                     left.borrow_mut().push_str(&right.borrow());
@@ -380,7 +380,7 @@ impl Value {
                 }))
             }
             Value::List(left) => {
-                let right = right.to_rc_list();
+                let right = right.into_rc_list();
 
                 Ok(Value::List(if Rc::strong_count(&left) == 1 {
                     left.borrow_mut().extend_from_slice(&right.borrow()[..]);

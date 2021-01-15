@@ -114,7 +114,7 @@ impl From<&Value> for Range<i64> {
 }
 
 impl Value {
-    pub fn to_rc_str(self) -> Rc<RefCell<String>> {
+    pub fn into_rc_str(self) -> Rc<RefCell<String>> {
         match self {
             Value::String(s) => s,
             _ => unreachable!(),
@@ -127,7 +127,7 @@ impl Value {
             _ => unreachable!(),
         }
     }
-    pub fn to_rc_list(self) -> Rc<RefCell<List>> {
+    pub fn into_rc_list(self) -> Rc<RefCell<List>> {
         match self {
             Value::List(l) => l,
             _ => unreachable!(),
@@ -141,7 +141,7 @@ impl Value {
         }
     }
 
-    pub fn to_rc_fn(self) -> Rc<Function> {
+    pub fn into_rc_fn(self) -> Rc<Function> {
         match self {
             Value::Function(f) => f,
             _ => unreachable!(),
@@ -189,14 +189,14 @@ mod tests {
 
     #[test]
     fn val_to_ref_string() {
-        assert_eq!(s("s").to_rc_str().borrow().as_str(), "s");
+        assert_eq!(s("s").into_rc_str().borrow().as_str(), "s");
         assert_eq!(s("s").to_ref_str().as_str(), "s");
     }
 
     #[test]
     fn val_to_ref_list() {
         assert_eq!(
-            l(vec![i(0), i(1), s("s")]).to_rc_list().borrow()[..],
+            l(vec![i(0), i(1), s("s")]).into_rc_list().borrow()[..],
             [i(0), i(1), s("s")]
         );
         assert_eq!(
@@ -212,6 +212,6 @@ mod tests {
             Default::default(),
         ));
         let f = Value::Function(Rc::clone(&rc_f));
-        assert!(Rc::ptr_eq(&rc_f, &f.to_rc_fn()));
+        assert!(Rc::ptr_eq(&rc_f, &f.into_rc_fn()));
     }
 }

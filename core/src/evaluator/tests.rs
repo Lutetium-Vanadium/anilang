@@ -40,7 +40,7 @@ fn eval_s(mut bytecode: Bytecode, scope: Rc<scope::Scope>) -> Value {
 #[test]
 fn evaluate_block_properly() {
     let scope = gen_scope(0, None);
-    scope.declare("global".to_owned(), i(2));
+    scope.declare("global".to_owned(), i(2)).unwrap();
 
     let bytecode = vec![
         InstructionKind::PushVar {
@@ -84,7 +84,7 @@ fn evaluate_block_properly() {
 #[test]
 fn evaluate_variable_properly() {
     let scope = Rc::new(scope::Scope::new(0, None));
-    scope.declare("a".to_owned(), i(0));
+    scope.declare("a".to_owned(), i(0)).unwrap();
     let bytecode = vec![InstructionKind::Load {
         ident: "a".to_owned(),
     }
@@ -109,7 +109,7 @@ fn evaluate_variable_properly() {
 #[test]
 fn evaluate_index_properly() {
     let scope = gen_scope(0, None);
-    scope.declare("a".to_owned(), s("hello world"));
+    scope.declare("a".to_owned(), s("hello world")).unwrap();
 
     let bytecode = vec![
         InstructionKind::Push { value: i(3) }.into(),
@@ -181,7 +181,7 @@ fn evaluate_if_properly() {
 #[test]
 fn evaluate_loop_properly() {
     let scope = gen_scope(0, None);
-    scope.declare("a".to_owned(), i(1));
+    scope.declare("a".to_owned(), i(1)).unwrap();
 
     let loop_scope = gen_scope(1, par!(scope));
     let if_scope = gen_scope(2, par!(loop_scope));
@@ -263,7 +263,7 @@ fn evaluate_list_properly() {
 #[test]
 fn evaluate_assignment_properly() {
     let scope = gen_scope(0, None);
-    scope.declare("a".to_owned(), i(0));
+    scope.declare("a".to_owned(), i(0)).unwrap();
 
     assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 0);
     assert_eq!(
@@ -352,8 +352,8 @@ fn evaluate_fn_declaration_properly() {
         ],
         Rc::clone(&scope),
     );
-    let func = scope.try_get_value("a").unwrap().clone().to_rc_fn();
-    assert!(Rc::ptr_eq(&return_f.to_rc_fn(), &func));
+    let func = scope.try_get_value("a").unwrap().clone().into_rc_fn();
+    assert!(Rc::ptr_eq(&return_f.into_rc_fn(), &func));
     assert_eq!(func.args, vec!["arg1".to_owned()]);
     assert_eq!(func.body.len(), 0);
 }
@@ -361,28 +361,30 @@ fn evaluate_fn_declaration_properly() {
 #[test]
 fn evaluate_fn_call_properly() {
     let scope = gen_scope(0, None);
-    scope.declare(
-        "add".to_owned(),
-        Value::Function(Rc::new(Function::new(
-            vec!["a".to_owned(), "b".to_owned()],
-            vec![
-                InstructionKind::PushVar {
-                    scope: gen_scope(1, par!(scope)),
-                }
-                .into(),
-                InstructionKind::Load {
-                    ident: "b".to_owned(),
-                }
-                .into(),
-                InstructionKind::Load {
-                    ident: "a".to_owned(),
-                }
-                .into(),
-                InstructionKind::BinaryAdd.into(),
-                InstructionKind::PopVar.into(),
-            ],
-        ))),
-    );
+    scope
+        .declare(
+            "add".to_owned(),
+            Value::Function(Rc::new(Function::new(
+                vec!["a".to_owned(), "b".to_owned()],
+                vec![
+                    InstructionKind::PushVar {
+                        scope: gen_scope(1, par!(scope)),
+                    }
+                    .into(),
+                    InstructionKind::Load {
+                        ident: "b".to_owned(),
+                    }
+                    .into(),
+                    InstructionKind::Load {
+                        ident: "a".to_owned(),
+                    }
+                    .into(),
+                    InstructionKind::BinaryAdd.into(),
+                    InstructionKind::PopVar.into(),
+                ],
+            ))),
+        )
+        .unwrap();
 
     assert_eq!(
         eval_s(

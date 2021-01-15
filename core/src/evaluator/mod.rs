@@ -299,19 +299,13 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             .expect("Expect value on stack to store")
             .clone();
         if declaration {
-            if self.scope().can_declare(&ident) {
-                self.scope().declare(ident, v);
-            } else {
+            if let Err(ident) = self.scope().declare(ident, v) {
                 self.diagnostics
                     .already_declared(&ident, self.bytecode[self.instr_i].span.clone());
             }
-        } else {
-            if self.scope().can_set(&ident) {
-                self.scope().set(ident, v);
-            } else {
-                self.diagnostics
-                    .unknown_reference(&ident, self.bytecode[self.instr_i].span.clone());
-            }
+        } else if let Err(ident) = self.scope().set(ident, v) {
+            self.diagnostics
+                .unknown_reference(&ident, self.bytecode[self.instr_i].span.clone());
         }
     }
 
@@ -370,7 +364,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             return;
         }
 
-        let func = v.to_rc_fn();
+        let func = v.into_rc_fn();
         if func.args.len() != num_args {
             self.diagnostics.incorrect_arg_count(
                 func.args.len(),
@@ -400,7 +394,11 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         };
 
         for arg in func.args.iter() {
-            fn_scope.declare(arg.clone(), self.stack.pop().unwrap_or_else(e_msg));
+            fn_scope
+                .declare(arg.clone(), self.stack.pop().unwrap_or_else(e_msg))
+                // Since this is a cloned scope, it should be, so there shouldn't be any issues in
+                // declaring the variable
+                .unwrap();
         }
 
         self.stack

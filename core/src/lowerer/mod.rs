@@ -199,7 +199,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
     }
 
     fn lower_block_statements(&mut self, statements: Vec<SyntaxNode>) {
-        if statements.len() == 0 {
+        if statements.is_empty() {
             return;
         }
         let last_index = statements.len() - 1;

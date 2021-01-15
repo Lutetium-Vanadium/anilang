@@ -62,43 +62,40 @@ impl Scope {
     // since the only way value is accessible is to copy the whole value. Similarly, here no
     // references are possible since the value which of the key, is copied.
 
-    fn vars_mut(&self) -> &mut HashMap<String, value::Value> {
-        unsafe { &mut *self.vars.get() }
-    }
     fn vars_ref(&self) -> &HashMap<String, value::Value> {
         unsafe { &*self.vars.get() }
     }
 
-    /////////////////////////////////////////////////////////////////
-
-    pub fn can_declare(&self, key: &str) -> bool {
-        !self.vars_ref().contains_key(key)
+    fn insert(&self, key: String, value: value::Value) {
+        let vars = unsafe { &mut *self.vars.get() };
+        vars.insert(key, value);
     }
 
+    /////////////////////////////////////////////////////////////////
+
     /// Creates the variable `key` with value `value` in this scope.
-    pub fn declare(&self, key: String, value: value::Value) {
-        let vars = self.vars_mut();
-        if !vars.contains_key(&key) {
-            vars.insert(key, value);
+    ///
+    /// If the variable could be declared, it returns Ok(()), otherwise it errors with the key
+    pub fn declare(&self, key: String, value: value::Value) -> Result<(), String> {
+        if !self.vars_ref().contains_key(&key) {
+            self.insert(key, value);
+            Ok(())
+        } else {
+            Err(key)
         }
     }
 
-    pub fn can_set(&self, key: &str) -> bool {
-        self.vars_ref().contains_key(key)
-            || self
-                .parent
-                .as_ref()
-                .map(|p| p.can_set(key))
-                .unwrap_or(false)
-    }
-
     /// Sets the value for the variable. If the variable is not found, it recurses to its parent.
-    pub fn set(&self, key: String, value: value::Value) {
-        let vars = self.vars_mut();
-        if vars.contains_key(&key) {
-            vars.insert(key, value);
+    ///
+    /// If the variable could be set, it returns Ok(()), otherwise it errors with the key
+    pub fn set(&self, key: String, value: value::Value) -> Result<(), String> {
+        if self.vars_ref().contains_key(&key) {
+            self.insert(key, value);
+            Ok(())
         } else if let Some(ref parent) = self.parent {
             parent.set(key, value)
+        } else {
+            Err(key)
         }
     }
 
