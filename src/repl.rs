@@ -5,6 +5,7 @@ use crossterm::style::Colorize;
 use shelp::LangInterface;
 use std::io;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 fn get_persistant_file_path() -> Option<PathBuf> {
     match app_dirs2::data_root(app_dirs2::AppDataType::UserCache) {
@@ -31,7 +32,7 @@ pub fn run(mut show_ast: bool, mut show_bytecode: bool) {
     let repl = shelp::Repl::<AnilangLangInterface>::new("» ", "· ", get_persistant_file_path())
         .iter(shelp::Color::Green);
 
-    let mut global_scope = anilang::Scope::new();
+    let global_scope = Rc::new(anilang::Scope::new(0, None));
 
     for line in repl {
         if line.trim() == ".tree" {
@@ -61,7 +62,12 @@ pub fn run(mut show_ast: bool, mut show_bytecode: bool) {
             root.prt();
         }
 
-        let bytecode = anilang::Lowerer::lower(root, &diagnostics, false);
+        let bytecode = anilang::Lowerer::lower_with_global(
+            root,
+            &diagnostics,
+            Rc::clone(&global_scope),
+            false,
+        );
         if show_bytecode {
             anilang::print_bytecode(&bytecode[..]).unwrap_or_else(|e| {
                 println!("{} Failed to print bytecode", "ERROR".dark_red());
@@ -70,11 +76,7 @@ pub fn run(mut show_ast: bool, mut show_bytecode: bool) {
         }
 
         if !diagnostics.any() {
-            let value = anilang::Evaluator::evaluate_with_global(
-                &bytecode[..],
-                &diagnostics,
-                &mut global_scope,
-            );
+            let value = anilang::Evaluator::evaluate(&bytecode[..], &diagnostics);
             match value {
                 anilang::Value::Null => {}
                 value if !diagnostics.any() => println!("{:?}", value),

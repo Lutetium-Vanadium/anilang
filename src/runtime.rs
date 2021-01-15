@@ -1,4 +1,4 @@
-use anilang::Serialize;
+use anilang::{Deserialize, DeserializeCtx};
 use crossterm::style::Colorize;
 use std::fs;
 use std::io;
@@ -9,12 +9,21 @@ pub fn run(bin_file: PathBuf, show_bytecode: bool) -> io::Result<()> {
     let src = anilang::SourceText::deserialize(&mut bin)?;
     let diagnostics = anilang::Diagnostics::new(&src);
 
-    let len = usize::deserialize(&mut bin)?;
-    let mut bytecode = Vec::with_capacity(len);
+    let num_scopes = usize::deserialize(&mut bin)?;
+    let mut ctx = anilang::DeserializationContext::new(num_scopes);
+    for i in 0..num_scopes {
+        let parent_id = usize::deserialize(&mut bin)?;
 
-    for _ in 0..len {
-        bytecode.push(anilang::Instruction::deserialize(&mut bin)?);
+        let parent_id = if parent_id != usize::MAX {
+            Some(parent_id)
+        } else {
+            None
+        };
+
+        ctx.add_scope(i, parent_id);
     }
+
+    let bytecode = Vec::deserialize_with_context(&mut bin, &mut ctx)?;
 
     if show_bytecode {
         if let Some(e) = anilang::print_bytecode(&bytecode[..]).err() {

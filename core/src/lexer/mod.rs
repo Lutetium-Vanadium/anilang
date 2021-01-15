@@ -195,7 +195,7 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
             if let Some((i, chr)) = self.chars.peek() {
                 e = *i;
 
-                if !chr.is_alphanumeric() {
+                if !chr.is_alphanumeric() && *chr != '_' {
                     break;
                 } else {
                     self.chars.next();

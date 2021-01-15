@@ -1,4 +1,5 @@
 use crate::bytecode::*;
+use crate::scope::Scope;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
 use crate::value::Function;
@@ -6,6 +7,8 @@ use crate::value::Value;
 use crate::Diagnostics;
 use node::SyntaxNode;
 use std::mem;
+use std::ops::RangeFrom;
+use std::rc::Rc;
 
 mod const_evaluator;
 use const_evaluator::ConstEvaluator;
@@ -27,7 +30,8 @@ mod optimize_tests;
 /// # Examples
 /// Evaluate from a node
 /// ```
-/// use anilang::{SourceText, Diagnostics, Lexer, Parser, Lowerer, Evaluator, Value, InstructionKind};
+/// use anilang::{SourceText, Diagnostics, Value, InstructionKind, Scope};
+/// use anilang::{Lexer, Parser, Lowerer, Evaluator};
 ///
 /// let src = SourceText::new("1 + 2 + 3");
 /// let diagnostics = Diagnostics::new(&src);
@@ -40,7 +44,7 @@ mod optimize_tests;
 ///     .collect();
 ///
 /// let expected = vec![
-///     InstructionKind::PushVar,
+///     InstructionKind::PushVar { scope: std::rc::Rc::new(Scope::new(0, None)) },
 ///     InstructionKind::Push {
 ///         value: Value::Int(3)
 ///     },
@@ -60,7 +64,8 @@ mod optimize_tests;
 ///
 /// The same program but with optimization leads to smaller bytecode:
 /// ```
-/// use anilang::{SourceText, Diagnostics, Lexer, Parser, Lowerer, Evaluator, Value, InstructionKind};
+/// use anilang::{SourceText, Diagnostics, Value, InstructionKind, Scope};
+/// use anilang::{Lexer, Parser, Lowerer, Evaluator};
 ///
 /// let src = SourceText::new("1 + 2 + 3");
 /// let diagnostics = Diagnostics::new(&src);
@@ -73,7 +78,7 @@ mod optimize_tests;
 ///     .collect();
 ///
 /// let expected = vec![
-///     InstructionKind::PushVar,
+///     InstructionKind::PushVar { scope: std::rc::Rc::new(Scope::new(0, None) )},
 ///     InstructionKind::Push {
 ///         value: Value::Int(6)
 ///     },
@@ -85,8 +90,10 @@ mod optimize_tests;
 pub struct Lowerer<'diagnostics, 'src> {
     diagnostics: &'diagnostics Diagnostics<'src>,
     bytecode: Bytecode,
-    label_maker: LabelMaker,
+    labels: RangeFrom<usize>,
+    scope_ids: RangeFrom<usize>,
     scopes_since_loop: usize,
+    current_scope: Option<Rc<Scope>>,
     break_label: Option<LabelNumber>,
     should_optimize: bool,
 }
@@ -100,8 +107,10 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         let mut lowerer = Self {
             diagnostics,
             bytecode: Default::default(),
-            label_maker: Default::default(),
+            labels: 0..,
+            scope_ids: 0..,
             scopes_since_loop: 0,
+            current_scope: None,
             break_label: None,
             should_optimize,
         };
@@ -111,8 +120,50 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         lowerer.bytecode
     }
 
+    /// Like the lower function except that it doesn't add a scope for root block
+    pub fn lower_with_global(
+        root: node::BlockNode,
+        diagnostics: &'diagnostics Diagnostics<'src>,
+        scope: Rc<Scope>,
+        should_optimize: bool,
+    ) -> Bytecode {
+        let mut lowerer = Self {
+            diagnostics,
+            bytecode: Default::default(),
+            labels: 0..,
+            scope_ids: 1..,
+            scopes_since_loop: 1,
+            current_scope: Some(Rc::clone(&scope)),
+            break_label: None,
+            should_optimize,
+        };
+
+        if root.block.is_empty() {
+            return vec![];
+        }
+
+        lowerer.bytecode.push(Instruction::new(
+            InstructionKind::PushVar { scope },
+            root.span.clone(),
+        ));
+
+        lowerer.lower_block_statements(root.block);
+
+        lowerer
+            .bytecode
+            .push(Instruction::new(InstructionKind::PopVar, root.span));
+
+        lowerer.bytecode
+    }
+
     fn next_label(&mut self) -> LabelNumber {
-        self.label_maker.next()
+        // It goes till infinity, there will always be a next
+        self.labels.next().unwrap()
+    }
+
+    fn next_scope_id(&mut self) -> usize {
+        // It goes till infinity, there will always be a next
+        self.scope_ids.next().unwrap()
     }
 
     fn lower_node(&mut self, node: SyntaxNode) {
@@ -147,20 +198,13 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         }
     }
 
-    fn lower_block(&mut self, block: node::BlockNode) {
-        if block.block.is_empty() {
+    fn lower_block_statements(&mut self, statements: Vec<SyntaxNode>) {
+        if statements.is_empty() {
             return;
         }
+        let last_index = statements.len() - 1;
 
-        let last_index = block.block.len() - 1;
-
-        self.bytecode.push(Instruction::new(
-            InstructionKind::PushVar,
-            block.span.clone(),
-        ));
-        self.scopes_since_loop += 1;
-
-        for (i, node) in block.block.into_iter().enumerate() {
+        for (i, node) in statements.into_iter().enumerate() {
             let node_span = node.span().clone();
             if i < last_index {
                 if self.should_optimize && node.can_const_eval() {
@@ -174,10 +218,29 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
                 self.lower_node(node);
             }
         }
+    }
+
+    fn lower_block(&mut self, block: node::BlockNode) {
+        if block.block.is_empty() {
+            return;
+        }
+
+        let prev_scope = self.current_scope.take();
+        let scope = Rc::new(Scope::new(self.next_scope_id(), prev_scope.clone()));
+        self.current_scope = Some(Rc::clone(&scope));
+        self.scopes_since_loop += 1;
+
+        self.bytecode.push(Instruction::new(
+            InstructionKind::PushVar { scope },
+            block.span.clone(),
+        ));
+
+        self.lower_block_statements(block.block);
 
         self.bytecode
             .push(Instruction::new(InstructionKind::PopVar, block.span));
         self.scopes_since_loop -= 1;
+        self.current_scope = prev_scope;
     }
 
     fn lower_literal(&mut self, literal: node::LiteralNode) {
@@ -298,8 +361,12 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         let previos_scopes_since_loop = self.scopes_since_loop;
         self.scopes_since_loop = 0;
 
+        let prev_scope = self.current_scope.take();
+        let scope = Rc::new(Scope::new(self.next_scope_id(), prev_scope.clone()));
+        self.current_scope = Some(Rc::clone(&scope));
+
         self.bytecode.push(Instruction::new(
-            InstructionKind::PushVar,
+            InstructionKind::PushVar { scope },
             loop_node.span.clone(),
         ));
         self.bytecode.push(Instruction::new(
@@ -311,10 +378,14 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
 
         for node in loop_node.block {
             let node_span = node.span().clone();
-            self.lower_node(node);
-            // Remove the value produced by the last statement
-            self.bytecode
-                .push(Instruction::new(InstructionKind::Pop, node_span));
+            if self.should_optimize && node.can_const_eval() {
+                self.diagnostics.unused_statement(node_span);
+            } else {
+                self.lower_node(node);
+                // Remove the value produced by the last statement
+                self.bytecode
+                    .push(Instruction::new(InstructionKind::Pop, node_span));
+            }
         }
 
         self.bytecode.push(Instruction::new(
@@ -329,9 +400,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             InstructionKind::PopVar,
             loop_node.span.clone(),
         ));
-        // Every high level statement must produce a value on the stack, in case there is no
-        // else block, and the condition is false, no value would be pushed to the stack, so we
-        // push a null
+        // Every high level statement must produce a value on the stack so we push a null
         self.bytecode.push(Instruction::new(
             InstructionKind::Push { value: Value::Null },
             loop_node.span,
@@ -339,6 +408,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
 
         mem::swap(&mut self.break_label, &mut previous_break_label);
         self.scopes_since_loop = previos_scopes_since_loop;
+        self.current_scope = prev_scope;
     }
 
     fn lower_assignment(&mut self, assignment_node: node::AssignmentNode) {
@@ -401,18 +471,20 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
 
     fn lower_fn_declaration(&mut self, fn_declaration_node: node::FnDeclarationNode) {
         let mut fn_body = Vec::new();
-        let mut reset_break_label = None;
 
-        // Swap out the current bytecode and break label, for empty ones to lower function body
-        mem::swap(&mut self.bytecode, &mut fn_body);
-        mem::swap(&mut self.break_label, &mut reset_break_label);
+        if !fn_declaration_node.block.block.is_empty() {
+            let mut reset_break_label = None;
 
-        self.lower_block(fn_declaration_node.block);
+            // Swap out the current bytecode and break label, for empty ones to lower function body
+            mem::swap(&mut self.bytecode, &mut fn_body);
+            mem::swap(&mut self.break_label, &mut reset_break_label);
 
-        // Swap back the current bytecode and break label to continue regular processing
-        mem::swap(&mut self.bytecode, &mut fn_body);
-        mem::swap(&mut self.break_label, &mut reset_break_label);
+            self.lower_block(fn_declaration_node.block);
 
+            // Swap back the current bytecode and break label to continue regular processing
+            mem::swap(&mut self.bytecode, &mut fn_body);
+            mem::swap(&mut self.break_label, &mut reset_break_label);
+        }
         let function = Function::new(fn_declaration_node.args, fn_body);
 
         self.bytecode.push(Instruction::new(
@@ -513,18 +585,5 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         } else {
             self.diagnostics.break_outside_loop(break_node.span);
         }
-    }
-}
-
-#[derive(Default)]
-struct LabelMaker {
-    next_label_id: LabelNumber,
-}
-
-impl LabelMaker {
-    fn next(&mut self) -> LabelNumber {
-        let next = self.next_label_id;
-        self.next_label_id += 1;
-        next
     }
 }

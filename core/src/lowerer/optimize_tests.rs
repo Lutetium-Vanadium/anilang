@@ -2,6 +2,12 @@ use super::*;
 use crate::test_helpers::*;
 use crate::text_span::*;
 
+// These tests are leveraging the fact that scopes are compared through id only, in a real world
+// environment, this would be erroneous
+fn gen_scope(id: usize) -> Rc<Scope> {
+    Rc::new(Scope::new(id, None))
+}
+
 fn span() -> TextSpan {
     Default::default()
 }
@@ -46,7 +52,10 @@ fn optimize_arithmetic_expr() {
     assert_eq!(
         bytecode,
         vec![
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(1)
+            }
+            .into(),
             InstructionKind::Push { value: i(12) }.into(),
             InstructionKind::Store {
                 ident: "a".to_owned(),
@@ -103,7 +112,10 @@ fn optimize_index() {
     assert_eq!(
         bytecode,
         vec![
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(1)
+            }
+            .into(),
             InstructionKind::Push { value: i(12) }.into(),
             InstructionKind::Store {
                 ident: "a".to_owned(),
@@ -226,8 +238,14 @@ fn optimize_const_if_condition() {
     assert_eq!(
         generate_bytecode(true),
         vec![
-            InstructionKind::PushVar.into(),
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(1)
+            }
+            .into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(2)
+            }
+            .into(),
             InstructionKind::Push { value: i(2) }.into(),
             InstructionKind::Load {
                 ident: "a".to_owned()
@@ -247,8 +265,14 @@ fn optimize_const_if_condition() {
     assert_eq!(
         generate_bytecode(false),
         vec![
-            InstructionKind::PushVar.into(),
-            InstructionKind::PushVar.into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(1)
+            }
+            .into(),
+            InstructionKind::PushVar {
+                scope: gen_scope(2)
+            }
+            .into(),
             InstructionKind::Push { value: i(4) }.into(),
             InstructionKind::Load {
                 ident: "b".to_owned()

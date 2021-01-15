@@ -1,7 +1,9 @@
-use crate::serialize::Serialize;
+use crate::scope::Scope;
+use crate::serialize::{DeserializationContext, Deserialize, DeserializeCtx, Serialize};
 use crate::text_span::TextSpan;
 use crate::value::Value;
 use std::io::{self, prelude::*};
+use std::rc::Rc;
 
 mod print_bytecode;
 pub use print_bytecode::print_bytecode;
@@ -31,9 +33,14 @@ impl Serialize for Instruction {
         self.span.len().serialize(buf)?;
         Ok(bytes_read + 16)
     }
+}
 
-    fn deserialize<R: BufRead>(data: &mut R) -> io::Result<Self> {
-        let kind = InstructionKind::deserialize(data)?;
+impl DeserializeCtx<DeserializationContext> for Instruction {
+    fn deserialize_with_context<R: BufRead>(
+        data: &mut R,
+        ctx: &mut DeserializationContext,
+    ) -> io::Result<Self> {
+        let kind = InstructionKind::deserialize_with_context(data, ctx)?;
         let span_start = usize::deserialize(data)?;
         let span_len = usize::deserialize(data)?;
         Ok(Instruction::new(kind, TextSpan::new(span_start, span_len)))
@@ -168,7 +175,7 @@ pub enum InstructionKind {
     MakeRange,
     // NOTE next two aren't great solutions, and possibly temporary
     /// Push a new variable stack
-    PushVar,
+    PushVar { scope: Rc<Scope> },
     /// Pop the top variable stack
     PopVar,
 }
@@ -244,12 +251,20 @@ impl Serialize for InstructionKind {
                 Ok(9)
             }
             InstructionKind::MakeRange => buf.write(&[29]),
-            InstructionKind::PushVar => buf.write(&[30]),
+            InstructionKind::PushVar { scope } => {
+                buf.write_all(&[30])?;
+                Ok(1 + scope.id.serialize(buf)?)
+            }
             InstructionKind::PopVar => buf.write(&[31]),
         }
     }
+}
 
-    fn deserialize<R: BufRead>(data: &mut R) -> io::Result<Self> {
+impl DeserializeCtx<DeserializationContext> for InstructionKind {
+    fn deserialize_with_context<R: BufRead>(
+        data: &mut R,
+        ctx: &mut DeserializationContext,
+    ) -> io::Result<Self> {
         let mut tag = 0;
         data.read_exact(std::slice::from_mut(&mut tag))?;
 
@@ -273,7 +288,7 @@ impl Serialize for InstructionKind {
             16 => InstructionKind::CompareNE,
             17 => InstructionKind::Pop,
             18 => {
-                let value = Value::deserialize(data)?;
+                let value = Value::deserialize_with_context(data, ctx)?;
                 InstructionKind::Push { value }
             }
             19 => {
@@ -313,7 +328,12 @@ impl Serialize for InstructionKind {
                 InstructionKind::MakeList { len }
             }
             29 => InstructionKind::MakeRange,
-            30 => InstructionKind::PushVar,
+            30 => {
+                let id = usize::deserialize(data)?;
+                InstructionKind::PushVar {
+                    scope: ctx.get_scope(id),
+                }
+            }
             31 => InstructionKind::PopVar,
             n => {
                 return Err(io::Error::new(

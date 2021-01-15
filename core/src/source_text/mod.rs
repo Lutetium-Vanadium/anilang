@@ -124,7 +124,7 @@ impl Index<&TextSpan> for SourceText<'_> {
     }
 }
 
-use crate::serialize::Serialize;
+use crate::serialize::{Deserialize, Serialize};
 use std::io::{self, prelude::*};
 
 impl<'a> Serialize for SourceText<'a> {
@@ -138,7 +138,9 @@ impl<'a> Serialize for SourceText<'a> {
         buf.write_all(b"srce")?;
         Ok(24 + self.lines.len() * 16)
     }
+}
 
+impl<'a> Deserialize for SourceText<'a> {
     fn deserialize<R: BufRead>(data: &mut R) -> io::Result<Self> {
         let mut tag = [0; 4];
         data.read_exact(&mut tag)?;

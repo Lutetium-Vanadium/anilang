@@ -1,5 +1,5 @@
 use super::Value;
-use crate::serialize::Serialize;
+use crate::serialize::{DeserializationContext, Deserialize, DeserializeCtx, Serialize};
 use crate::types::Type;
 use std::cell::RefCell;
 use std::io::{self, prelude::*};
@@ -38,8 +38,13 @@ impl Serialize for Value {
             Value::Null => Ok(1),
         }
     }
+}
 
-    fn deserialize<R: BufRead>(data: &mut R) -> io::Result<Value> {
+impl DeserializeCtx<DeserializationContext> for Value {
+    fn deserialize_with_context<R: BufRead>(
+        data: &mut R,
+        ctx: &mut DeserializationContext,
+    ) -> io::Result<Value> {
         let mut tag = 0;
         data.read_exact(slice::from_mut(&mut tag))?;
 
@@ -52,11 +57,13 @@ impl Serialize for Value {
                 let e = i64::deserialize(data)?;
                 Value::Range(s, e)
             }
-            Type::List => Value::List(Rc::new(RefCell::new(Vec::deserialize(data)?))),
+            Type::List => Value::List(Rc::new(RefCell::new(Vec::deserialize_with_context(
+                data, ctx,
+            )?))),
             Type::String => Value::String(Rc::new(RefCell::new(String::deserialize(data)?))),
             Type::Function => {
                 let args = Vec::deserialize(data)?;
-                let body = Vec::deserialize(data)?;
+                let body = Vec::deserialize_with_context(data, ctx)?;
 
                 Value::Function(Rc::new(super::Function::new(args, body)))
             }
@@ -74,10 +81,12 @@ mod tests {
     use std::rc::Rc;
 
     fn test_serialize(v: Value, expected_bytes: Vec<u8>) {
+        let mut context = DeserializationContext::new(1);
+        context.add_scope(0, None);
         let mut buf = Vec::new();
         assert_eq!(v.serialize(&mut buf).unwrap(), expected_bytes.len());
         assert_eq!(buf[..expected_bytes.len()], expected_bytes[..]);
-        let dv = Value::deserialize(&mut &expected_bytes[..]).unwrap();
+        let dv = Value::deserialize_with_context(&mut &expected_bytes[..], &mut context).unwrap();
         match v {
             Value::Function(f) => match dv {
                 Value::Function(df) => {
@@ -142,7 +151,7 @@ mod tests {
         let f = Value::Function(Rc::new(Function::new(
             vec!["a".to_owned(), "b".to_owned()],
             vec![
-                InstructionKind::PushVar.into(),
+                InstructionKind::PushVar { scope: Rc::new(crate::Scope::new(0, None)) }.into(),
                 InstructionKind::Load {
                     ident: "b".to_owned(),
                 }
@@ -157,14 +166,21 @@ mod tests {
         )));
 
         test_serialize(f, vec![
-            64, 2, 0, 0, 0, 0, 0, 0, 0,
-            b'a', b'\0', b'b', b'\0',
-            5, 0, 0, 0, 0, 0, 0, 0,
-            30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            20, b'b', b'\0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            20, b'a', b'\0', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            64, // Value tag
+            2, 0, 0, 0, 0, 0, 0, 0, // Length of args
+            b'a', b'\0', b'b', b'\0', // Args
+            5, 0, 0, 0, 0, 0, 0, 0, // Length of Instructions
+            // Instruction 0
+            30, 0, 0, 0, 0, 0, 0, 0, 0, // Tag + scope id (PushVar)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Span
+            // Instruction 1
+            20, b'b', b'\0', // Tag + ident (Load)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Span
+            // Instruction 2
+            20, b'a', b'\0', // Tag + ident (Load)
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Span
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Instruction 3 - Tag + Span
+            31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Instruction 4 - Tag + Span
         ]);
     }
 

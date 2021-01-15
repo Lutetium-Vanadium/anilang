@@ -30,11 +30,14 @@ pub fn compile(
     if !diagnostics.any() {
         let mut output_file = fs::File::create(output_file)?;
         src.serialize(&mut output_file)?;
-        bytecode.len().serialize(&mut output_file)?;
 
-        for instr in bytecode.into_iter() {
-            instr.serialize(&mut output_file)?;
-        }
+        // Serialize scopes
+        count_scopes(&bytecode[..]).serialize(&mut output_file)?;
+
+        serialize_scopes(&bytecode[..], &mut output_file)?;
+
+        // Serialize the Instructions
+        bytecode.serialize(&mut output_file)?;
 
         println!("Compiled with {} warnings", diagnostics.num_warnings());
     } else {
@@ -43,6 +46,48 @@ pub fn compile(
             diagnostics.num_errors(),
             diagnostics.num_warnings()
         );
+    }
+
+    Ok(())
+}
+
+use anilang::{Instruction, InstructionKind, Value};
+
+fn count_scopes(bytecode: &[Instruction]) -> usize {
+    let mut num_scopes = 0;
+
+    for instr in bytecode {
+        match &instr.kind {
+            InstructionKind::PushVar { .. } => num_scopes += 1,
+            InstructionKind::Push { value } => {
+                if let Value::Function(func) = value {
+                    num_scopes += count_scopes(&func.body[..])
+                }
+            }
+            _ => {}
+        }
+    }
+
+    num_scopes
+}
+
+fn serialize_scopes(bytecode: &[Instruction], output_file: &mut fs::File) -> Result<()> {
+    for instr in bytecode {
+        match &instr.kind {
+            InstructionKind::PushVar { scope } => {
+                if let Some(parent_id) = scope.parent_id() {
+                    parent_id.serialize(output_file)?;
+                } else {
+                    usize::MAX.serialize(output_file)?;
+                }
+            }
+            InstructionKind::Push { value } => {
+                if let Value::Function(func) = value {
+                    serialize_scopes(&func.body[..], output_file)?;
+                }
+            }
+            _ => {}
+        }
     }
 
     Ok(())

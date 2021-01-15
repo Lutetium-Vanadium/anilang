@@ -59,22 +59,75 @@ fn functions_declaration_returns_function() {
     );
 }
 
-// Currently broken since functions do not have access to the parent scope where they were declared
-//
-// #[test]
-// fn functions_recurse() {
-//     assert_eq!(
-//         execute(
-//             "fn fact(a) {
-//                 if a == 2 {
-//                     2
-//                 } else {
-//                     a * fact(a-1)
-//                 }
-//             }
-//             fact(5)"
-//         )
-//         .unwrap(),
-//         v::i(120),
-//     );
-// }
+#[test]
+fn functions_recurse() {
+    assert_eq!(
+        execute(
+            "fn fact(a) {
+                if a == 2 {
+                    2
+                } else {
+                    a * fact(a-1)
+                }
+            }
+            fact(5)"
+        )
+        .unwrap(),
+        v::i(120),
+    );
+}
+
+#[test]
+fn functions_use_proper_scope() {
+    assert_eq!(
+        execute(
+            "fn create_fact() {
+            let mem = [1, 1, 2, 0, 0, 0, 0, 0, 0, 0]
+
+            fn fact(a) {
+                if mem[a] > 0{
+                    mem[a]
+                } else {
+                    mem[a] = a * fact(a-1)
+                    mem[a]
+                }
+            }
+        }
+
+        let fact = create_fact()
+        fact(5)
+
+        fact(9)"
+        )
+        .unwrap(),
+        v::i(362880)
+    );
+
+    assert_eq!(
+        execute(
+            "fn outer(a) {
+                fn inner() {
+                    a + 1
+                }
+            }
+
+            let five = outer(4)
+            let four = outer(3)
+            five() + four()"
+        )
+        .unwrap(),
+        v::i(9)
+    );
+
+    assert_eq!(
+        execute(
+            "let a = 100
+            fn f(a) {
+                a + 123
+            }
+            f(10)"
+        )
+        .unwrap(),
+        v::i(133)
+    );
+}
