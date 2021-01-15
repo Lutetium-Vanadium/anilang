@@ -68,12 +68,17 @@ while <cond> {
     );
     println!("loop provides an infinite loop");
 
-    println!("\nFunctions can be declared in the following way:");
+    println!("\nFunctions can be declared in the following ways:");
     print_block(
         stdout,
-        r##"fn <func_name>(<args>...) {
+        r##"// Regular function declaration, gets stored in <func_name>
+fn <func_name>(<args>...) {
     ...
-}"##,
+}
+
+// Anonymous function which is immediately invoked, but it can be used
+// like any other value
+(fn(a, b) { a + b })(1, 2)"##,
     );
 
     println!("\nStrings can be indexed using []");

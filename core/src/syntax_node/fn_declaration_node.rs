@@ -6,13 +6,18 @@ use crossterm::style;
 #[derive(Debug, Clone)]
 pub struct FnDeclarationNode {
     pub span: TextSpan,
-    pub ident: String,
+    pub ident: Option<String>,
     pub args: Vec<String>,
     pub block: BlockNode,
 }
 
 impl FnDeclarationNode {
-    pub fn new(fn_token: &Token, ident: String, args: Vec<String>, block: BlockNode) -> Self {
+    pub fn new(
+        fn_token: &Token,
+        ident: Option<String>,
+        args: Vec<String>,
+        block: BlockNode,
+    ) -> Self {
         Self {
             span: TextSpan::from_spans(&fn_token.text_span, &block.span),
             ident,
@@ -21,7 +26,12 @@ impl FnDeclarationNode {
         }
     }
 
-    pub fn with_span(ident: String, args: Vec<String>, block: BlockNode, span: TextSpan) -> Self {
+    pub fn with_span(
+        ident: Option<String>,
+        args: Vec<String>,
+        block: BlockNode,
+        span: TextSpan,
+    ) -> Self {
         Self {
             ident,
             args,
@@ -47,6 +57,6 @@ impl FnDeclarationNode {
 use std::fmt;
 impl fmt::Display for FnDeclarationNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "FnKeyword -> {}", self.ident)
+        write!(f, "FnKeyword -> {:?}", self.ident)
     }
 }

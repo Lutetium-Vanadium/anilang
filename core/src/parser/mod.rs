@@ -272,7 +272,13 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
     fn parse_fn_declaration_statement(&self) -> SyntaxNode {
         let fn_token = self.match_token(TokenKind::FnKeyword);
-        let ident = self.match_token(TokenKind::Ident);
+
+        let ident = if let TokenKind::Ident = self.cur().kind {
+            Some(self.src[&self.next().text_span].to_owned())
+        } else {
+            None
+        };
+
         self.match_token(TokenKind::OpenParan);
 
         let mut args = Vec::new();
@@ -306,12 +312,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         self.match_token(TokenKind::OpenBrace);
         let block = self.parse_block(TokenKind::CloseBrace);
 
-        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode::new(
-            fn_token,
-            self.src[&ident.text_span].to_owned(),
-            args,
-            block,
-        ))
+        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode::new(fn_token, ident, args, block))
     }
 
     fn parse_if_statement(&self) -> SyntaxNode {
@@ -409,9 +410,6 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             TokenKind::String | TokenKind::Number | TokenKind::Boolean => {
                 self.parse_literal_expression()
             }
-            TokenKind::Ident if self.peek(1).kind == TokenKind::OpenParan => {
-                self.parse_fn_call_statement()
-            }
             TokenKind::Ident => {
                 SyntaxNode::VariableNode(node::VariableNode::new(self.next(), self.src))
             }
@@ -427,11 +425,25 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             }
         };
 
-        while self.cur().kind == TokenKind::OpenBracket {
-            self.next();
-            let index = self.parse_statement();
-            let close_bracket = self.match_token(TokenKind::CloseBracket);
-            node = SyntaxNode::IndexNode(node::IndexNode::new(node, index, close_bracket));
+        // Parse additional stuff afterword
+        loop {
+            match self.cur().kind {
+                TokenKind::OpenBracket => {
+                    self.next();
+                    let index = self.parse_statement();
+                    let close_bracket = self.match_token(TokenKind::CloseBracket);
+                    node = SyntaxNode::IndexNode(node::IndexNode::new(node, index, close_bracket));
+                }
+                TokenKind::OpenParan => {
+                    self.next();
+
+                    let (args, close_paran) =
+                        self.parse_comma_seperated_values(TokenKind::CloseParan);
+
+                    node = SyntaxNode::FnCallNode(node::FnCallNode::new(node, args, close_paran));
+                }
+                _ => break,
+            }
         }
 
         node
@@ -458,15 +470,6 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         };
 
         (args, end_delim)
-    }
-
-    fn parse_fn_call_statement(&self) -> SyntaxNode {
-        let ident = self.next();
-        self.next();
-
-        let (args, close_paran) = self.parse_comma_seperated_values(TokenKind::CloseParan);
-
-        SyntaxNode::FnCallNode(node::FnCallNode::new(ident, args, close_paran, self.src))
     }
 
     fn parse_list_expression(&self) -> SyntaxNode {

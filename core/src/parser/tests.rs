@@ -146,8 +146,36 @@ fn parse_fn_declaration_properly() {
     assert_eq!(root.block.len(), 1);
 
     let fdn = match &root.block[0] {
-        SyntaxNode::FnDeclarationNode(fdn) if &fdn.ident == "f" => fdn,
+        SyntaxNode::FnDeclarationNode(fdn) if fdn.ident.as_ref().unwrap() == "f" => fdn,
         n => panic!("expected FnDeclarationNode with ident 'f', got {:?}", n),
+    };
+
+    assert_eq!(fdn.args.len(), 0);
+    assert_eq!(fdn.block.block.len(), 1);
+    assert!(matches!(
+        &fdn.block.block[0],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(123),
+            ..
+        })
+    ));
+
+    let tokens = vec![
+        Token::new(TokenKind::FnKeyword, 0, 2),
+        Token::new(TokenKind::OpenParan, 2, 1),
+        Token::new(TokenKind::CloseParan, 3, 1),
+        Token::new(TokenKind::OpenBrace, 5, 1),
+        Token::new(TokenKind::Number, 7, 3),
+        Token::new(TokenKind::CloseBrace, 11, 1),
+        Token::new(TokenKind::EOF, 12, 0),
+    ];
+
+    let root = parse("fn() { 123 }", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let fdn = match &root.block[0] {
+        SyntaxNode::FnDeclarationNode(fdn) if fdn.ident.is_none() => fdn,
+        n => panic!("expected FnDeclarationNode with no ident, got {:?}", n),
     };
 
     assert_eq!(fdn.args.len(), 0);
@@ -180,7 +208,7 @@ fn parse_fn_declaration_properly() {
     assert_eq!(root.block.len(), 1);
 
     let fdn = match &root.block[0] {
-        SyntaxNode::FnDeclarationNode(fdn) if &fdn.ident == "f" => fdn,
+        SyntaxNode::FnDeclarationNode(fdn) if fdn.ident.as_ref().unwrap() == "f" => fdn,
         n => panic!("expected FnDeclarationNode with ident 'f', got {:?}", n),
     };
 
@@ -205,6 +233,106 @@ fn parse_fn_declaration_properly() {
             n => panic!("expected VariableNode, got {:?}", n),
         },
         "b"
+    );
+}
+
+#[test]
+fn parse_fn_call_properly() {
+    let tokens = vec![
+        Token::new(TokenKind::Ident, 0, 1),
+        Token::new(TokenKind::OpenParan, 1, 1),
+        Token::new(TokenKind::Number, 2, 1),
+        Token::new(TokenKind::CommaOperator, 3, 1),
+        Token::new(TokenKind::Number, 5, 1),
+        Token::new(TokenKind::CloseParan, 6, 1),
+        Token::new(TokenKind::EOF, 7, 0),
+    ];
+    let root = parse("f(1, 2)", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let (args, child) = match &root.block[0] {
+        SyntaxNode::FnCallNode(node::FnCallNode { args, child, .. }) => (args, &**child),
+        n => panic!("Expected FnCallNode, got {:?}", n),
+    };
+
+    assert_eq!(args.len(), 2);
+    assert!(matches!(
+        args[0],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(1),
+            ..
+        })
+    ));
+    assert!(matches!(
+        args[1],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(2),
+            ..
+        })
+    ));
+
+    assert_eq!(
+        (match child {
+            SyntaxNode::VariableNode(node::VariableNode { ident, .. }) => ident,
+            n => panic!("Expected VariableNode, got {:?}", n),
+        })
+        .as_str(),
+        "f"
+    );
+
+    let tokens = vec![
+        Token::new(TokenKind::OpenParan, 0, 1),
+        Token::new(TokenKind::FnKeyword, 1, 2),
+        Token::new(TokenKind::Ident, 4, 1),
+        Token::new(TokenKind::OpenParan, 5, 1),
+        Token::new(TokenKind::Ident, 6, 1),
+        Token::new(TokenKind::CloseParan, 7, 1),
+        Token::new(TokenKind::OpenBrace, 9, 1),
+        Token::new(TokenKind::Ident, 11, 1),
+        Token::new(TokenKind::CloseBrace, 13, 1),
+        Token::new(TokenKind::CloseParan, 14, 1),
+        Token::new(TokenKind::OpenParan, 15, 1),
+        Token::new(TokenKind::Number, 16, 1),
+        Token::new(TokenKind::CloseParan, 17, 1),
+        Token::new(TokenKind::EOF, 18, 0),
+    ];
+    let root = parse("(fn f(a) { a })(1)", tokens);
+    assert_eq!(root.block.len(), 1, "{:#?}", root.block);
+
+    let (args, child) = match &root.block[0] {
+        SyntaxNode::FnCallNode(node::FnCallNode { args, child, .. }) => (args, &**child),
+        n => panic!("Expected FnCallNode, got {:?}", n),
+    };
+
+    assert_eq!(args.len(), 1);
+    assert!(matches!(
+        args[0],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(1),
+            ..
+        })
+    ));
+
+    let (ident, args, body) = match child {
+        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
+            ident, args, block, ..
+        }) => (ident, args, block),
+        n => panic!("Expected FnDeclarationNode, got {:?}", n),
+    };
+
+    assert_eq!(ident.as_ref().unwrap(), "f");
+
+    assert_eq!(*args, vec!["a".to_owned()]);
+
+    assert_eq!(body.block.len(), 1);
+
+    assert_eq!(
+        match &body.block[0] {
+            SyntaxNode::VariableNode(node::VariableNode { ident, .. }) => ident,
+            n => panic!("Expected VariableNode, got {:?}", n),
+        }
+        .as_str(),
+        "a"
     );
 }
 

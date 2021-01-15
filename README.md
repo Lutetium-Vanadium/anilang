@@ -84,11 +84,16 @@ while <cond> {
 }
 ```
 
-Functions can be declared in the following way:
+Functions can be declared in the following ways:
 ```rust
+// Regular function declaration, gets stored in <func_name>
 fn <func_name>(<args>...) {
     ...
 }
+
+// Anonymous function which is immediately invoked, but it can be used
+// like any other value
+(fn(a, b) { a + b })(1, 2)
 ```
 
 Strings can be indexed using `[]`

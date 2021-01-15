@@ -453,7 +453,7 @@ fn lowerer_declaration_properly() {
 #[test]
 fn lower_fn_declaration_properly() {
     let bytecode = lower(SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
-        ident: "a".to_owned(),
+        ident: Some("a".to_owned()),
         span: span(),
         args: vec!["arg1".to_owned()],
         block: node::BlockNode {
@@ -476,13 +476,34 @@ fn lower_fn_declaration_properly() {
             declaration: true
         }
     );
+
+    // Anonymous function
+    let bytecode = lower(SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
+        ident: None,
+        span: span(),
+        args: vec!["arg1".to_owned()],
+        block: node::BlockNode {
+            span: span(),
+            block: vec![],
+        },
+    }));
+    assert_eq!(bytecode.len(), 1);
+    match &bytecode[0].kind {
+        InstructionKind::Push {
+            value: crate::Value::Function(f),
+        } if f.args == vec!["arg1".to_owned()] && f.body.len() == 0 => {}
+        i => panic!("Expected Push Value::Function, got {:?}", i),
+    }
 }
 
 #[test]
 fn lower_fn_call_properly() {
     assert_eq!(
         lower(SyntaxNode::FnCallNode(node::FnCallNode {
-            ident: "add".to_owned(),
+            child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
+                ident: "add".to_owned(),
+                span: span(),
+            })),
             span: span(),
             args: vec![
                 SyntaxNode::LiteralNode(node::LiteralNode {
@@ -508,7 +529,10 @@ fn lower_fn_call_properly() {
 
     assert_eq!(
         lower(SyntaxNode::FnCallNode(node::FnCallNode {
-            ident: "print".to_owned(),
+            child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
+                ident: "print".to_owned(),
+                span: span(),
+            })),
             span: span(),
             args: vec![SyntaxNode::LiteralNode(node::LiteralNode {
                 value: s("Hello World!"),

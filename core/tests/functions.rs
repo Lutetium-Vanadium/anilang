@@ -131,3 +131,16 @@ fn functions_use_proper_scope() {
         v::i(133)
     );
 }
+
+#[test]
+fn anonymous_functions() {
+    assert_eq!(execute("(fn(a, b) { a + b })(1, 2)").unwrap(), v::i(3));
+    assert_eq!(
+        execute(
+            "let add = fn(a, b) { a + b }
+            add(1, 2)"
+        )
+        .unwrap(),
+        v::i(3)
+    );
+}

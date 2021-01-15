@@ -493,13 +493,16 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             },
             fn_declaration_node.span.clone(),
         ));
-        self.bytecode.push(Instruction::new(
-            InstructionKind::Store {
-                ident: fn_declaration_node.ident,
-                declaration: true,
-            },
-            fn_declaration_node.span,
-        ));
+
+        if let Some(ident) = fn_declaration_node.ident {
+            self.bytecode.push(Instruction::new(
+                InstructionKind::Store {
+                    ident,
+                    declaration: true,
+                },
+                fn_declaration_node.span,
+            ));
+        }
     }
 
     fn lower_fn_call(&mut self, fn_call_node: node::FnCallNode) {
@@ -507,27 +510,26 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         for arg in fn_call_node.args.into_iter().rev() {
             self.lower_node(arg);
         }
-        match fn_call_node.ident.as_str() {
-            "print" | "input" => self.bytecode.push(Instruction::new(
-                InstructionKind::CallInbuilt {
-                    ident: fn_call_node.ident,
-                    num_args,
-                },
-                fn_call_node.span,
-            )),
-            _ => {
+        if let SyntaxNode::VariableNode(node::VariableNode { ref ident, .. }) = *fn_call_node.child
+        {
+            if ["print", "input"].contains(&ident.as_str()) {
                 self.bytecode.push(Instruction::new(
-                    InstructionKind::Load {
-                        ident: fn_call_node.ident,
+                    InstructionKind::CallInbuilt {
+                        ident: ident.clone(),
+                        num_args,
                     },
-                    fn_call_node.span.clone(),
-                ));
-                self.bytecode.push(Instruction::new(
-                    InstructionKind::CallFunction { num_args },
                     fn_call_node.span,
                 ));
+                return;
             }
         }
+
+        self.lower_node(*fn_call_node.child);
+
+        self.bytecode.push(Instruction::new(
+            InstructionKind::CallFunction { num_args },
+            fn_call_node.span,
+        ));
     }
 
     fn lower_binary(&mut self, binary_node: node::BinaryNode) {
