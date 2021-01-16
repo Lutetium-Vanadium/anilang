@@ -16,7 +16,7 @@ mod variable_node;
 // Public for access to `Parse` and `ErrorKind`
 pub mod literal_node;
 
-use crate::text_span::{self, TextSpan};
+use crate::text_span::TextSpan;
 use crossterm::{queue, style};
 use std::io::prelude::*;
 
@@ -74,7 +74,7 @@ pub enum SyntaxNode {
     ReturnNode(ReturnNode),
     UnaryNode(UnaryNode),
     VariableNode(VariableNode),
-    BadNode,
+    BadNode(TextSpan),
 }
 
 use std::fmt;
@@ -96,7 +96,7 @@ impl fmt::Display for SyntaxNode {
             SyntaxNode::ReturnNode(ref n) => write!(f, "{}", n),
             SyntaxNode::UnaryNode(ref n) => write!(f, "{}", n),
             SyntaxNode::VariableNode(ref n) => write!(f, "{}", n),
-            SyntaxNode::BadNode => write!(f, "BadNode"),
+            SyntaxNode::BadNode(_) => write!(f, "BadNode"),
         }
     }
 }
@@ -119,7 +119,7 @@ impl SyntaxNode {
             SyntaxNode::ReturnNode(ref n) => &n.span,
             SyntaxNode::UnaryNode(ref n) => &n.span,
             SyntaxNode::VariableNode(ref n) => &n.span,
-            SyntaxNode::BadNode => &text_span::DEFAULT,
+            SyntaxNode::BadNode(ref span) => span,
         }
     }
 
@@ -145,7 +145,7 @@ impl SyntaxNode {
             SyntaxNode::ReturnNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::UnaryNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::VariableNode(ref n) => n._prt(indent, is_last, stdout),
-            SyntaxNode::BadNode => {
+            SyntaxNode::BadNode(_) => {
                 let _ = print_node(style::Color::Red, &indent, self, is_last, stdout);
             }
         }
@@ -177,7 +177,7 @@ impl SyntaxNode {
             SyntaxNode::LoopNode(_) => false,
             SyntaxNode::ReturnNode(_) => false,
             SyntaxNode::VariableNode(_) => false,
-            SyntaxNode::BadNode => false,
+            SyntaxNode::BadNode(_) => false,
         }
     }
 }

@@ -200,7 +200,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
                 SyntaxNode::UnaryNode(node) => self.lower_unary(node),
                 SyntaxNode::BreakNode(node) => self.lower_break(node),
                 SyntaxNode::ReturnNode(node) => self.lower_return(node),
-                SyntaxNode::BadNode => {}
+                SyntaxNode::BadNode(_) => {}
             }
         }
     }

@@ -35,4 +35,5 @@ impl TextSpan {
     }
 }
 
+#[cfg(test)]
 pub static DEFAULT: TextSpan = TextSpan::new(0, 0);

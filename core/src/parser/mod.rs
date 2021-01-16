@@ -431,8 +431,9 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             TokenKind::OpenParan => self.parse_paran_expression(),
             TokenKind::OpenBracket => self.parse_list_expression(),
             _ => {
+                let span = self.cur().text_span.clone();
                 self.diagnostics.unexpected_token(&self.next(), None);
-                SyntaxNode::BadNode
+                SyntaxNode::BadNode(span)
             }
         };
 
@@ -546,7 +547,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             Ok(node) => SyntaxNode::LiteralNode(node),
             Err(_) => {
                 self.diagnostics.failed_parse(&token);
-                SyntaxNode::BadNode
+                SyntaxNode::BadNode(token.text_span.clone())
             }
         }
     }
