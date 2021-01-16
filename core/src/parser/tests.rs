@@ -575,6 +575,70 @@ fn parse_while_properly() {
 }
 
 #[test]
+fn parse_return_properly() {
+    // Return a value
+    let tokens = vec![
+        Token::new(TokenKind::FnKeyword, 0, 2),
+        Token::new(TokenKind::OpenParan, 2, 1),
+        Token::new(TokenKind::CloseParan, 3, 1),
+        Token::new(TokenKind::OpenBrace, 5, 1),
+        Token::new(TokenKind::ReturnKeyword, 7, 6),
+        Token::new(TokenKind::Number, 14, 3),
+        Token::new(TokenKind::CloseBrace, 18, 1),
+        Token::new(TokenKind::EOF, 19, 0),
+    ];
+    let mut root = parse("fn() { return 123 }", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let mut fdn = match root.block.pop().unwrap() {
+        SyntaxNode::FnDeclarationNode(fdn) if fdn.ident.is_none() => fdn,
+        n => panic!("expected FnDeclarationNode without ident, got {:?}", n),
+    };
+
+    assert_eq!(fdn.args.len(), 0);
+    assert_eq!(fdn.block.block.len(), 1);
+
+    let ret_val = match fdn.block.block.pop().unwrap() {
+        SyntaxNode::ReturnNode(node::ReturnNode { value, .. }) => *value.unwrap(),
+        n => panic!("expected ReturnNode with return value, got {:?}", n),
+    };
+
+    assert!(matches!(
+        ret_val,
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(123),
+            ..
+        })
+    ));
+
+    // Return no value
+    let tokens = vec![
+        Token::new(TokenKind::FnKeyword, 0, 2),
+        Token::new(TokenKind::OpenParan, 2, 1),
+        Token::new(TokenKind::CloseParan, 3, 1),
+        Token::new(TokenKind::OpenBrace, 5, 1),
+        Token::new(TokenKind::ReturnKeyword, 7, 6),
+        Token::new(TokenKind::CloseBrace, 14, 1),
+        Token::new(TokenKind::EOF, 15, 0),
+    ];
+    let mut root = parse("fn() { return }", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let fdn = match root.block.pop().unwrap() {
+        SyntaxNode::FnDeclarationNode(fdn) if fdn.ident.is_none() => fdn,
+        n => panic!("expected FnDeclarationNode without ident, got {:?}", n),
+    };
+
+    assert_eq!(fdn.args.len(), 0);
+    assert_eq!(fdn.block.block.len(), 1);
+
+    assert!(matches!(
+        fdn.block.block[0],
+        SyntaxNode::ReturnNode(node::ReturnNode { value: None, .. })
+    ));
+}
+
+#[test]
 fn parse_index_properly() {
     let tokens = vec![
         Token::new(TokenKind::String, 0, 7),

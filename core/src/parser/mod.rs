@@ -183,6 +183,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             TokenKind::BreakKeyword => {
                 SyntaxNode::BreakNode(node::BreakNode::new(self.next().text_span.clone()))
             }
+            TokenKind::ReturnKeyword => self.parse_return_statement(),
             TokenKind::LoopKeyword => self.parse_loop_statement(),
             TokenKind::WhileKeyword => self.parse_while_statement(),
             _ => self.parse_binary_expression(0),
@@ -350,6 +351,16 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         };
 
         SyntaxNode::IfNode(node::IfNode::new(if_token, cond, if_block, else_block))
+    }
+
+    fn parse_return_statement(&self) -> SyntaxNode {
+        let return_token = self.match_token(TokenKind::ReturnKeyword);
+        let value = match self.cur().kind {
+            TokenKind::CloseBrace | TokenKind::CloseParan => None,
+            _ => Some(Box::new(self.parse_statement())),
+        };
+
+        SyntaxNode::ReturnNode(node::ReturnNode::new(value, return_token))
     }
 
     fn parse_loop_statement(&self) -> SyntaxNode {

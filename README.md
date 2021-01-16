@@ -39,7 +39,7 @@ To declare a variable:
 let a = <val>
 ```
 
-Variables can be reassigned to any other value
+Once declared variables can be reassigned to any other value
 ```rust
 a = <val>
 ```
@@ -94,6 +94,18 @@ fn <func_name>(<args>...) {
 // Anonymous function which is immediately invoked, but it can be used
 // like any other value
 (fn(a, b) { a + b })(1, 2)
+```
+
+Functions by default return the value of the last statement, but early
+returns are possible with the `return` keyword
+```rust
+fn factorial(n) {
+    if n == 2 {
+        return n
+    }
+
+    n * factorial(n-1)
+}
 ```
 
 Strings can be indexed using `[]`

@@ -484,16 +484,36 @@ fn lower_fn_declaration_properly() {
         args: vec!["arg1".to_owned()],
         block: node::BlockNode {
             span: span(),
-            block: vec![],
+            block: vec![SyntaxNode::ReturnNode(node::ReturnNode {
+                value: Some(Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                    value: Value::Int(123),
+                    span: span(),
+                }))),
+                span: span(),
+            })],
         },
     }));
     assert_eq!(bytecode.len(), 1);
-    match &bytecode[0].kind {
+    let body = match &bytecode[0].kind {
         InstructionKind::Push {
             value: crate::Value::Function(f),
-        } if f.args == vec!["arg1".to_owned()] && f.body.len() == 0 => {}
+        } if f.args == vec!["arg1".to_owned()] => &f.body,
         i => panic!("Expected Push Value::Function, got {:?}", i),
-    }
+    };
+
+    let bytecode = vec![
+        InstructionKind::PushVar {
+            scope: gen_scope(1),
+        }
+        .into(),
+        InstructionKind::Push { value: i(123) }.into(),
+        InstructionKind::PopVar.into(),
+        InstructionKind::JumpTo { label: 0 }.into(),
+        InstructionKind::PopVar.into(),
+        InstructionKind::Label { number: 0 }.into(),
+    ];
+
+    assert_eq!(*body, bytecode);
 }
 
 #[test]

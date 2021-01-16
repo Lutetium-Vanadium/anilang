@@ -67,6 +67,7 @@ fn print_token(
         | TokenKind::BreakKeyword
         | TokenKind::WhileKeyword
         | TokenKind::LoopKeyword
+        | TokenKind::ReturnKeyword
         | TokenKind::LetKeyword => RED,
 
         TokenKind::AssignmentOperator

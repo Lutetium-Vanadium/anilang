@@ -44,13 +44,14 @@ pub enum TokenKind {
     CloseBracket, // ']'
 
     // Keywords
-    IfKeyword,    // 'if'
-    ElseKeyword,  // 'else'
-    BreakKeyword, // 'break'
-    WhileKeyword, // 'while'
-    LoopKeyword,  // 'loop'
-    LetKeyword,   // 'let'
-    FnKeyword,    // 'fn'
+    IfKeyword,     // 'if'
+    ElseKeyword,   // 'else'
+    BreakKeyword,  // 'break'
+    ReturnKeyword, // 'return'
+    WhileKeyword,  // 'while'
+    LoopKeyword,   // 'loop'
+    LetKeyword,    // 'let'
+    FnKeyword,     // 'fn'
 
     // Unrecognised
     Bad,

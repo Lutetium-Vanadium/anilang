@@ -44,6 +44,7 @@ fn correct_unary_precedence() {
     assert_eq!(t(IfKeyword).unary_precedence(), 0);
     assert_eq!(t(ElseKeyword).unary_precedence(), 0);
     assert_eq!(t(BreakKeyword).unary_precedence(), 0);
+    assert_eq!(t(ReturnKeyword).unary_precedence(), 0);
     assert_eq!(t(WhileKeyword).unary_precedence(), 0);
     assert_eq!(t(LoopKeyword).unary_precedence(), 0);
     assert_eq!(t(LetKeyword).unary_precedence(), 0);
@@ -90,6 +91,7 @@ fn correct_binary_precedence() {
     assert_eq!(t(IfKeyword).binary_precedence(), 0);
     assert_eq!(t(ElseKeyword).binary_precedence(), 0);
     assert_eq!(t(BreakKeyword).binary_precedence(), 0);
+    assert_eq!(t(ReturnKeyword).binary_precedence(), 0);
     assert_eq!(t(WhileKeyword).binary_precedence(), 0);
     assert_eq!(t(LoopKeyword).binary_precedence(), 0);
     assert_eq!(t(LetKeyword).binary_precedence(), 0);
@@ -135,6 +137,7 @@ fn is_calc_assign() {
     assert_eq!(t(IfKeyword).is_calc_assign(), false);
     assert_eq!(t(ElseKeyword).is_calc_assign(), false);
     assert_eq!(t(BreakKeyword).is_calc_assign(), false);
+    assert_eq!(t(ReturnKeyword).is_calc_assign(), false);
     assert_eq!(t(WhileKeyword).is_calc_assign(), false);
     assert_eq!(t(LoopKeyword).is_calc_assign(), false);
     assert_eq!(t(LetKeyword).is_calc_assign(), false);

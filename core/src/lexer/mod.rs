@@ -213,6 +213,7 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
                 "if" => TokenKind::IfKeyword,
                 "else" => TokenKind::ElseKeyword,
                 "break" => TokenKind::BreakKeyword,
+                "return" => TokenKind::ReturnKeyword,
                 "loop" => TokenKind::LoopKeyword,
                 "while" => TokenKind::WhileKeyword,
                 "let" => TokenKind::LetKeyword,

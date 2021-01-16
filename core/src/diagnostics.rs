@@ -377,6 +377,17 @@ impl<'a> Diagnostics<'a> {
 
     /// Generated in the lowerer
     ///
+    /// Is reported when there is a break statement outside a loop.
+    /// see `core/src/lowerer/mod.rs`
+    pub fn return_outside_fn(&self, span: TextSpan) {
+        self.report_err(
+            "ReturnOutsideFn: return can only be used in function declarations".to_owned(),
+            span,
+        )
+    }
+
+    /// Generated in the lowerer
+    ///
     /// Is reported when a statement is const evaluable, but does not occur at the end of the block
     /// see `core/src/lowerer/mod.rs`
     /// Examples:

@@ -93,8 +93,10 @@ pub struct Lowerer<'diagnostics, 'src> {
     labels: RangeFrom<usize>,
     scope_ids: RangeFrom<usize>,
     scopes_since_loop: usize,
+    scopes_since_fn: usize,
     current_scope: Option<Rc<Scope>>,
     break_label: Option<LabelNumber>,
+    return_label: Option<LabelNumber>,
     should_optimize: bool,
 }
 
@@ -112,6 +114,8 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             scopes_since_loop: 0,
             current_scope: None,
             break_label: None,
+            scopes_since_fn: 0,
+            return_label: None,
             should_optimize,
         };
 
@@ -135,6 +139,8 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             scopes_since_loop: 1,
             current_scope: Some(Rc::clone(&scope)),
             break_label: None,
+            scopes_since_fn: 0,
+            return_label: None,
             should_optimize,
         };
 
@@ -193,6 +199,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
                 SyntaxNode::BinaryNode(node) => self.lower_binary(node),
                 SyntaxNode::UnaryNode(node) => self.lower_unary(node),
                 SyntaxNode::BreakNode(node) => self.lower_break(node),
+                SyntaxNode::ReturnNode(node) => self.lower_return(node),
                 SyntaxNode::BadNode => {}
             }
         }
@@ -229,6 +236,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         let scope = Rc::new(Scope::new(self.next_scope_id(), prev_scope.clone()));
         self.current_scope = Some(Rc::clone(&scope));
         self.scopes_since_loop += 1;
+        self.scopes_since_fn += 1;
 
         self.bytecode.push(Instruction::new(
             InstructionKind::PushVar { scope },
@@ -240,6 +248,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         self.bytecode
             .push(Instruction::new(InstructionKind::PopVar, block.span));
         self.scopes_since_loop -= 1;
+        self.scopes_since_fn -= 1;
         self.current_scope = prev_scope;
     }
 
@@ -360,6 +369,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         mem::swap(&mut self.break_label, &mut previous_break_label);
         let previos_scopes_since_loop = self.scopes_since_loop;
         self.scopes_since_loop = 0;
+        self.scopes_since_fn += 1;
 
         let prev_scope = self.current_scope.take();
         let scope = Rc::new(Scope::new(self.next_scope_id(), prev_scope.clone()));
@@ -408,6 +418,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
 
         mem::swap(&mut self.break_label, &mut previous_break_label);
         self.scopes_since_loop = previos_scopes_since_loop;
+        self.scopes_since_fn -= 1;
         self.current_scope = prev_scope;
     }
 
@@ -473,17 +484,31 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         let mut fn_body = Vec::new();
 
         if !fn_declaration_node.block.block.is_empty() {
+            let return_label = self.next_label();
             let mut reset_break_label = None;
+            let mut reset_return_label = Some(return_label);
+            let prev_scopes_since_fn = self.scopes_since_fn;
+            self.scopes_since_fn = 0;
+            let block_span = fn_declaration_node.block.span.clone();
 
             // Swap out the current bytecode and break label, for empty ones to lower function body
             mem::swap(&mut self.bytecode, &mut fn_body);
             mem::swap(&mut self.break_label, &mut reset_break_label);
+            mem::swap(&mut self.return_label, &mut reset_return_label);
 
             self.lower_block(fn_declaration_node.block);
+            self.bytecode.push(Instruction::new(
+                InstructionKind::Label {
+                    number: return_label,
+                },
+                block_span,
+            ));
 
             // Swap back the current bytecode and break label to continue regular processing
             mem::swap(&mut self.bytecode, &mut fn_body);
             mem::swap(&mut self.break_label, &mut reset_break_label);
+            mem::swap(&mut self.return_label, &mut reset_return_label);
+            self.scopes_since_fn = prev_scopes_since_fn;
         }
         let function = Function::new(fn_declaration_node.args, fn_body);
 
@@ -586,6 +611,33 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             ));
         } else {
             self.diagnostics.break_outside_loop(break_node.span);
+        }
+    }
+
+    fn lower_return(&mut self, return_node: node::ReturnNode) {
+        if let Some(value) = return_node.value {
+            self.lower_node(*value);
+        } else {
+            self.bytecode.push(Instruction::new(
+                InstructionKind::Push { value: Value::Null },
+                return_node.span.clone(),
+            ));
+        }
+
+        if let Some(return_label) = self.return_label {
+            let span = return_node.span;
+            self.bytecode.extend(
+                (0..self.scopes_since_fn)
+                    .map(|_| Instruction::new(InstructionKind::PopVar, span.clone())),
+            );
+            self.bytecode.push(Instruction::new(
+                InstructionKind::JumpTo {
+                    label: return_label,
+                },
+                span,
+            ));
+        } else {
+            self.diagnostics.return_outside_fn(return_node.span);
         }
     }
 }

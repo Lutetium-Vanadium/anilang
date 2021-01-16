@@ -17,7 +17,7 @@ pub fn print() {
     println!("The current syntax is subject to change.\n");
     println!("To declare a variable:");
     print_block(stdout, "let a = <val>");
-    println!("\nVariables can be reassigned to any other value");
+    println!("\nOnce declared variables can be reassigned to any other value");
     print_block(stdout, "a = <val>");
     println!();
 
@@ -66,7 +66,8 @@ while <cond> {
     ...
 }"##,
     );
-    println!("loop provides an infinite loop");
+    let _ = AnilangLangInterface::print_line(stdout, "loop");
+    println!(" provides an infinite loop");
 
     println!("\nFunctions can be declared in the following ways:");
     print_block(
@@ -79,6 +80,21 @@ fn <func_name>(<args>...) {
 // Anonymous function which is immediately invoked, but it can be used
 // like any other value
 (fn(a, b) { a + b })(1, 2)"##,
+    );
+
+    print!("\nFunctions by default return the value of the last statement, but early");
+    print!(" returns are possible with the ");
+    let _ = AnilangLangInterface::print_line(stdout, "return");
+    println!(" keyword");
+    print_block(
+        stdout,
+        r##"fn factorial(n) {
+    if n == 2 {
+        return n
+    }
+
+    n * factorial(n-1)
+}"##,
     );
 
     println!("\nStrings can be indexed using []");

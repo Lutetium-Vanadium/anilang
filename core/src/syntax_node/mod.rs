@@ -9,6 +9,7 @@ mod if_node;
 mod index_node;
 mod list_node;
 mod loop_node;
+mod return_node;
 mod unary_node;
 mod variable_node;
 
@@ -31,6 +32,7 @@ pub use index_node::*;
 pub use list_node::*;
 pub use literal_node::*;
 pub use loop_node::*;
+pub use return_node::*;
 pub use unary_node::*;
 pub use variable_node::*;
 
@@ -69,6 +71,7 @@ pub enum SyntaxNode {
     ListNode(ListNode),
     LiteralNode(LiteralNode),
     LoopNode(LoopNode),
+    ReturnNode(ReturnNode),
     UnaryNode(UnaryNode),
     VariableNode(VariableNode),
     BadNode,
@@ -90,6 +93,7 @@ impl fmt::Display for SyntaxNode {
             SyntaxNode::ListNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LiteralNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LoopNode(ref n) => write!(f, "{}", n),
+            SyntaxNode::ReturnNode(ref n) => write!(f, "{}", n),
             SyntaxNode::UnaryNode(ref n) => write!(f, "{}", n),
             SyntaxNode::VariableNode(ref n) => write!(f, "{}", n),
             SyntaxNode::BadNode => write!(f, "BadNode"),
@@ -112,6 +116,7 @@ impl SyntaxNode {
             SyntaxNode::ListNode(ref n) => &n.span,
             SyntaxNode::LiteralNode(ref n) => &n.span,
             SyntaxNode::LoopNode(ref n) => &n.span,
+            SyntaxNode::ReturnNode(ref n) => &n.span,
             SyntaxNode::UnaryNode(ref n) => &n.span,
             SyntaxNode::VariableNode(ref n) => &n.span,
             SyntaxNode::BadNode => &text_span::DEFAULT,
@@ -137,6 +142,7 @@ impl SyntaxNode {
             SyntaxNode::ListNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::LiteralNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::LoopNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::ReturnNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::UnaryNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::VariableNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::BadNode => {
@@ -169,6 +175,7 @@ impl SyntaxNode {
             SyntaxNode::FnDeclarationNode(_) => false,
             SyntaxNode::FnCallNode(_) => false,
             SyntaxNode::LoopNode(_) => false,
+            SyntaxNode::ReturnNode(_) => false,
             SyntaxNode::VariableNode(_) => false,
             SyntaxNode::BadNode => false,
         }
