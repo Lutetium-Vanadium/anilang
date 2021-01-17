@@ -11,7 +11,7 @@ pub fn compile(
 ) -> Result<()> {
     let input = String::from_utf8(fs::read(input_file)?)?;
 
-    let src = anilang::SourceText::new(&input);
+    let src = anilang::SourceText::new(input.as_str());
     let diagnostics = anilang::Diagnostics::new(&src);
 
     let tokens = anilang::Lexer::lex(&src, &diagnostics);

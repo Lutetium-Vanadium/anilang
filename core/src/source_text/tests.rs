@@ -6,13 +6,13 @@ const PROG_CR: &'static str = "let a = 1231\n\rlet b = 123123\n\rlet c = a + b";
 #[test]
 fn detect_correct_lines() {
     let src = SourceText::new(PROG);
-    assert_eq!(src.lines, vec![(0, 12), (13, 27), (28, 41)]);
+    assert_eq!(src.text.lines, vec![(0, 12), (13, 27), (28, 41)]);
 }
 
 #[test]
 fn detect_correct_lines_with_cr() {
     let src = SourceText::new(PROG_CR);
-    assert_eq!(src.lines, vec![(0, 12), (14, 28), (30, 43)]);
+    assert_eq!(src.text.lines, vec![(0, 12), (14, 28), (30, 43)]);
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn serialize_correctly() {
         // Can't assert_eq directly since there won't be text in the deserialized SourceText
         let desrc = SourceText::deserialize(&mut &expected_buf[..]).unwrap();
         assert_eq!(desrc.offset, src.offset);
-        assert_eq!(desrc.lines, src.lines);
+        assert_eq!(desrc.text.lines, src.text.lines);
     };
 
     test_serialize(PROG, vec![

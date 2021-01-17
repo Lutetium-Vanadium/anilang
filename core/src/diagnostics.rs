@@ -1,4 +1,4 @@
-use crate::source_text::SourceText;
+use crate::source_text::{SourceText, TextBase};
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 use crate::types::ToString;
@@ -53,7 +53,7 @@ impl Diagnostic {
     /// 0 | let a = 234 + "sada"
     ///   |
     /// note the + is in red and underlined
-    fn prt(&self, src: &SourceText) -> crossterm::Result<()> {
+    fn prt<T: TextBase>(&self, src: &SourceText<'_, T>) -> crossterm::Result<()> {
         let s = match src.lineno(self.span.start()) {
             Some(s) => s,
             None => {
@@ -136,13 +136,13 @@ impl Diagnostic {
                     style::Print(s),
                     style::Print(" | "),
                     style::ResetColor,
-                    style::Print(&src.text[src.line(s).0..self.span.start()]),
+                    style::Print(&src[src.line(s).0..self.span.start()]),
                     style::SetForegroundColor(color),
                     style::SetAttribute(style::Attribute::Underlined),
                     style::Print(&src[&self.span]),
                     style::ResetColor,
                     style::SetAttribute(style::Attribute::NoUnderline),
-                    style::Print(&src.text[self.span.end()..src.line(s).1]),
+                    style::Print(&src[self.span.end()..src.line(s).1]),
                     style::Print('\n'),
                 )?;
             } else {
@@ -151,10 +151,10 @@ impl Diagnostic {
                     style::SetForegroundColor(style::Color::DarkBlue),
                     style::Print(format!("{: >w$} | ", s, w = w)),
                     style::ResetColor,
-                    style::Print(&src.text[src.line(s).0..self.span.start()]),
+                    style::Print(&src[src.line(s).0..self.span.start()]),
                     style::SetForegroundColor(color),
                     style::SetAttribute(style::Attribute::Underlined),
-                    style::Print(&src.text[self.span.start()..src.line(s).1]),
+                    style::Print(&src[self.span.start()..src.line(s).1]),
                     style::Print('\n'),
                 )?;
 
@@ -166,7 +166,7 @@ impl Diagnostic {
                         style::Print(format!("{: >w$} | ", i, w = w)),
                         style::SetForegroundColor(color),
                         style::SetAttribute(style::Attribute::Underlined),
-                        style::Print(&src.text[src.line(i).0..src.line(i).1]),
+                        style::Print(&src[src.line(i).0..src.line(i).1]),
                         style::Print('\n'),
                     )?;
                 }
@@ -179,10 +179,10 @@ impl Diagnostic {
                     style::Print(" | "),
                     style::SetForegroundColor(color),
                     style::SetAttribute(style::Attribute::Underlined),
-                    style::Print(&src.text[src.line(e).0..self.span.end()]),
+                    style::Print(&src[src.line(e).0..self.span.end()]),
                     style::ResetColor,
                     style::SetAttribute(style::Attribute::NoUnderline),
-                    style::Print(&src.text[self.span.end()..src.line(e).1]),
+                    style::Print(&src[self.span.end()..src.line(e).1]),
                     style::Print('\n'),
                 )?;
             }
@@ -218,9 +218,9 @@ impl Diagnostic {
 /// let src = SourceText::new("1 + 2 + 3");
 /// let diagnostics = Diagnostics::new(&src).no_print();
 /// ```
-pub struct Diagnostics<'a> {
+pub struct Diagnostics<'a, T: TextBase = &'a str> {
     /// The source from which text spans are taken
-    src: &'a SourceText<'a>,
+    src: &'a SourceText<'a, T>,
     /// To keep track of the number of errors generated
     /// A Cell is used so that `diagnostics` can be passed immutably, which reduces the number of
     /// clones required in the parser, since if a mutable reference to the `diagnostics` is needed,
@@ -237,8 +237,8 @@ pub struct Diagnostics<'a> {
     no_print: bool,
 }
 
-impl<'a> Diagnostics<'a> {
-    pub fn new(src: &'a SourceText) -> Self {
+impl<'a, T: TextBase> Diagnostics<'a, T> {
+    pub fn new(src: &'a SourceText<'a, T>) -> Self {
         Diagnostics {
             src,
             num_errors: Cell::new(0),

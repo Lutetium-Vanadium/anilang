@@ -41,7 +41,7 @@ pub fn run(bin_file: PathBuf, show_bytecode: bool) -> io::Result<()> {
 pub fn interpret(file: PathBuf, show_ast: bool, show_bytecode: bool) -> crossterm::Result<()> {
     let input = String::from_utf8(fs::read(file)?)?;
 
-    let src = anilang::SourceText::new(&input);
+    let src = anilang::SourceText::new(input.as_str());
     let diagnostics = anilang::Diagnostics::new(&src);
 
     let tokens = anilang::Lexer::lex(&src, &diagnostics);

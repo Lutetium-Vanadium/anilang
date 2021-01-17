@@ -1,5 +1,5 @@
 use crate::diagnostics::Diagnostics;
-use crate::source_text::SourceText;
+use crate::source_text::{SourceText, TextBase};
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
 
@@ -37,24 +37,24 @@ macro_rules! add {
 ///  8  Number -> 3
 ///  9  EOF
 /// ]
-pub struct Lexer<'diagnostics, 'src> {
-    diagnostics: &'diagnostics Diagnostics<'src>,
+pub struct Lexer<'diagnostics, 'src, T: TextBase> {
+    diagnostics: &'diagnostics Diagnostics<'src, T>,
     /// The lexed tokens get added to this `Vec`
     pub tokens: Vec<Token>,
     /// The source text, used to detect keywords, and add EOF at the end
-    src: &'src SourceText<'src>,
+    src: &'src SourceText<'src, T>,
     /// The iterator constructed from src, which is used to lex tokens
-    chars: std::iter::Peekable<std::str::CharIndices<'src>>,
+    chars: std::iter::Peekable<T::Iter>,
 }
 
-impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
+impl<'diagnostics, 'src, T: TextBase> Lexer<'diagnostics, 'src, T> {
     pub fn lex(
-        src: &'src SourceText<'src>,
-        diagnostics: &'diagnostics Diagnostics<'src>,
+        src: &'src SourceText<'src, T>,
+        diagnostics: &'diagnostics Diagnostics<T>,
     ) -> Vec<Token> {
         let mut lexer = Lexer {
             diagnostics,
-            chars: src.text.char_indices().peekable(),
+            chars: src.iter().peekable(),
             src,
             tokens: Vec::new(),
         };
@@ -208,7 +208,9 @@ impl<'diagnostics, 'src> Lexer<'diagnostics, 'src> {
 
         add!(
             self,
-            match &self.src.text[start..e] {
+            // NOTE: When T = &[String], while indexing the text, it only returns things in the same
+            // line, this is alright here since after a line, the iterator gives a '\n'
+            match &self.src[start..e] {
                 "true" | "false" => TokenKind::Boolean,
                 "if" => TokenKind::IfKeyword,
                 "else" => TokenKind::ElseKeyword,

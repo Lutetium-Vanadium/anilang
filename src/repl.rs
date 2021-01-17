@@ -53,7 +53,7 @@ pub fn run(mut show_ast: bool, mut show_bytecode: bool) {
             continue;
         }
 
-        let src = anilang::SourceText::new(&line);
+        let src = anilang::SourceText::new(line.as_str());
         let diagnostics = anilang::Diagnostics::new(&src);
 
         let tokens = anilang::Lexer::lex(&src, &diagnostics);

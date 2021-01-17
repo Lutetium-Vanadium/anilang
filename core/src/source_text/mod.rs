@@ -1,5 +1,10 @@
 use crate::text_span::TextSpan;
-use std::ops::Index;
+use std::marker::PhantomData;
+use std::ops::{Index, Range};
+
+mod text;
+use text::Text;
+pub use text::TextBase;
 
 #[cfg(test)]
 mod tests;
@@ -13,7 +18,8 @@ mod tests;
 /// use anilang::SourceText;
 /// let text = "let a = 1 + 2\na + 3";
 /// let src = SourceText::new(text);
-/// assert_eq!(src.text, text);
+/// assert_eq!(src[0..src.len()], *text);
+/// assert_eq!(src.lineno(3).unwrap(), 0);
 /// ```
 ///
 /// In the above example the source is essentially:
@@ -26,81 +32,44 @@ mod tests;
 /// use anilang::SourceText;
 /// let text = "let a = 1 + 2\na + 3";
 /// let src = SourceText::with_offset(text, 4);
-/// assert_eq!(src.text, text);
+/// assert_eq!(src[0..src.len()], *text);
+/// assert_eq!(src.lineno(3).unwrap(), 4);
 /// ```
 /// Here the source is:
 ///   |
 /// 4 | let a = 1 + 2
 /// 5 | a + 3
 ///   |
-pub struct SourceText<'a> {
-    pub text: &'a str,
-    /// The start and end indices of each line, used for getting line number of an index
-    /// in O(log(number lines)) instead of O(length of source)
-    ///
-    /// note there is potential to generating lines `Vec` and instead using at as a memoized array,
-    /// and generating further when needed
-    lines: Vec<(usize, usize)>,
+pub struct SourceText<'a, T: TextBase = &'a str> {
+    /// This has all the functionality of the text
+    text: Text<T>,
     /// The first line number is offset
     offset: usize,
+    _marker: PhantomData<&'a ()>,
 }
 
-impl<'a> SourceText<'a> {
-    pub fn new(text: &'a str) -> SourceText<'a> {
+impl<'a, T: TextBase> SourceText<'a, T> {
+    pub fn new(text: T) -> Self {
         SourceText::with_offset(text, 0)
     }
 
-    pub fn with_offset(text: &'a str, offset: usize) -> SourceText<'a> {
-        let mut lines = Vec::new();
-
-        let mut ignore = false;
-        let mut start = 0;
-        for (i, chr) in text.char_indices() {
-            if chr == '\n' || chr == '\r' {
-                if !ignore {
-                    ignore = true;
-                    lines.push((start, i));
-                }
-            } else if ignore {
-                ignore = false;
-                start = i;
-            }
-        }
-        lines.push((start, text.len()));
-
+    pub fn with_offset(text: T, offset: usize) -> Self {
         SourceText {
-            text,
-            lines,
+            text: Text::new(text),
             offset,
+            _marker: PhantomData,
         }
     }
 
     /// Binary search for index through the stored lines
     pub fn lineno(&self, index: usize) -> Option<usize> {
-        if index >= self.lines.last().map(|l| l.1).unwrap_or(0) {
-            return None;
-        }
-
-        let mut s = 0;
-        let mut e = self.lines.len();
-
-        while s <= e {
-            let m = (s + e) / 2;
-            if self.lines[m].0 <= index && index < self.lines[m].1 {
-                return Some(self.offset + m);
-            } else if self.lines[m].0 > index {
-                e = m - 1;
-            } else {
-                s = m + 1;
-            };
-        }
-        None
+        self.text.lineno(index).map(|lineno| lineno + self.offset)
     }
 
     /// Whether the line numbers correspond to the text, or the text is invalid and line numbers
     /// have been manually entered (through deserialization)
     pub fn has_text(&self) -> bool {
-        !self.is_empty() || self.lines.is_empty()
+        !self.is_empty() || self.text.is_empty()
     }
 
     pub fn len(&self) -> usize {
@@ -112,11 +81,15 @@ impl<'a> SourceText<'a> {
     }
 
     pub fn line(&self, index: usize) -> (usize, usize) {
-        self.lines[index - self.offset]
+        self.text.lines[index - self.offset]
+    }
+
+    pub fn iter(&self) -> T::Iter {
+        self.text.iter()
     }
 }
 
-impl Index<&TextSpan> for SourceText<'_> {
+impl<T: TextBase> Index<&TextSpan> for SourceText<'_, T> {
     type Output = str;
 
     fn index(&self, span: &TextSpan) -> &Self::Output {
@@ -124,23 +97,31 @@ impl Index<&TextSpan> for SourceText<'_> {
     }
 }
 
+impl<T: TextBase> Index<Range<usize>> for SourceText<'_, T> {
+    type Output = str;
+
+    fn index(&self, range: Range<usize>) -> &Self::Output {
+        &self.text[range]
+    }
+}
+
 use crate::serialize::{Deserialize, Serialize};
 use std::io::{self, prelude::*};
 
-impl<'a> Serialize for SourceText<'a> {
+impl<T: TextBase> Serialize for SourceText<'_, T> {
     fn serialize<W: Write>(&self, buf: &mut W) -> io::Result<usize> {
         // Source start
         buf.write_all(b"srcs")?;
         self.offset.serialize(buf)?;
-        self.lines.serialize(buf)?;
+        self.text.lines.serialize(buf)?;
 
         // Source end
         buf.write_all(b"srce")?;
-        Ok(24 + self.lines.len() * 16)
+        Ok(24 + self.text.lines.len() * 16)
     }
 }
 
-impl<'a> Deserialize for SourceText<'a> {
+impl Deserialize for SourceText<'static> {
     fn deserialize<R: BufRead>(data: &mut R) -> io::Result<Self> {
         let mut tag = [0; 4];
         data.read_exact(&mut tag)?;
@@ -163,9 +144,9 @@ impl<'a> Deserialize for SourceText<'a> {
         }
 
         Ok(SourceText {
-            text: "",
-            lines,
+            text: Text::from_lines(lines),
             offset,
+            _marker: PhantomData,
         })
     }
 }
