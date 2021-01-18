@@ -7,20 +7,15 @@ fn lineno(lines: &[(usize, usize)], index: usize) -> Option<usize> {
         return None;
     }
 
-    let mut s = 0;
-    let mut e = lines.len();
-
-    while s <= e {
-        let m = (s + e) / 2;
-        if lines[m].0 <= index && index < lines[m].1 {
-            return Some(m);
-        } else if lines[m].0 > index {
-            e = m - 1;
-        } else {
-            s = m + 1;
-        };
-    }
-    None
+    lines
+        .binary_search_by(|line| {
+            if line.0 <= index && index < line.1 {
+                std::cmp::Ordering::Equal
+            } else {
+                line.0.cmp(&index)
+            }
+        })
+        .ok()
 }
 
 pub struct Text<T> {
@@ -128,8 +123,9 @@ impl<'s> TextBase for &'s [String] {
         let mut lines = Vec::new();
         let mut cur = 0;
 
-        for line in *self {
-            lines.push((cur, cur + line.len()));
+        #[allow(clippy::into_iter_on_ref)]
+        for (i, line) in self.into_iter().enumerate() {
+            lines.push((i + cur, i + cur + line.len()));
             cur += line.len()
         }
 

@@ -1,23 +1,56 @@
 use crossterm::{queue, style};
 use std::io::{self, prelude::*};
 
-pub fn print_linted(stdout: &mut io::Stdout, line: &str) -> crossterm::Result<()> {
-    match line.trim() {
-        "exit" | ".tree" | ".bytecode" | "clear" => {
+pub fn print_linted(
+    stdout: &mut io::Stdout,
+    lines: &[String],
+    index: usize,
+) -> crossterm::Result<()> {
+    match lines[0].trim() {
+        "exit" | ".tree" | ".bytecode" | "clear" if lines.len() == 1 => {
             queue!(
                 stdout,
                 style::SetForegroundColor(style::Color::DarkGreen),
-                style::Print(line)
+                style::Print(lines[0].as_str())
             )?;
         }
         _ => {
-            let src = anilang::SourceText::new(line);
+            let src = anilang::SourceText::new(lines);
             let diagnostics = anilang::Diagnostics::new(&src).no_print();
             let mut tokens = anilang::Lexer::lex(&src, &diagnostics)
                 .into_iter()
                 .peekable();
 
+            let (line_start, line_end) = src.line(index);
+
             while let Some(token) = tokens.next() {
+                if token.text_span.end() > line_start {
+                    print_token(
+                        // min in case the whole line is a single token
+                        &src[line_start..token.text_span.end().min(line_end)],
+                        &token.kind,
+                        tokens.peek().map(|t| &t.kind),
+                        stdout,
+                    )?;
+
+                    break;
+                }
+            }
+
+            while let Some(token) = tokens.next() {
+                if token.text_span.end() > line_end {
+                    if !token.text_span.is_empty() && token.kind != TokenKind::Whitespace {
+                        print_token(
+                            &src[token.text_span.start()..line_end],
+                            &token.kind,
+                            tokens.peek().map(|t| &t.kind),
+                            stdout,
+                        )?;
+                    }
+
+                    break;
+                }
+
                 if !token.text_span.is_empty() {
                     print_token(
                         &src[&token.text_span],

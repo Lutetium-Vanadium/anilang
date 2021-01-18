@@ -19,8 +19,8 @@ fn get_persistant_file_path() -> Option<PathBuf> {
 
 pub struct AnilangLangInterface;
 impl LangInterface for AnilangLangInterface {
-    fn print_line(stdout: &mut io::Stdout, line: &str) -> shelp::Result<()> {
-        linter::print_linted(stdout, line)
+    fn print_line(stdout: &mut io::Stdout, lines: &[String], index: usize) -> shelp::Result<()> {
+        linter::print_linted(stdout, lines, index)
     }
 
     fn get_indent(lines: &[String]) -> usize {

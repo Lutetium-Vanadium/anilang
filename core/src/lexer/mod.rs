@@ -286,7 +286,7 @@ impl<'diagnostics, 'src, T: TextBase> Lexer<'diagnostics, 'src, T> {
             }
         }
 
-        add!(self, TokenKind::Comment, start => e + 1 - start);
+        add!(self, TokenKind::Comment, start => e - start);
     }
 
     fn ignore_multiline_comment(&mut self, start: usize) {

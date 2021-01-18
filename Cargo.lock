@@ -545,9 +545,9 @@ checksum = "b88fa983de7720629c9387e9f517353ed404164b1e482c970a90c1a4aaf7dc1a"
 
 [[package]]
 name = "shelp"
-version = "0.1.2"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22eaa141ec614ba10a24fd0917352b887a7610a945f18c4b354f78acf89aaae5"
+checksum = "612a5f6fbb4608a33ec9a04373e26643ace50c401457fe0235be16bb58ffb67a"
 dependencies = [
  "crossterm",
 ]

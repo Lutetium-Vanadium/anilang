@@ -2,11 +2,16 @@ use crate::repl::AnilangLangInterface;
 use crossterm::style::Colorize;
 use shelp::LangInterface;
 
+fn print_line(stdout: &mut std::io::Stdout, line: String) {
+    let lines = [line];
+    let _ = AnilangLangInterface::print_line(stdout, &lines[..], 0);
+}
+
 fn print_block(stdout: &mut std::io::Stdout, string: &str) {
     println!("{}", "  |".dark_blue());
     for (i, line) in string.lines().enumerate() {
         print!("{} ", format!("{} |", i).dark_blue());
-        let _ = AnilangLangInterface::print_line(stdout, line);
+        print_line(stdout, line.to_owned());
         println!();
     }
     println!("{}", "  |".dark_blue());
@@ -66,7 +71,7 @@ while <cond> {
     ...
 }"##,
     );
-    let _ = AnilangLangInterface::print_line(stdout, "loop");
+    print_line(stdout, "loop".to_owned());
     println!(" provides an infinite loop");
 
     println!("\nFunctions can be declared in the following ways:");
@@ -84,7 +89,7 @@ fn <func_name>(<args>...) {
 
     print!("\nFunctions by default return the value of the last statement, but early");
     print!(" returns are possible with the ");
-    let _ = AnilangLangInterface::print_line(stdout, "return");
+    print_line(stdout, "return".to_owned());
     println!(" keyword");
     print_block(
         stdout,
@@ -109,12 +114,12 @@ variable[1] = "ab" // variable is "-aba-""##,
     );
 
     print!("\nStrings larger than 1 character will remove the character at that index");
-    println!("and insert the characters given");
+    println!(" and insert the characters given");
 
     println!("\nThere are also comments -");
     print!("{} Single line: ", "-".grey());
-    let _ = AnilangLangInterface::print_line(stdout, "// comment");
+    print_line(stdout, "// comment".to_owned());
     print!("\n{} Multi line:  ", "-".dark_grey());
-    let _ = AnilangLangInterface::print_line(stdout, "/* comment */");
+    print_line(stdout, "/* comment */".to_owned());
     println!();
 }

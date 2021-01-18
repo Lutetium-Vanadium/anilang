@@ -116,7 +116,7 @@ fn ignores_singleline_comment() {
         Token::new(TokenKind::Whitespace, 3, 1)
     );
     assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Number, 4, 1));
-    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Comment, 5, 6));
+    assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::Comment, 5, 5));
     assert_eq!(tokens.next().unwrap(), Token::new(TokenKind::EOF, 11, 0));
     assert_eq!(tokens.next(), None);
 
@@ -142,7 +142,7 @@ fn ignores_singleline_comment() {
     );
     assert_eq!(
         tokens.next().unwrap(),
-        Token::new(TokenKind::Comment, 6, 18)
+        Token::new(TokenKind::Comment, 6, 17)
     );
     assert_eq!(
         tokens.next().unwrap(),
