@@ -1,10 +1,10 @@
 use crate::bytecode::*;
 use crate::diagnostics::Diagnostics;
+use crate::function::native;
 use crate::scope;
 use crate::types::Type;
 use crate::value::{ErrorKind, Value};
 use std::cell::RefCell;
-use std::io::{self, prelude::*};
 use std::rc::Rc;
 
 #[cfg(test)]
@@ -366,9 +366,11 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
 
         let func = v.into_rc_fn();
         if func.args.len() != num_args {
-            self.diagnostics.incorrect_arg_count(
-                func.args.len(),
-                num_args,
+            self.diagnostics.from_value_error(
+                ErrorKind::IncorrectArgCount {
+                    got: num_args,
+                    expected: func.args.len(),
+                },
                 self.bytecode[self.instr_i].span.clone(),
             );
             return;
@@ -411,50 +413,31 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
     }
 
     fn evaluate_call_inbuilt(&mut self, ident: &str, num_args: usize) {
-        match ident {
-            "print" => {
-                let e_msg = || {
-                    panic!(
-                        "Expect {} value{} on stack",
-                        num_args,
-                        if num_args == 1 { "" } else { "s" }
-                    );
-                };
-
-                for _ in 0..(num_args - 1) {
-                    print!("{} ", self.stack.pop().unwrap_or_else(e_msg));
-                }
-                println!("{}", self.stack.pop().unwrap_or_else(e_msg));
-                self.stack.push(Value::Null);
-            }
-            "input" => {
-                if num_args > 1 {
-                    self.diagnostics.incorrect_arg_count(
-                        1,
-                        num_args,
-                        self.bytecode[self.instr_i].span.clone(),
-                    );
-                    return;
-                }
-
-                if num_args == 1 {
-                    print!("{} ", self.stack.pop().expect("Expect 1 value on stack"));
-                }
-
-                io::stdout().flush().unwrap();
-                let mut s = String::new();
-                io::stdin()
-                    .read_line(&mut s)
-                    .expect("Did not enter a correct string");
-
-                // Remove the ending new line
-                let new_len = s.trim_end_matches(|c| c == '\n' || c == '\r').len();
-                s.truncate(new_len);
-
-                self.stack.push(Value::String(Rc::new(RefCell::new(s))));
-            }
-            _ => unreachable!(),
+        if self.stack.len() < num_args {
+            panic!(
+                "Expect {} value{} on stack",
+                num_args,
+                if num_args == 1 { "" } else { "s" }
+            );
         }
+
+        let func = match ident {
+            "print" => native::print,
+            "input" => native::input,
+            _ => unreachable!(),
+        };
+
+        let v = match func(&self.stack[(self.stack.len() - num_args)..]) {
+            Ok(v) => v,
+            Err(e) => {
+                self.diagnostics
+                    .from_value_error(e, self.bytecode[self.instr_i].span.clone());
+                return;
+            }
+        };
+
+        self.stack.truncate(self.stack.len() - num_args);
+        self.stack.push(v);
     }
 
     fn evaluate_make_list(&mut self, len: usize) {

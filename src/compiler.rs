@@ -51,6 +51,7 @@ pub fn compile(
     Ok(())
 }
 
+use anilang::function::Function;
 use anilang::{Instruction, InstructionKind, Value};
 
 fn count_scopes(bytecode: &[Instruction]) -> usize {
@@ -60,7 +61,7 @@ fn count_scopes(bytecode: &[Instruction]) -> usize {
         match &instr.kind {
             InstructionKind::PushVar { .. } => num_scopes += 1,
             InstructionKind::Push { value } => {
-                if let Value::Function(func) = value {
+                if let Value::Function(Function::AnilangFn(func)) = value {
                     num_scopes += count_scopes(&func.body[..])
                 }
             }
@@ -82,7 +83,7 @@ fn serialize_scopes(bytecode: &[Instruction], output_file: &mut fs::File) -> Res
                 }
             }
             InstructionKind::Push { value } => {
-                if let Value::Function(func) = value {
+                if let Value::Function(Function::AnilangFn(func)) = value {
                     serialize_scopes(&func.body[..], output_file)?;
                 }
             }

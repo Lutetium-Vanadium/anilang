@@ -1,15 +1,16 @@
+use super::Function;
 use crate::bytecode::{Bytecode, InstructionKind};
 use crate::scope::Scope;
 use crate::value::Value;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
-pub struct Function {
+pub struct AnilangFn {
     pub args: Vec<String>,
     pub body: Bytecode,
 }
 
-impl Function {
+impl AnilangFn {
     pub fn new(args: Vec<String>, body: Bytecode) -> Self {
         Self { args, body }
     }
@@ -55,9 +56,9 @@ impl Function {
                     *scope = new_scope;
                 }
                 InstructionKind::Push {
-                    value: Value::Function(func),
+                    value: Value::Function(Function::AnilangFn(func)),
                 } => {
-                    let mut f = Function::new(func.args.clone(), func.duplicate_body());
+                    let mut f = AnilangFn::new(func.args.clone(), func.duplicate_body());
                     let new_scope = Rc::new(Scope::new(
                         f.scope().id,
                         f.scope()
@@ -76,7 +77,7 @@ impl Function {
 }
 
 use std::fmt;
-impl fmt::Display for Function {
+impl fmt::Display for AnilangFn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.args.is_empty() {
             write!(f, "fn ()")
@@ -87,21 +88,6 @@ impl fmt::Display for Function {
                 write!(f, ", {}", arg)?;
             }
             write!(f, ")")
-        }
-    }
-}
-
-impl From<Function> for Value {
-    fn from(f: Function) -> Value {
-        Value::Function(std::rc::Rc::new(f))
-    }
-}
-
-impl Default for Function {
-    fn default() -> Self {
-        Self {
-            args: Vec::new(),
-            body: Default::default(),
         }
     }
 }

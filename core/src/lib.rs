@@ -28,3 +28,11 @@ pub use source_text::SourceText;
 pub use tokens::TokenKind;
 pub use types::Type;
 pub use value::Value;
+
+pub mod function {
+    pub use super::value::{AnilangFn, Function, NativeFn};
+
+    pub mod native {
+        pub use crate::value::function::native_fn::*;
+    }
+}

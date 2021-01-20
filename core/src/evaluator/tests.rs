@@ -341,7 +341,7 @@ fn evaluate_fn_declaration_properly() {
     let return_f = eval_s(
         vec![
             InstructionKind::Push {
-                value: Value::Function(Rc::new(Function::new(vec!["arg1".to_owned()], vec![]))),
+                value: Function::new(vec!["arg1".to_owned()], vec![]).into(),
             }
             .into(),
             InstructionKind::Store {
@@ -364,7 +364,7 @@ fn evaluate_fn_call_properly() {
     scope
         .declare(
             "add".to_owned(),
-            Value::Function(Rc::new(Function::new(
+            Function::new(
                 vec!["a".to_owned(), "b".to_owned()],
                 vec![
                     InstructionKind::PushVar {
@@ -382,7 +382,8 @@ fn evaluate_fn_call_properly() {
                     InstructionKind::BinaryAdd.into(),
                     InstructionKind::PopVar.into(),
                 ],
-            ))),
+            )
+            .into(),
         )
         .unwrap();
 

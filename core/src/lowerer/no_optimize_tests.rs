@@ -464,7 +464,7 @@ fn lower_fn_declaration_properly() {
     assert_eq!(bytecode.len(), 2);
     match &bytecode[0].kind {
         InstructionKind::Push {
-            value: crate::Value::Function(f),
+            value: crate::Value::Function(crate::function::Function::AnilangFn(f)),
         } if f.args == vec!["arg1".to_owned()] && f.body.len() == 0 => {}
         i => panic!("Expected Push Value::Function, got {:?}", i),
     }
@@ -496,7 +496,7 @@ fn lower_fn_declaration_properly() {
     assert_eq!(bytecode.len(), 1);
     let body = match &bytecode[0].kind {
         InstructionKind::Push {
-            value: crate::Value::Function(f),
+            value: crate::Value::Function(crate::function::Function::AnilangFn(f)),
         } if f.args == vec!["arg1".to_owned()] => &f.body,
         i => panic!("Expected Push Value::Function, got {:?}", i),
     };

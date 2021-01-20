@@ -27,7 +27,7 @@ pub fn r(s: i64, e: i64) -> Value {
 }
 
 pub fn func() -> Value {
-    Value::Function(Rc::new(Default::default()))
+    super::function::Function::new(vec![], vec![]).into()
 }
 
 pub fn n() -> Value {

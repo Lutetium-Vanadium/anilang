@@ -1,4 +1,4 @@
-use super::Value;
+use super::{Function, Value};
 use crate::serialize::{DeserializationContext, Deserialize, DeserializeCtx, Serialize};
 use crate::types::Type;
 use std::cell::RefCell;
@@ -34,7 +34,12 @@ impl Serialize for Value {
                 s.serialize(buf)?;
                 Ok(2 + s.len())
             }
-            Value::Function(f) => Ok(1 + f.args.serialize(buf)? + f.body.serialize(buf)?),
+            Value::Function(Function::AnilangFn(f)) => {
+                Ok(1 + f.args.serialize(buf)? + f.body.serialize(buf)?)
+            }
+            Value::Function(Function::NativeFn(_)) => {
+                unreachable!("Native Function cannot be serialized")
+            }
             Value::Null => Ok(1),
         }
     }
@@ -65,7 +70,8 @@ impl DeserializeCtx<DeserializationContext> for Value {
                 let args = Vec::deserialize(data)?;
                 let body = Vec::deserialize_with_context(data, ctx)?;
 
-                Value::Function(Rc::new(super::Function::new(args, body)))
+                // Note native functions cannot be serialized, so the function has to be a AnilangFn
+                Function::new(args, body).into()
             }
             Type::Null => Value::Null,
         })
@@ -88,8 +94,8 @@ mod tests {
         assert_eq!(buf[..expected_bytes.len()], expected_bytes[..]);
         let dv = Value::deserialize_with_context(&mut &expected_bytes[..], &mut context).unwrap();
         match v {
-            Value::Function(f) => match dv {
-                Value::Function(df) => {
+            Value::Function(Function::AnilangFn(f)) => match dv {
+                Value::Function(Function::AnilangFn(df)) => {
                     assert_eq!(df.args, f.args);
                     assert_eq!(df.body, f.body);
                 }
@@ -148,7 +154,7 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn function_serialize() {
-        let f = Value::Function(Rc::new(Function::new(
+        let f = Function::new(
             vec!["a".to_owned(), "b".to_owned()],
             vec![
                 InstructionKind::PushVar { scope: Rc::new(crate::Scope::new(0, None)) }.into(),
@@ -163,7 +169,7 @@ mod tests {
                 InstructionKind::BinaryAdd.into(),
                 InstructionKind::PopVar.into(),
             ],
-        )));
+        ).into();
 
         test_serialize(f, vec![
             64, // Value tag

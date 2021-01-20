@@ -478,18 +478,14 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
                 "IndexOutOfRange: index {} out of range, len: {}",
                 index, len,
             ),
+            value::ErrorKind::IncorrectArgCount { got, expected } => {
+                format!("TypeError: expected {} args, got {} args", expected, got)
+            }
             value::ErrorKind::CannotCompare { left, right } => {
                 format!("Cannot compare values of type <{}> and <{}>", left, right)
             }
         };
 
         self.report_err(msg, span)
-    }
-
-    pub fn incorrect_arg_count(&self, expected: usize, got: usize, span: TextSpan) {
-        self.report_err(
-            format!("TypeError: expected {} args, got {} args", expected, got),
-            span,
-        )
     }
 }

@@ -5,13 +5,13 @@ use std::rc::Rc;
 mod cmp_impl;
 mod fmt_impl;
 mod from_impl;
-mod function;
+pub(crate) mod function;
 mod serialize;
 
 #[cfg(test)]
 mod tests;
 
-pub use function::Function;
+pub use function::{AnilangFn, Function, NativeFn};
 
 pub type List = Vec<Value>;
 pub type Ref<T> = Rc<RefCell<T>>;
@@ -26,6 +26,7 @@ pub enum ErrorKind {
     IndexOutOfRange { index: i64, len: i64 },
     Unindexable { val_t: Type, index_t: Type },
     CannotCompare { left: Type, right: Type },
+    IncorrectArgCount { got: usize, expected: usize },
     DivideByZero,
 }
 
@@ -43,10 +44,9 @@ pub enum Value {
     /// so instead of directly using `Rc<Vec>`, we use `Rc<RefCell<Vec>>` to provide mutable
     /// strings.
     List(Ref<List>),
-    /// Functions are expensive to copy because they contain the whole function body as well as
-    /// a `Vec<String>`, therefore a `Rc` is used. Since functions are immutable, `Rc<Function>`
-    /// can directly be used.
-    Function(Rc<Function>), // Functions are not mutable
+    /// A pointer to a function, see `core/src/value/function/mod.rs` for more information, easy to
+    /// copy so not placed in a `Rc`.
+    Function(Function),
     /// A range value, easy to copy, so it is not placed in a `Rc`
     Range(i64, i64),
     /// A primitive integer type, easy to copy, so is not placed in a `Rc`
