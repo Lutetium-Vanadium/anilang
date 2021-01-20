@@ -32,7 +32,9 @@ pub fn run(mut show_ast: bool, mut show_bytecode: bool) {
     let repl = shelp::Repl::<AnilangLangInterface>::new("» ", "· ", get_persistant_file_path())
         .iter(shelp::Color::Green);
 
-    let global_scope = Rc::new(anilang::Scope::new(0, None));
+    let std = crate::stdlib::make_std();
+
+    let global_scope = Rc::new(anilang::Scope::new(1, Some(std)));
 
     for line in repl {
         if line.trim() == ".tree" {

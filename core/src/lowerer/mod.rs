@@ -135,7 +135,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             diagnostics,
             bytecode: Default::default(),
             labels: 0..,
-            scope_ids: 1..,
+            scope_ids: (scope.id + 1)..,
             scopes_since_loop: 1,
             current_scope: Some(Rc::clone(&scope)),
             break_label: None,
@@ -534,19 +534,6 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         let num_args = fn_call_node.args.len();
         for arg in fn_call_node.args.into_iter().rev() {
             self.lower_node(arg);
-        }
-        if let SyntaxNode::VariableNode(node::VariableNode { ref ident, .. }) = *fn_call_node.child
-        {
-            if ["print", "input"].contains(&ident.as_str()) {
-                self.bytecode.push(Instruction::new(
-                    InstructionKind::CallInbuilt {
-                        ident: ident.clone(),
-                        num_args,
-                    },
-                    fn_call_node.span,
-                ));
-                return;
-            }
         }
 
         self.lower_node(*fn_call_node.child);

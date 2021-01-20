@@ -1,6 +1,6 @@
 use crate::bytecode::*;
 use crate::diagnostics::Diagnostics;
-use crate::function::native;
+use crate::function::Function;
 use crate::scope;
 use crate::types::Type;
 use crate::value::{ErrorKind, Value};
@@ -135,9 +135,6 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 InstructionKind::PopJumpIfTrue { label } => self.evaluate_pop_jump_if_true(*label),
                 InstructionKind::CallFunction { num_args } => {
                     self.evaluate_call_function(*num_args)
-                }
-                InstructionKind::CallInbuilt { ident, num_args } => {
-                    self.evaluate_call_inbuilt(ident, *num_args)
                 }
                 InstructionKind::Label { .. } => {}
                 InstructionKind::MakeList { len } => self.evaluate_make_list(*len),
@@ -364,6 +361,26 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             return;
         }
 
+        if let Value::Function(Function::NativeFn(f)) = v {
+            if self.stack.len() < num_args {
+                e_msg();
+            }
+
+            let v = match f(&self.stack[(self.stack.len() - num_args)..]) {
+                Ok(v) => v,
+                Err(e) => {
+                    self.diagnostics
+                        .from_value_error(e, self.bytecode[self.instr_i].span.clone());
+                    return;
+                }
+            };
+
+            self.stack.truncate(self.stack.len() - num_args);
+            self.stack.push(v);
+
+            return;
+        }
+
         let func = v.into_rc_fn();
         if func.args.len() != num_args {
             self.diagnostics.from_value_error(
@@ -410,34 +427,6 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
 
         self.stack
             .push(Evaluator::evaluate(&fn_body, self.diagnostics));
-    }
-
-    fn evaluate_call_inbuilt(&mut self, ident: &str, num_args: usize) {
-        if self.stack.len() < num_args {
-            panic!(
-                "Expect {} value{} on stack",
-                num_args,
-                if num_args == 1 { "" } else { "s" }
-            );
-        }
-
-        let func = match ident {
-            "print" => native::print,
-            "input" => native::input,
-            _ => unreachable!(),
-        };
-
-        let v = match func(&self.stack[(self.stack.len() - num_args)..]) {
-            Ok(v) => v,
-            Err(e) => {
-                self.diagnostics
-                    .from_value_error(e, self.bytecode[self.instr_i].span.clone());
-                return;
-            }
-        };
-
-        self.stack.truncate(self.stack.len() - num_args);
-        self.stack.push(v);
     }
 
     fn evaluate_make_list(&mut self, len: usize) {

@@ -564,11 +564,11 @@ fn lower_fn_call_properly() {
                 value: s("Hello World!")
             }
             .into(),
-            InstructionKind::CallInbuilt {
+            InstructionKind::Load {
                 ident: "print".to_owned(),
-                num_args: 1
             }
             .into(),
+            InstructionKind::CallFunction { num_args: 1 }.into(),
         ],
     );
 }

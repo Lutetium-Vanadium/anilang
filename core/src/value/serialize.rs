@@ -87,7 +87,7 @@ mod tests {
     use std::rc::Rc;
 
     fn test_serialize(v: Value, expected_bytes: Vec<u8>) {
-        let mut context = DeserializationContext::new(1);
+        let mut context = DeserializationContext::new(1, None);
         context.add_scope(0, None);
         let mut buf = Vec::new();
         assert_eq!(v.serialize(&mut buf).unwrap(), expected_bytes.len());
@@ -177,7 +177,7 @@ mod tests {
             b'a', b'\0', b'b', b'\0', // Args
             5, 0, 0, 0, 0, 0, 0, 0, // Length of Instructions
             // Instruction 0
-            30, 0, 0, 0, 0, 0, 0, 0, 0, // Tag + scope id (PushVar)
+            29, 0, 0, 0, 0, 0, 0, 0, 0, // Tag + scope id (PushVar)
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Span
             // Instruction 1
             20, b'b', b'\0', // Tag + ident (Load)
@@ -186,7 +186,7 @@ mod tests {
             20, b'a', b'\0', // Tag + ident (Load)
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Span
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Instruction 3 - Tag + Span
-            31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Instruction 4 - Tag + Span
+            30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Instruction 4 - Tag + Span
         ]);
     }
 

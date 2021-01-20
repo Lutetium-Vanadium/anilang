@@ -7,6 +7,7 @@ use structopt::StructOpt;
 mod compiler;
 mod repl;
 mod runtime;
+mod stdlib;
 mod syntax;
 
 #[derive(Debug, StructOpt)]

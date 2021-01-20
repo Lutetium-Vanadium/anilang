@@ -9,8 +9,10 @@ pub fn run(bin_file: PathBuf, show_bytecode: bool) -> io::Result<()> {
     let src = anilang::SourceText::deserialize(&mut bin)?;
     let diagnostics = anilang::Diagnostics::new(&src);
 
+    let std = crate::stdlib::make_std();
+
     let num_scopes = usize::deserialize(&mut bin)?;
-    let mut ctx = anilang::DeserializationContext::new(num_scopes);
+    let mut ctx = anilang::DeserializationContext::new(num_scopes, Some(std));
     for i in 0..num_scopes {
         let parent_id = usize::deserialize(&mut bin)?;
 
@@ -41,6 +43,8 @@ pub fn run(bin_file: PathBuf, show_bytecode: bool) -> io::Result<()> {
 pub fn interpret(file: PathBuf, show_ast: bool, show_bytecode: bool) -> crossterm::Result<()> {
     let input = String::from_utf8(fs::read(file)?)?;
 
+    let std = crate::stdlib::make_std();
+
     let src = anilang::SourceText::new(input.as_str());
     let diagnostics = anilang::Diagnostics::new(&src);
 
@@ -51,7 +55,7 @@ pub fn interpret(file: PathBuf, show_ast: bool, show_bytecode: bool) -> crosster
         root.prt();
     }
 
-    let bytecode = anilang::Lowerer::lower(root, &diagnostics, false);
+    let bytecode = anilang::Lowerer::lower_with_global(root, &diagnostics, std, false);
 
     if show_bytecode {
         anilang::print_bytecode(&bytecode[..])?;

@@ -2,7 +2,7 @@ use super::*;
 use crate::test_helpers::*;
 
 fn test_serialize(instr: InstructionKind, expected_bytes: Vec<u8>) {
-    let mut context = DeserializationContext::new(1);
+    let mut context = DeserializationContext::new(1, None);
     context.add_scope(0, None);
     let mut buf = Vec::new();
     assert_eq!(instr.serialize(&mut buf).unwrap(), expected_bytes.len());
@@ -185,23 +185,10 @@ fn serialize_instr_call_fn() {
 }
 
 #[test]
-fn serialize_instr_call_inbuilt() {
-    test_serialize(
-        InstructionKind::CallInbuilt {
-            ident: "ident".to_owned(),
-            num_args: 12,
-        },
-        vec![
-            26, b'i', b'd', b'e', b'n', b't', b'\0', 12, 0, 0, 0, 0, 0, 0, 0,
-        ],
-    );
-}
-
-#[test]
 fn serialize_instr_label() {
     test_serialize(
         InstructionKind::Label { number: 812 },
-        vec![27, 44, 3, 0, 0, 0, 0, 0, 0],
+        vec![26, 44, 3, 0, 0, 0, 0, 0, 0],
     );
 }
 
@@ -209,13 +196,13 @@ fn serialize_instr_label() {
 fn serialize_instr_make_list() {
     test_serialize(
         InstructionKind::MakeList { len: 31 },
-        vec![28, 31, 0, 0, 0, 0, 0, 0, 0],
+        vec![27, 31, 0, 0, 0, 0, 0, 0, 0],
     );
 }
 
 #[test]
 fn serialize_instr_make_range() {
-    test_serialize(InstructionKind::MakeRange, vec![29]);
+    test_serialize(InstructionKind::MakeRange, vec![28]);
 }
 
 #[test]
@@ -224,11 +211,11 @@ fn serialize_instr_push_var() {
         InstructionKind::PushVar {
             scope: Rc::new(Scope::new(0, None)),
         },
-        vec![30, 0, 0, 0, 0, 0, 0, 0, 0],
+        vec![29, 0, 0, 0, 0, 0, 0, 0, 0],
     );
 }
 
 #[test]
 fn serialize_instr_pop_var() {
-    test_serialize(InstructionKind::PopVar, vec![31]);
+    test_serialize(InstructionKind::PopVar, vec![30]);
 }

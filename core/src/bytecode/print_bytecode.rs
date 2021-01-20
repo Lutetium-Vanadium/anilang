@@ -107,11 +107,6 @@ fn print_instr(
             style::Print("CallFunction\t\t"),
             style::Print(format!("args: {}", num_args))
         ),
-        InstructionKind::CallInbuilt { num_args, ident } => queue!(
-            stdout,
-            style::Print("CallInbuilt\t\t"),
-            style::Print(format!("args: {}\t\t\tident: {}", num_args, ident))
-        ),
         InstructionKind::Label { number } => queue!(
             stdout,
             style::Print("Label\t\t\t"),

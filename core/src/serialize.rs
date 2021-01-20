@@ -138,13 +138,15 @@ use crate::scope::Scope;
 use std::rc::Rc;
 
 pub struct DeserializationContext {
+    global: Option<Rc<Scope>>,
     scopes: Vec<Rc<Scope>>,
 }
 
 impl DeserializationContext {
-    pub fn new(len: usize) -> Self {
+    pub fn new(len: usize, global: Option<Rc<Scope>>) -> Self {
         Self {
             scopes: Vec::with_capacity(len),
+            global,
         }
     }
 
@@ -156,7 +158,9 @@ impl DeserializationContext {
         // be added
         self.scopes.push(Rc::new(Scope::new(
             id,
-            parent_id.map(|id| Rc::clone(&self.scopes[id])),
+            parent_id
+                .map(|id| Rc::clone(&self.scopes[id]))
+                .or_else(|| self.global.clone()),
         )))
     }
 

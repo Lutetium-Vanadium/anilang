@@ -161,9 +161,6 @@ pub enum InstructionKind {
     /// Take the top of the stack, and call it as a function, popping the next `num_args` values of
     /// the stack and supplying them as arguments to the function.
     CallFunction { num_args: usize },
-    /// Pop the next `num_args` values of the stack and supplying them as arguments to the inbuilt
-    /// function.
-    CallInbuilt { ident: String, num_args: usize },
     /// Label to jump to
     Label { number: LabelNumber },
     /// Take the top <len> elements of the stack and push a List on to the stack.
@@ -234,28 +231,22 @@ impl Serialize for InstructionKind {
                 num_args.serialize(buf)?;
                 Ok(9)
             }
-            InstructionKind::CallInbuilt { ident, num_args } => {
-                buf.write_all(&[26])?;
-                ident.serialize(buf)?;
-                num_args.serialize(buf)?;
-                Ok(10 + ident.len())
-            }
             InstructionKind::Label { number } => {
-                buf.write_all(&[27])?;
+                buf.write_all(&[26])?;
                 number.serialize(buf)?;
                 Ok(9)
             }
             InstructionKind::MakeList { len } => {
-                buf.write_all(&[28])?;
+                buf.write_all(&[27])?;
                 len.serialize(buf)?;
                 Ok(9)
             }
-            InstructionKind::MakeRange => buf.write(&[29]),
+            InstructionKind::MakeRange => buf.write(&[28]),
             InstructionKind::PushVar { scope } => {
-                buf.write_all(&[30])?;
+                buf.write_all(&[29])?;
                 Ok(1 + scope.id.serialize(buf)?)
             }
-            InstructionKind::PopVar => buf.write(&[31]),
+            InstructionKind::PopVar => buf.write(&[30]),
         }
     }
 }
@@ -315,26 +306,21 @@ impl DeserializeCtx<DeserializationContext> for InstructionKind {
                 InstructionKind::CallFunction { num_args }
             }
             26 => {
-                let ident = String::deserialize(data)?;
-                let num_args = usize::deserialize(data)?;
-                InstructionKind::CallInbuilt { ident, num_args }
-            }
-            27 => {
                 let number = usize::deserialize(data)?;
                 InstructionKind::Label { number }
             }
-            28 => {
+            27 => {
                 let len = usize::deserialize(data)?;
                 InstructionKind::MakeList { len }
             }
-            29 => InstructionKind::MakeRange,
-            30 => {
+            28 => InstructionKind::MakeRange,
+            29 => {
                 let id = usize::deserialize(data)?;
                 InstructionKind::PushVar {
                     scope: ctx.get_scope(id),
                 }
             }
-            31 => InstructionKind::PopVar,
+            30 => InstructionKind::PopVar,
             n => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
