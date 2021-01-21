@@ -7,58 +7,98 @@ pub(crate) mod native_fn;
 pub use anilang_fn::AnilangFn;
 pub use native_fn::NativeFn;
 
-/// Representation of pointer to function which can be executed
-#[derive(Clone)]
-pub enum Function {
-    /// A function declared within anilang. It contains bytecode and args to be executed.
-    AnilangFn(Rc<anilang_fn::AnilangFn>),
-    /// A pointer to a rust function that performs some operation on variable amount of args.
-    ///
-    /// The rust function must be of type
-    NativeFn(native_fn::NativeFn),
+pub struct Function {
+    fn_type: FunctionType,
+    pub(crate) this: Option<Value>,
 }
 
 impl Function {
-    pub fn new(args: Vec<String>, body: Bytecode) -> Self {
-        Self::AnilangFn(Rc::new(AnilangFn::new(args, body)))
+    pub fn new(fn_type: FunctionType) -> Self {
+        Self {
+            fn_type,
+            this: None,
+        }
+    }
+
+    pub fn anilang_fn(args: Vec<String>, body: Bytecode) -> Self {
+        Self {
+            fn_type: FunctionType::AnilangFn(AnilangFn::new(args, body)),
+            this: None,
+        }
+    }
+
+    pub fn native_fn(native_fn: NativeFn) -> Self {
+        Self {
+            fn_type: FunctionType::NativeFn(native_fn),
+            this: None,
+        }
+    }
+
+    pub fn as_anilang_fn(&self) -> Option<&AnilangFn> {
+        if let FunctionType::AnilangFn(ref f) = self.fn_type {
+            Some(f)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_native_fn(&self) -> Option<&NativeFn> {
+        if let FunctionType::NativeFn(ref f) = self.fn_type {
+            Some(f)
+        } else {
+            None
+        }
+    }
+
+    pub fn with_this(mut self, this: Value) -> Self {
+        self.this = Some(this);
+        self
     }
 }
 
-impl PartialEq for Function {
-    fn eq(&self, other: &Function) -> bool {
-        match (self, other) {
-            (Function::AnilangFn(f1), Function::AnilangFn(f2)) => Rc::ptr_eq(f1, f2),
-            // Not a great solution, but the only one I found to equate if 2 functions are the same
-            //
-            // FIXME: Hacky and possibly erroneous way to check if functions are the same
-            (Function::NativeFn(f1), Function::NativeFn(f2)) => *f1 as usize == *f2 as usize,
-            _ => false,
-        }
-    }
+/// Representation of pointer to function which can be executed
+#[derive(Clone)]
+pub enum FunctionType {
+    /// A function declared within anilang. It contains bytecode and args to be executed.
+    AnilangFn(AnilangFn),
+    /// A pointer to a rust function that performs some operation on variable amount of args.
+    ///
+    /// The rust function must be of type
+    NativeFn(NativeFn),
 }
 
 use std::fmt;
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.fn_type)?;
+        if let Some(ref this) = self.this {
+            write!(f, " on {}", this)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for FunctionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Function::AnilangFn(func) => write!(f, "{}", func),
-            Function::NativeFn(_) => write!(f, "Native function"),
+            FunctionType::AnilangFn(func) => write!(f, "{}", func),
+            FunctionType::NativeFn(_) => write!(f, "Native function"),
         }
     }
 }
 
 use super::Value;
-impl From<Function> for Value {
-    fn from(f: Function) -> Value {
-        Value::Function(f)
+impl From<FunctionType> for Value {
+    fn from(fn_type: FunctionType) -> Value {
+        Value::Function(Rc::new(Function::new(fn_type)))
     }
 }
 
-impl fmt::Debug for Function {
+impl fmt::Debug for FunctionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Function::AnilangFn(func) => write!(f, "{:?}", func),
-            Function::NativeFn(_) => write!(f, "Native Function"),
+            FunctionType::AnilangFn(func) => write!(f, "{:?}", func),
+            FunctionType::NativeFn(_) => write!(f, "Native Function"),
         }
     }
 }

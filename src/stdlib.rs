@@ -7,7 +7,7 @@ macro_rules! declare_native_fn {
         $scope
             .declare(
                 stringify!($fn_name).to_owned(),
-                Value::Function(Function::NativeFn(native::$fn_name)),
+                Value::Function(Rc::new(Function::native_fn(native::$fn_name))),
             )
             .unwrap_or_else(|_| {
                 panic!("Could not declare native function {}", stringify!($fn_name))

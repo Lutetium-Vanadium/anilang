@@ -1,4 +1,4 @@
-use super::Function;
+use super::{Function, FunctionType};
 use crate::bytecode::{Bytecode, InstructionKind};
 use crate::scope::Scope;
 use crate::value::Value;
@@ -56,17 +56,23 @@ impl AnilangFn {
                     *scope = new_scope;
                 }
                 InstructionKind::Push {
-                    value: Value::Function(Function::AnilangFn(func)),
+                    value: Value::Function(rc_fn),
                 } => {
-                    let mut f = AnilangFn::new(func.args.clone(), func.duplicate_body());
-                    let new_scope = Rc::new(Scope::new(
-                        f.scope().id,
-                        f.scope()
-                            .parent_id()
-                            .map(|id| Rc::clone(&scopes[id - delta])),
-                    ));
-                    f.set_scope(new_scope);
-                    *func = Rc::new(f);
+                    if let Some(func) = rc_fn.as_anilang_fn() {
+                        let mut f = AnilangFn::new(func.args.clone(), func.duplicate_body());
+                        let new_scope = Rc::new(Scope::new(
+                            f.scope().id,
+                            f.scope()
+                                .parent_id()
+                                .map(|id| Rc::clone(&scopes[id - delta])),
+                        ));
+
+                        f.set_scope(new_scope);
+                        let mut f = Function::new(FunctionType::AnilangFn(f));
+                        f.this = rc_fn.this.clone();
+
+                        *rc_fn = Rc::new(f);
+                    }
                 }
                 _ => {}
             }

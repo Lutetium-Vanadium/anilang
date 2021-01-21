@@ -9,7 +9,7 @@
 ///     _ => unreachable!()
 /// }
 /// ```
-use super::{AnilangFn, Function, List, Value};
+use super::{Function, List, Value};
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
@@ -94,15 +94,6 @@ impl From<&Value> for bool {
     }
 }
 
-impl From<Value> for Function {
-    fn from(val: Value) -> Function {
-        match val {
-            Value::Function(f) => f,
-            _ => unreachable!(),
-        }
-    }
-}
-
 use std::ops::Range;
 impl From<Value> for Range<i64> {
     fn from(val: Value) -> Range<i64> {
@@ -150,9 +141,9 @@ impl Value {
         }
     }
 
-    pub fn into_rc_fn(self) -> Rc<AnilangFn> {
+    pub fn into_rc_fn(self) -> Rc<Function> {
         match self {
-            Value::Function(Function::AnilangFn(f)) => f,
+            Value::Function(f) => f,
             _ => unreachable!(),
         }
     }
@@ -215,20 +206,12 @@ mod tests {
     }
 
     #[test]
-    fn val_to_fn() {
-        let f = Function::new(vec![], vec![]);
-        let val_f = Value::from(f.clone());
-        assert_eq!(Function::from(val_f), f)
-    }
-
-    #[test]
     fn val_to_ref_fn() {
-        let f: Value =
-            Function::new(vec!["a".to_owned(), "b".to_owned()], Default::default()).into();
-        let rc_f = match f.clone() {
-            Value::Function(Function::AnilangFn(f)) => f,
-            _ => unreachable!(),
-        };
+        let rc_f = Rc::new(Function::anilang_fn(
+            vec!["a".to_owned(), "b".to_owned()],
+            vec![],
+        ));
+        let f = Value::Function(Rc::clone(&rc_f));
         assert!(Rc::ptr_eq(&rc_f, &f.into_rc_fn()));
     }
 }

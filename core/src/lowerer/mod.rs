@@ -510,11 +510,11 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             mem::swap(&mut self.return_label, &mut reset_return_label);
             self.scopes_since_fn = prev_scopes_since_fn;
         }
-        let function = Function::new(fn_declaration_node.args, fn_body);
+        let function = Function::anilang_fn(fn_declaration_node.args, fn_body);
 
         self.bytecode.push(Instruction::new(
             InstructionKind::Push {
-                value: function.into(),
+                value: Value::Function(Rc::new(function)),
             },
             fn_declaration_node.span.clone(),
         ));

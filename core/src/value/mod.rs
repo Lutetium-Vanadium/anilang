@@ -46,7 +46,7 @@ pub enum Value {
     List(Ref<List>),
     /// A pointer to a function, see `core/src/value/function/mod.rs` for more information, easy to
     /// copy so not placed in a `Rc`.
-    Function(Function),
+    Function(Rc<Function>),
     /// A range value, easy to copy, so it is not placed in a `Rc`
     Range(i64, i64),
     /// A primitive integer type, easy to copy, so is not placed in a `Rc`

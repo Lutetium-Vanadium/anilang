@@ -27,7 +27,10 @@ pub fn r(s: i64, e: i64) -> Value {
 }
 
 pub fn func() -> Value {
-    super::function::Function::new(vec![], vec![]).into()
+    Value::Function(std::rc::Rc::new(super::function::Function::anilang_fn(
+        vec![],
+        vec![],
+    )))
 }
 
 pub fn n() -> Value {

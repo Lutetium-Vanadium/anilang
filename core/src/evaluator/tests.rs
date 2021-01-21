@@ -9,6 +9,14 @@ macro_rules! par {
     };
 }
 
+fn make_fn(args: Vec<String>, body: Bytecode) -> Value {
+    Value::Function(Rc::new(Function::anilang_fn(args, body)))
+}
+
+fn make_fn_with_this(args: Vec<String>, body: Bytecode, this: Value) -> Value {
+    Value::Function(Rc::new(Function::anilang_fn(args, body).with_this(this)))
+}
+
 fn gen_scope(id: usize, parent: Option<Rc<scope::Scope>>) -> Rc<scope::Scope> {
     Rc::new(scope::Scope::new(id, parent))
 }
@@ -341,7 +349,7 @@ fn evaluate_fn_declaration_properly() {
     let return_f = eval_s(
         vec![
             InstructionKind::Push {
-                value: Function::new(vec!["arg1".to_owned()], vec![]).into(),
+                value: make_fn(vec!["arg1".to_owned()], vec![]),
             }
             .into(),
             InstructionKind::Store {
@@ -352,8 +360,11 @@ fn evaluate_fn_declaration_properly() {
         ],
         Rc::clone(&scope),
     );
+
     let func = scope.try_get_value("a").unwrap().clone().into_rc_fn();
     assert!(Rc::ptr_eq(&return_f.into_rc_fn(), &func));
+
+    let func = func.as_anilang_fn().unwrap();
     assert_eq!(func.args, vec!["arg1".to_owned()]);
     assert_eq!(func.body.len(), 0);
 }
@@ -364,7 +375,7 @@ fn evaluate_fn_call_properly() {
     scope
         .declare(
             "add".to_owned(),
-            Function::new(
+            make_fn(
                 vec!["a".to_owned(), "b".to_owned()],
                 vec![
                     InstructionKind::PushVar {
@@ -382,8 +393,33 @@ fn evaluate_fn_call_properly() {
                     InstructionKind::BinaryAdd.into(),
                     InstructionKind::PopVar.into(),
                 ],
-            )
-            .into(),
+            ),
+        )
+        .unwrap();
+
+    scope
+        .declare(
+            "this_add".to_owned(),
+            make_fn_with_this(
+                vec!["self".to_owned(), "other".to_owned()],
+                vec![
+                    InstructionKind::PushVar {
+                        scope: gen_scope(1, par!(scope)),
+                    }
+                    .into(),
+                    InstructionKind::Load {
+                        ident: "other".to_owned(),
+                    }
+                    .into(),
+                    InstructionKind::Load {
+                        ident: "self".to_owned(),
+                    }
+                    .into(),
+                    InstructionKind::BinaryAdd.into(),
+                    InstructionKind::PopVar.into(),
+                ],
+                i(1),
+            ),
         )
         .unwrap();
 
@@ -397,6 +433,21 @@ fn evaluate_fn_call_properly() {
                 }
                 .into(),
                 InstructionKind::CallFunction { num_args: 2 }.into(),
+            ],
+            Rc::clone(&scope),
+        ),
+        i(3)
+    );
+
+    assert_eq!(
+        eval_s(
+            vec![
+                InstructionKind::Push { value: i(2) }.into(),
+                InstructionKind::Load {
+                    ident: "this_add".to_owned()
+                }
+                .into(),
+                InstructionKind::CallFunction { num_args: 1 }.into(),
             ],
             scope,
         ),

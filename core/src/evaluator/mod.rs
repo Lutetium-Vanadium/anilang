@@ -1,6 +1,5 @@
 use crate::bytecode::*;
 use crate::diagnostics::Diagnostics;
-use crate::function::Function;
 use crate::scope;
 use crate::types::Type;
 use crate::value::{ErrorKind, Value};
@@ -341,15 +340,15 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         }
     }
 
-    fn evaluate_call_function(&mut self, num_args: usize) {
-        let e_msg = || {
+    fn evaluate_call_function(&mut self, mut num_args: usize) {
+        let e_msg = |num_args| {
             panic!(
                 "Expect {} value{} on the stack",
                 num_args + 1,
                 if num_args == 0 { "" } else { "s" }
             );
         };
-        let v = self.stack.pop().unwrap_or_else(e_msg);
+        let v = self.stack.pop().unwrap_or_else(|| e_msg(num_args));
         if v.type_() != Type::Function {
             self.diagnostics.from_value_error(
                 ErrorKind::IncorrectType {
@@ -361,9 +360,16 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             return;
         }
 
-        if let Value::Function(Function::NativeFn(f)) = v {
+        let func = v.into_rc_fn();
+
+        if let Some(ref this) = func.this {
+            self.stack.push(this.clone());
+            num_args += 1;
+        }
+
+        if let Some(f) = func.as_native_fn() {
             if self.stack.len() < num_args {
-                e_msg();
+                e_msg(num_args);
             }
 
             let v = match f(&self.stack[(self.stack.len() - num_args)..]) {
@@ -381,7 +387,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             return;
         }
 
-        let func = v.into_rc_fn();
+        let func = func.as_anilang_fn().unwrap();
         if func.args.len() != num_args {
             self.diagnostics.from_value_error(
                 ErrorKind::IncorrectArgCount {
@@ -419,7 +425,10 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
 
         for arg in func.args.iter() {
             fn_scope
-                .declare(arg.clone(), self.stack.pop().unwrap_or_else(e_msg))
+                .declare(
+                    arg.clone(),
+                    self.stack.pop().unwrap_or_else(|| e_msg(num_args)),
+                )
                 // Since this is a cloned scope, it should be empty, so there shouldn't be any
                 // issues in declaring the variable
                 .unwrap();
