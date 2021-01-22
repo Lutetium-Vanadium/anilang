@@ -372,7 +372,12 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 e_msg(num_args);
             }
 
-            let v = match f(&self.stack[(self.stack.len() - num_args)..]) {
+            let mut args = Vec::with_capacity(num_args);
+            for _ in 0..num_args {
+                args.push(self.stack.pop().unwrap());
+            }
+
+            let v = match f(args) {
                 Ok(v) => v,
                 Err(e) => {
                     self.diagnostics
@@ -381,7 +386,6 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 }
             };
 
-            self.stack.truncate(self.stack.len() - num_args);
             self.stack.push(v);
 
             return;

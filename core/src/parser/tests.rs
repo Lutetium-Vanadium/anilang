@@ -676,6 +676,47 @@ fn parse_index_properly() {
         .as_str(),
         "hello"
     );
+
+    let tokens = vec![
+        Token::new(TokenKind::String, 0, 7),
+        Token::new(TokenKind::DotOperator, 7, 1),
+        Token::new(TokenKind::Ident, 8, 3),
+        Token::new(TokenKind::EOF, 11, 0),
+    ];
+
+    let root = parse("'hello'.len", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let index = match &root.block[0] {
+        SyntaxNode::IndexNode(index) => index,
+        n => panic!("Expected IndexNode, got {:?}", n),
+    };
+
+    assert_eq!(
+        match &*index.index {
+            SyntaxNode::LiteralNode(node::LiteralNode {
+                value: Value::String(s),
+                ..
+            }) => s,
+            n => panic!("Expected LiteralString, got {:?}", n),
+        }
+        .borrow()
+        .as_str(),
+        "len"
+    );
+
+    assert_eq!(
+        match &*index.child {
+            SyntaxNode::LiteralNode(node::LiteralNode {
+                value: Value::String(s),
+                ..
+            }) => s,
+            n => panic!("Expected LiteralString, got {:?}", n),
+        }
+        .borrow()
+        .as_str(),
+        "hello"
+    );
 }
 
 #[test]

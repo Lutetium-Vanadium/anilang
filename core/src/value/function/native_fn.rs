@@ -1,27 +1,27 @@
+use crate::types::Type;
 use crate::value::{ErrorKind, Result, Value};
 use std::cell::RefCell;
 use std::io::{self, prelude::*};
 use std::rc::Rc;
 
-// FIXME Native functions receive a slice of the stack which has arguments in reverse order
-pub type NativeFn = for<'a> fn(&'a [Value]) -> Result<Value>;
+pub type NativeFn = fn(Vec<Value>) -> Result<Value>;
 
-pub fn print(args: &[Value]) -> Result<Value> {
+pub fn print(args: Vec<Value>) -> Result<Value> {
     if args.is_empty() {
         println!();
         return Ok(Value::Null);
     }
 
-    for value in args[1..].iter().rev() {
+    for value in &args[..(args.len() - 1)] {
         print!("{} ", value)
     }
 
-    println!("{}", args[0]);
+    println!("{}", args.last().unwrap());
 
     Ok(Value::Null)
 }
 
-pub fn input(args: &[Value]) -> Result<Value> {
+pub fn input(args: Vec<Value>) -> Result<Value> {
     if args.len() > 1 {
         return Err(ErrorKind::IncorrectArgCount {
             expected: 1,
@@ -44,4 +44,52 @@ pub fn input(args: &[Value]) -> Result<Value> {
     s.truncate(new_len);
 
     Ok(Value::String(Rc::new(RefCell::new(s))))
+}
+
+pub fn push(mut args: Vec<Value>) -> Result<Value> {
+    if args.len() != 2 {
+        return Err(ErrorKind::IncorrectArgCount {
+            expected: 2,
+            got: args.len(),
+        });
+    }
+
+    let to_push = args.pop().unwrap();
+
+    match &args[0] {
+        Value::List(l) => {
+            l.borrow_mut().push(to_push);
+            Ok(Value::Null)
+        }
+        _ => Err(ErrorKind::IncorrectType {
+            got: args[0].type_(),
+            expected: Type::List.into(),
+        }),
+    }
+}
+
+pub fn pop(args: Vec<Value>) -> Result<Value> {
+    if args.len() != 1 {
+        return Err(ErrorKind::IncorrectArgCount {
+            expected: 1,
+            got: args.len(),
+        });
+    }
+
+    match &args[0] {
+        Value::List(l) => {
+            let mut l = l.borrow_mut();
+            if l.len() == 0 {
+                return Err(ErrorKind::Other {
+                    message: "Cannot pop from empty list".to_owned(),
+                });
+            }
+
+            Ok(l.pop().unwrap())
+        }
+        _ => Err(ErrorKind::IncorrectType {
+            got: args[0].type_(),
+            expected: Type::List.into(),
+        }),
+    }
 }

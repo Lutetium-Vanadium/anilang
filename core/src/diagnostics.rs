@@ -481,9 +481,24 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
             value::ErrorKind::IncorrectArgCount { got, expected } => {
                 format!("TypeError: expected {} args, got {} args", expected, got)
             }
+            value::ErrorKind::InvalidProperty { val, property } => {
+                format!(
+                    "InvalidProperty: property '{}' does not exist on type <{}>",
+                    property.borrow().as_str(),
+                    val.type_()
+                )
+            }
+            value::ErrorKind::ReadonlyProperty { val, property } => {
+                format!(
+                    "ReadonlyProperty: property '{}' is immutable for type <{}>",
+                    property.borrow().as_str(),
+                    val.type_()
+                )
+            }
             value::ErrorKind::CannotCompare { left, right } => {
                 format!("Cannot compare values of type <{}> and <{}>", left, right)
             }
+            value::ErrorKind::Other { message } => message,
         };
 
         self.report_err(msg, span)

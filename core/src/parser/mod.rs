@@ -3,8 +3,10 @@ use crate::source_text::SourceText;
 use crate::syntax_node as node;
 use crate::text_span::TextSpan;
 use crate::tokens::{Token, TokenKind};
+use crate::value::Value;
 use node::SyntaxNode;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 
 #[cfg(test)]
 mod tests;
@@ -454,6 +456,17 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
                     node = SyntaxNode::FnCallNode(node::FnCallNode::new(node, args, close_paran));
                 }
+                TokenKind::DotOperator => {
+                    self.next();
+                    let ident = self.match_token(TokenKind::Ident);
+                    let value =
+                        Value::String(Rc::new(RefCell::new(self.src[&ident.text_span].to_owned())));
+                    let literal = SyntaxNode::LiteralNode(node::LiteralNode::from_val(
+                        value,
+                        ident.text_span.clone(),
+                    ));
+                    node = SyntaxNode::IndexNode(node::IndexNode::new(node, literal, ident))
+                }
                 _ => break,
             }
         }
@@ -543,13 +556,13 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             _ => unreachable!(),
         };
 
-        match res {
-            Ok(node) => SyntaxNode::LiteralNode(node),
-            Err(_) => {
-                self.diagnostics.failed_parse(&token);
+        res.map_or_else(
+            |_| {
+                self.diagnostics.failed_parse(token);
                 SyntaxNode::BadNode(token.text_span.clone())
-            }
-        }
+            },
+            SyntaxNode::LiteralNode,
+        )
     }
 }
 

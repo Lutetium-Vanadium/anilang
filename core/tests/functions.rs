@@ -144,3 +144,8 @@ fn anonymous_functions() {
         v::i(3)
     );
 }
+
+#[test]
+fn inbuilt_property_functions() {
+    assert_eq!(execute("(fn(a, b) { a + b }).call(1, 2)").unwrap(), v::i(3))
+}

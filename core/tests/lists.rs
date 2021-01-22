@@ -51,7 +51,7 @@ fn index_lists() {
 }
 
 #[test]
-fn nested_index() {
+fn nested_index_on_lists() {
     assert_eq!(execute("[123, [1231], 9812][1][0]").unwrap(), v::i(1231));
     assert_eq!(
         execute("[123, [[1231], 9812]][-1][-2][0]").unwrap(),
@@ -70,5 +70,36 @@ fn nested_index() {
             v::i(50),
             v::l(vec![v::f(173.1), v::l(vec![v::s("hello world")])]),
         ]),
+    );
+}
+
+#[test]
+fn inbuilt_property_lists() {
+    assert_eq!(execute("[1, 2, 3, 4, 5].len").unwrap(), v::i(5));
+    assert_eq!(
+        execute(
+            "let l = [1, 2, 3, 4, 5]
+            l.pop()"
+        )
+        .unwrap(),
+        v::i(5)
+    );
+    assert_eq!(
+        execute(
+            "let l = [1, 2, 3, 4, 5]
+            l.pop()
+            l"
+        )
+        .unwrap(),
+        v::l(vec![v::i(1), v::i(2), v::i(3), v::i(4)]),
+    );
+    assert_eq!(
+        execute(
+            "let l = [1, 2, 3, 4, 5]
+            l.push(6)
+            l"
+        )
+        .unwrap(),
+        v::l(vec![v::i(1), v::i(2), v::i(3), v::i(4), v::i(5), v::i(6)]),
     );
 }

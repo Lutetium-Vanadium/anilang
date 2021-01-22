@@ -91,6 +91,10 @@ impl LiteralNode {
         })
     }
 
+    pub fn from_val(value: Value, span: TextSpan) -> Self {
+        Self { value, span }
+    }
+
     pub(super) fn _prt(&self, indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
         let _ = super::print_node(style::Color::Green, &indent, self, is_last, stdout);
     }
