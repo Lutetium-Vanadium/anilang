@@ -91,6 +91,7 @@ impl<'diagnostics, 'src, T: TextBase> Lexer<'diagnostics, 'src, T> {
                         }
                     }
                     ',' => add!(self, TokenKind::CommaOperator, i => 1),
+                    ':' => add!(self, TokenKind::ColonOperator, i => 1),
 
                     '-' => add!(self, TokenKind::MinusOperator, i => 1),
                     '+' => add!(self, TokenKind::PlusOperator, i => 1),

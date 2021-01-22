@@ -15,6 +15,7 @@ pub enum TokenKind {
     RangeOperator,      // '..'
     CommaOperator,      // ','
     AssignmentOperator, // '='
+    ColonOperator,      // ':'
 
     // Arithmetic operators
     PlusOperator,  // '+'

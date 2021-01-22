@@ -140,7 +140,18 @@ fn print_token(
             }
         }
 
-        _ => Color::Reset,
+        TokenKind::DotOperator
+        | TokenKind::CommaOperator
+        | TokenKind::ColonOperator
+        | TokenKind::RangeOperator
+        | TokenKind::OpenParan
+        | TokenKind::OpenBracket
+        | TokenKind::OpenBrace
+        | TokenKind::CloseParan
+        | TokenKind::CloseBracket
+        | TokenKind::CloseBrace
+        | TokenKind::Whitespace
+        | TokenKind::EOF => Color::Reset,
     };
 
     queue!(
