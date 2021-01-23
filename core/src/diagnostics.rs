@@ -345,6 +345,10 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     ///         ^^^^
     /// An OpenBrace is expected, but a number was found
     pub fn unexpected_token(&self, unexpected: &Token, expected: Option<&TokenKind>) {
+        if unexpected.kind == TokenKind::EOF {
+            return self.unexpected_eof(TextSpan::new(unexpected.text_span.start() - 2, 1));
+        }
+
         if unexpected.kind != TokenKind::Bad {
             if let Some(correct) = expected {
                 self.report_err(

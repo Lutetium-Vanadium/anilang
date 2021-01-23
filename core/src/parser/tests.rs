@@ -756,6 +756,144 @@ fn parse_block_properly() {
 }
 
 #[test]
+fn parse_object_properly() {
+    let get_el = |src, tokens| {
+        let mut root = parse(src, tokens);
+        assert_eq!(root.block.len(), 1);
+
+        match root.block.pop().unwrap() {
+            SyntaxNode::ObjectNode(node::ObjectNode { elements, .. }) => elements,
+            n => panic!("expected ObjectNode, got {:?}", n),
+        }
+    };
+
+    let tokens = vec![
+        Token::new(TokenKind::OpenBrace, 0, 1),
+        Token::new(TokenKind::CloseBrace, 1, 1),
+        Token::new(TokenKind::EOF, 2, 0),
+    ];
+    assert!(get_el("{}", tokens).is_empty());
+
+    let tokens = vec![
+        Token::new(TokenKind::OpenBrace, 0, 1),
+        Token::new(TokenKind::Ident, 2, 1),
+        Token::new(TokenKind::CommaOperator, 3, 1),
+        Token::new(TokenKind::CloseBrace, 5, 1),
+        Token::new(TokenKind::EOF, 6, 0),
+    ];
+    let elements = get_el("{ a, }", tokens);
+    assert_eq!(elements.len(), 2);
+
+    assert_eq!(
+        match &elements[0] {
+            SyntaxNode::LiteralNode(node::LiteralNode { value, .. }) => value,
+            n => panic!("expected literal string, got {:?}", n),
+        }
+        .to_ref_str()
+        .as_str(),
+        "a"
+    );
+
+    assert_eq!(
+        match &elements[1] {
+            SyntaxNode::VariableNode(node::VariableNode { ident, .. }) => ident,
+            n => panic!("Expected VariableNode, got {:?}", n),
+        }
+        .as_str(),
+        "a"
+    );
+
+    let tokens = vec![
+        Token::new(TokenKind::OpenBrace, 0, 1),
+        Token::new(TokenKind::Ident, 2, 1),
+        Token::new(TokenKind::ColonOperator, 3, 1),
+        Token::new(TokenKind::Number, 5, 1),
+        Token::new(TokenKind::CloseBrace, 7, 1),
+        Token::new(TokenKind::EOF, 8, 0),
+    ];
+    let elements = get_el("{ a: 2 }", tokens);
+    assert_eq!(elements.len(), 2);
+
+    assert_eq!(
+        match &elements[0] {
+            SyntaxNode::LiteralNode(node::LiteralNode { value, .. }) => value,
+            n => panic!("expected literal string, got {:?}", n),
+        }
+        .to_ref_str()
+        .as_str(),
+        "a"
+    );
+    assert!(matches!(
+        elements[1],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(2),
+            ..
+        })
+    ));
+
+    let tokens = vec![
+        Token::new(TokenKind::OpenBrace, 0, 1),
+        Token::new(TokenKind::Number, 2, 1),
+        Token::new(TokenKind::ColonOperator, 3, 1),
+        Token::new(TokenKind::Number, 5, 1),
+        Token::new(TokenKind::CloseBrace, 7, 1),
+        Token::new(TokenKind::EOF, 8, 0),
+    ];
+    let elements = get_el("{ 1: 2 }", tokens);
+    assert_eq!(elements.len(), 2);
+
+    assert!(matches!(
+        elements[0],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(1),
+            ..
+        })
+    ));
+
+    assert!(matches!(
+        elements[1],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(2),
+            ..
+        })
+    ));
+
+    let tokens = vec![
+        Token::new(TokenKind::OpenBrace, 0, 1),
+        Token::new(TokenKind::Ident, 2, 1),
+        Token::new(TokenKind::OpenParan, 3, 1),
+        Token::new(TokenKind::Ident, 4, 1),
+        Token::new(TokenKind::CloseParan, 5, 1),
+        Token::new(TokenKind::OpenBrace, 7, 1),
+        Token::new(TokenKind::CloseBrace, 8, 1),
+        Token::new(TokenKind::CloseBrace, 10, 1),
+        Token::new(TokenKind::EOF, 11, 0),
+    ];
+    let elements = get_el("{ a(b) {} }", tokens);
+    assert_eq!(elements.len(), 2);
+
+    assert_eq!(
+        match &elements[0] {
+            SyntaxNode::LiteralNode(node::LiteralNode { value, .. }) => value,
+            n => panic!("expected literal string, got {:?}", n),
+        }
+        .to_ref_str()
+        .as_str(),
+        "a"
+    );
+    let args = match &elements[1] {
+        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
+            ident: None,
+            args,
+            block,
+            ..
+        }) if block.block.is_empty() => args,
+        n => panic!("Expected FnDeclarationNode with empty body, got {:?}", n),
+    };
+    assert_eq!(&args[..], &["b".to_owned()]);
+}
+
+#[test]
 fn parse_list_properly() {
     let tokens = vec![
         Token::new(TokenKind::OpenBracket, 0, 1),

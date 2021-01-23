@@ -97,6 +97,11 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         cur
     }
 
+    fn literal_from_ident(&self, ident: &Token) -> SyntaxNode {
+        let value = Value::String(Rc::new(RefCell::new(self.src[&ident.text_span].to_owned())));
+        SyntaxNode::LiteralNode(node::LiteralNode::from_val(value, ident.text_span.clone()))
+    }
+
     fn is_index_assign(&self) -> AssignmentType {
         let mut i = self.index() + 2;
         let mut open_bracket_count = 1;
@@ -129,6 +134,74 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         AssignmentType::None
     }
 
+    fn is_object_declaration(&self) -> bool {
+        // Already matched '{'
+        let mut i = self.index() + 1;
+
+        match (&self.tokens[i].kind, &self.tokens[i + 1].kind) {
+            // {}
+            // ^^-- Empty object
+            (TokenKind::CloseBrace, _) => return true,
+            // { <ident>, ...
+            //          ^-- The comma differentiates this from a block
+            //              which loads a variable
+            (TokenKind::Ident, TokenKind::CommaOperator) => return true,
+
+            // { <ident>(<args>...) { ...
+            //  ^                   ^-- The open brace differentiates from
+            //  |                       it being a function call
+            //  '-- No `fn` keyword differentiates this from a block with
+            //      a function declaration
+            (TokenKind::Ident, TokenKind::OpenParan) => {
+                let mut parans = 1;
+                i += 2;
+                while i < self.tokens.len() {
+                    match self.tokens[i].kind {
+                        TokenKind::OpenParan => parans += 1,
+                        TokenKind::CloseParan => parans -= 1,
+                        _ => {}
+                    }
+
+                    i += 1;
+
+                    if parans == 0 {
+                        return self.tokens[i].kind == TokenKind::OpenBrace;
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        // { <statement>: ...
+        //              ^-- Colon differentiates this from being a
+        //                  block with statements
+        //
+        // This also detects `{ <ident>: ...`, which looks similar (so can be detected with the same
+        // code), but has a semantic difference when parsed.
+        //
+        // NOTE this doesn't check if there is a colon after a valid statement, it assumes that the
+        // first key cannot be anything that contains a block statement, and hence if there is a
+        // brace, it isn't a object declaration.
+        //
+        // a)              |  b)
+        // {               |  {
+        //     { 2 }: 3,   |      a: 123,
+        //     a: 123,     |      { 2 }: 3,
+        // }               |  }
+        // This means that (a) is an invalid object declaration, but (b) is valid
+        while i < self.tokens.len() {
+            match self.tokens[i].kind {
+                TokenKind::OpenBrace | TokenKind::CloseBrace => break,
+                TokenKind::ColonOperator => return true,
+                _ => {
+                    i += 1;
+                }
+            }
+        }
+
+        false
+    }
+
     // ----- Parse Methods -----
 
     fn parse_block(&self, delim: TokenKind) -> node::BlockNode {
@@ -136,20 +209,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         let mut block: Vec<SyntaxNode> = Vec::new();
 
         while self.cur().kind != delim {
-            match self.cur().kind {
-                TokenKind::EOF => {
-                    self.diagnostics
-                        .unexpected_eof(self.tokens[self.index() - 1].text_span.clone());
-                    break;
-                }
-                TokenKind::OpenBrace => {
-                    self.index.set(self.index() + 1);
-                    block.push(SyntaxNode::BlockNode(
-                        self.parse_block(TokenKind::CloseBrace),
-                    ));
-                }
-                _ => block.push(self.parse_statement()),
-            };
+            block.push(self.parse_statement());
         }
         let e = self.next().text_span.end();
 
@@ -180,7 +240,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             {
                 self.parse_calc_assignment_expression()
             }
-            TokenKind::FnKeyword => self.parse_fn_declaration_statement(),
+            TokenKind::FnKeyword => self.parse_fn_declaration_statement(self.next()),
             TokenKind::IfKeyword => self.parse_if_statement(),
             TokenKind::BreakKeyword => {
                 SyntaxNode::BreakNode(node::BreakNode::new(self.next().text_span.clone()))
@@ -273,9 +333,10 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, indices, value, self.src))
     }
 
-    fn parse_fn_declaration_statement(&self) -> SyntaxNode {
-        let fn_token = self.match_token(TokenKind::FnKeyword);
-
+    /// Parses function declaration assuming the fn keyword has already been processed
+    ///
+    /// It doesn't check for fn keyword so that it can be used while parsing objects
+    fn parse_fn_declaration_statement(&self, start_token: &Token) -> SyntaxNode {
         let ident = if let TokenKind::Ident = self.cur().kind {
             Some(self.src[&self.next().text_span].to_owned())
         } else {
@@ -315,7 +376,12 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         self.match_token(TokenKind::OpenBrace);
         let block = self.parse_block(TokenKind::CloseBrace);
 
-        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode::new(fn_token, ident, args, block))
+        SyntaxNode::FnDeclarationNode(node::FnDeclarationNode::new(
+            start_token,
+            ident,
+            args,
+            block,
+        ))
     }
 
     fn parse_if_statement(&self) -> SyntaxNode {
@@ -426,12 +492,18 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             TokenKind::Ident => {
                 SyntaxNode::VariableNode(node::VariableNode::new(self.next(), self.src))
             }
+            TokenKind::OpenBrace if self.is_object_declaration() => self.parse_object_expression(),
             TokenKind::OpenBrace => {
                 self.next();
                 SyntaxNode::BlockNode(self.parse_block(TokenKind::CloseBrace))
             }
             TokenKind::OpenParan => self.parse_paran_expression(),
             TokenKind::OpenBracket => self.parse_list_expression(),
+            TokenKind::EOF => {
+                let span = self.tokens[self.index() - 1].text_span.clone();
+                self.diagnostics.unexpected_eof(span.clone());
+                SyntaxNode::BadNode(span)
+            }
             _ => {
                 let span = self.cur().text_span.clone();
                 self.diagnostics.unexpected_token(&self.next(), None);
@@ -459,12 +531,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 TokenKind::DotOperator => {
                     self.next();
                     let ident = self.match_token(TokenKind::Ident);
-                    let value =
-                        Value::String(Rc::new(RefCell::new(self.src[&ident.text_span].to_owned())));
-                    let literal = SyntaxNode::LiteralNode(node::LiteralNode::from_val(
-                        value,
-                        ident.text_span.clone(),
-                    ));
+                    let literal = self.literal_from_ident(ident);
                     node = SyntaxNode::IndexNode(node::IndexNode::new(node, literal, ident))
                 }
                 _ => break,
@@ -489,6 +556,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                     _ => {
                         self.diagnostics
                             .unexpected_token(next, Some(&TokenKind::CommaOperator));
+                        break self.cur();
                     }
                 }
             }
@@ -502,6 +570,70 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         let (list, close_bracket) = self.parse_comma_seperated_values(TokenKind::CloseBracket);
 
         SyntaxNode::ListNode(node::ListNode::new(open_bracket, list, close_bracket))
+    }
+
+    fn parse_object_expression(&self) -> SyntaxNode {
+        let open_brace = self.match_token(TokenKind::OpenBrace);
+        let mut elements = Vec::new();
+
+        loop {
+            match self.cur().kind {
+                // In case last element had a trailing comma, or it is an empty object, it will
+                // break here
+                TokenKind::CloseBrace => break,
+                // { <ident>: ....
+                //   ^^^^^^^-- Syntactic sugar for `"<ident>": value`
+                TokenKind::Ident if self.peek(1).kind == TokenKind::ColonOperator => {
+                    elements.push(self.literal_from_ident(self.next()));
+                    self.match_token(TokenKind::ColonOperator);
+                    elements.push(self.parse_statement());
+                }
+                // { <ident>(<args>...) { ...
+                //  ^                   ^-- The open brace differentiates from
+                //  |                       it being a function call
+                //  '-- No `fn` keyword differentiates this from a block with
+                //      a function declaration
+                TokenKind::Ident if self.peek(1).kind == TokenKind::OpenParan => {
+                    // Remove the ident so that function is parsed as anonymous function
+                    let ident = self.next();
+                    elements.push(self.literal_from_ident(ident));
+                    elements.push(self.parse_fn_declaration_statement(ident));
+                }
+                // { <ident>, ...
+                //          ^-- The comma differentiates this from a block
+                //              which loads a variable
+                TokenKind::Ident if self.peek(1).kind == TokenKind::CommaOperator => {
+                    elements.push(self.literal_from_ident(self.cur()));
+                    elements.push(SyntaxNode::VariableNode(node::VariableNode::new(
+                        self.next(),
+                        self.src,
+                    )))
+                }
+                // { <statement>: ...
+                //              ^-- Colon differentiates this from being a
+                //                  block with statements
+                _ => {
+                    elements.push(self.parse_statement());
+                    self.match_token(TokenKind::ColonOperator);
+                    elements.push(self.parse_statement());
+                }
+            }
+
+            let next = self.next();
+            match next.kind {
+                TokenKind::CommaOperator => {}
+                TokenKind::CloseBrace => break,
+                _ => {
+                    self.diagnostics
+                        .unexpected_token(next, Some(&TokenKind::CommaOperator));
+                    break;
+                }
+            }
+        }
+
+        let close_brace = self.match_token(TokenKind::CloseBrace);
+
+        SyntaxNode::ObjectNode(node::ObjectNode::new(open_brace, elements, close_brace))
     }
 
     fn parse_paran_expression(&self) -> SyntaxNode {
