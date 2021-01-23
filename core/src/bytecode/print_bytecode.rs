@@ -119,6 +119,11 @@ fn print_instr(
             style::Print("MakeList\t\t"),
             style::Print(format!("len: {}", len))
         ),
+        InstructionKind::MakeObject { len } => queue!(
+            stdout,
+            style::Print("MakeObject\t\t"),
+            style::Print(format!("len: {}", len))
+        ),
         InstructionKind::MakeRange => queue!(stdout, style::Print("MakeRange\t\t")),
         InstructionKind::PushVar { scope } => queue!(
             stdout,

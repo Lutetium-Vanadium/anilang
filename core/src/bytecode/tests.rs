@@ -201,8 +201,16 @@ fn serialize_instr_make_list() {
 }
 
 #[test]
+fn serialize_instr_make_object() {
+    test_serialize(
+        InstructionKind::MakeObject { len: 6 },
+        vec![28, 6, 0, 0, 0, 0, 0, 0, 0],
+    );
+}
+
+#[test]
 fn serialize_instr_make_range() {
-    test_serialize(InstructionKind::MakeRange, vec![28]);
+    test_serialize(InstructionKind::MakeRange, vec![29]);
 }
 
 #[test]
@@ -211,11 +219,11 @@ fn serialize_instr_push_var() {
         InstructionKind::PushVar {
             scope: Rc::new(Scope::new(0, None)),
         },
-        vec![29, 0, 0, 0, 0, 0, 0, 0, 0],
+        vec![30, 0, 0, 0, 0, 0, 0, 0, 0],
     );
 }
 
 #[test]
 fn serialize_instr_pop_var() {
-    test_serialize(InstructionKind::PopVar, vec![30]);
+    test_serialize(InstructionKind::PopVar, vec![31]);
 }

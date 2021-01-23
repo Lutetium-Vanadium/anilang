@@ -188,7 +188,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
                 SyntaxNode::BlockNode(block) => self.lower_block(block),
                 SyntaxNode::LiteralNode(literal) => self.lower_literal(literal),
                 SyntaxNode::ListNode(node) => self.lower_list(node),
-                SyntaxNode::ObjectNode(node) => todo!("Implement {}", node),
+                SyntaxNode::ObjectNode(node) => self.lower_object(node),
                 SyntaxNode::VariableNode(variable) => self.lower_variable(variable),
                 SyntaxNode::IndexNode(node) => self.lower_index(node),
                 SyntaxNode::IfNode(node) => self.lower_if(node),
@@ -272,6 +272,18 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         self.bytecode.push(Instruction::new(
             InstructionKind::MakeList { len },
             list.span,
+        ));
+    }
+
+    fn lower_object(&mut self, object: node::ObjectNode) {
+        assert_eq!(object.elements.len() % 2, 0);
+        let len = object.elements.len() / 2;
+        for node in object.elements.into_iter().rev() {
+            self.lower_node(node);
+        }
+        self.bytecode.push(Instruction::new(
+            InstructionKind::MakeObject { len },
+            object.span,
         ));
     }
 

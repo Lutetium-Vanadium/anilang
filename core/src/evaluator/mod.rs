@@ -137,6 +137,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 }
                 InstructionKind::Label { .. } => {}
                 InstructionKind::MakeList { len } => self.evaluate_make_list(*len),
+                InstructionKind::MakeObject { len } => self.evaluate_make_object(*len),
                 InstructionKind::MakeRange => self.evaluate_make_range(),
                 InstructionKind::PushVar { scope } => self.evaluate_push_var(Rc::clone(scope)),
                 InstructionKind::PopVar => self.evaluate_pop_var(),
@@ -457,6 +458,10 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         }
 
         self.stack.push(Value::List(Rc::new(RefCell::new(list))));
+    }
+
+    fn evaluate_make_object(&mut self, _len: usize) {
+        todo!()
     }
 
     fn evaluate_make_range(&mut self) {

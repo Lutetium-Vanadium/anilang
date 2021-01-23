@@ -28,6 +28,7 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
             SyntaxNode::IfNode(node) => self.evaluate_if(node),
             SyntaxNode::IndexNode(node) => self.evaluate_index(node),
             SyntaxNode::ListNode(node) => self.evaluate_list(node),
+            SyntaxNode::ObjectNode(node) => self.evaluate_object(node),
             SyntaxNode::UnaryNode(node) => self.evaluate_unary(node),
             SyntaxNode::LiteralNode(node) => node.value,
             _ => unreachable!(),
@@ -115,6 +116,10 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
             list.push(self.evaluate_node(e));
         }
         Value::List(std::rc::Rc::new(std::cell::RefCell::new(list)))
+    }
+
+    fn evaluate_object(&self, _node: node::ObjectNode) -> Value {
+        todo!()
     }
 
     fn evaluate_unary(&self, node: node::UnaryNode) -> Value {

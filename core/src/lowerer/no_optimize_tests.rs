@@ -369,6 +369,36 @@ fn lower_list_properly() {
 }
 
 #[test]
+fn lower_object_properly() {
+    let elements = [s("a"), i(0), s("b"), l(vec![f(0.0), b(false)])];
+
+    assert_eq!(
+        lower(SyntaxNode::ObjectNode(node::ObjectNode {
+            span: span(),
+            elements: elements
+                .iter()
+                .map(|e| {
+                    SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: e.clone(),
+                    })
+                })
+                .collect(),
+        })),
+        vec![
+            InstructionKind::Push {
+                value: l(vec![f(0.0), b(false)]) // This list is not created in the syntax tree
+            }
+            .into(),
+            InstructionKind::Push { value: s("b") }.into(),
+            InstructionKind::Push { value: i(0) }.into(),
+            InstructionKind::Push { value: s("a") }.into(),
+            InstructionKind::MakeObject { len: 2 }.into(),
+        ],
+    );
+}
+
+#[test]
 fn lower_assignment_properly() {
     assert_eq!(
         lower(SyntaxNode::AssignmentNode(node::AssignmentNode {
