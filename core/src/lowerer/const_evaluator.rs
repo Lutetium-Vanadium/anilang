@@ -1,8 +1,10 @@
 use crate::diagnostics::Diagnostics;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
-use crate::value::Value;
+use crate::types::Type;
+use crate::value::{ErrorKind, Value};
 use node::SyntaxNode;
+use std::collections::HashMap;
 
 /// An evaluator used to optimize constant expressions to a single value.
 /// It executes the constant expression directly in the form of the syntax tree independent of
@@ -118,8 +120,29 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
         Value::List(std::rc::Rc::new(std::cell::RefCell::new(list)))
     }
 
-    fn evaluate_object(&self, _node: node::ObjectNode) -> Value {
-        todo!()
+    fn evaluate_object(&self, mut node: node::ObjectNode) -> Value {
+        let len = node.elements.len() / 2;
+        let mut map = HashMap::with_capacity(len);
+
+        for _ in 0..len {
+            let v = self.evaluate_node(node.elements.pop().unwrap());
+            let k_node = node.elements.pop().unwrap();
+            let k_span = k_node.span().clone();
+            let k = self.evaluate_node(k_node);
+            if k.type_() != Type::String {
+                self.diagnostics.from_value_error(
+                    ErrorKind::IncorrectType {
+                        got: k.type_(),
+                        expected: Type::String.into(),
+                    },
+                    k_span,
+                );
+            } else {
+                map.insert(k.into_str(), v);
+            }
+        }
+
+        Value::Object(std::rc::Rc::new(std::cell::RefCell::new(map)))
     }
 
     fn evaluate_unary(&self, node: node::UnaryNode) -> Value {

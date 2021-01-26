@@ -7,7 +7,9 @@ use crossterm::style;
 pub struct ObjectNode {
     pub span: TextSpan,
     // Not stored as a HashMap<SyntaxNode, SyntaxNode>, but instead as a Vec<SyntaxNode> where the
-    // (2*n)th element is the key for the (2*n + 1)th element for int n >= 0
+    // (2*n)th element is the key for the (2*n + 1)th element for int n >= 0. Also the keys are
+    // stored as SyntaxNode since they don't have to be direct Strings, but can also be expressions
+    // that evaluate to strings
     pub elements: Vec<SyntaxNode>,
 }
 

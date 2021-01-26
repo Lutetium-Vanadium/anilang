@@ -26,16 +26,17 @@ pub enum Cast {
 /// stored in just one byte, rather than storing multiple types in a `Vec` or array
 #[derive(Copy, Clone, Debug, PartialEq, Eq, BitFlags)]
 #[rustfmt::skip]
-#[repr(u8)]
+#[repr(u16)]
 pub enum Type {
-    Int      = 0b00000001,
-    Float    = 0b00000010,
-    String   = 0b00000100,
-    List     = 0b00001000,
-    Range    = 0b00010000,
-    Bool     = 0b00100000,
-    Function = 0b01000000,
-    Null     = 0b10000000,
+    Int      = 0b000000001,
+    Float    = 0b000000010,
+    String   = 0b000000100,
+    List     = 0b000001000,
+    Object   = 0b000010000,
+    Range    = 0b000100000,
+    Bool     = 0b001000000,
+    Function = 0b010000000,
+    Null     = 0b100000000,
 }
 
 impl Type {
@@ -52,19 +53,20 @@ impl Type {
     }
 }
 
-impl From<u8> for Type {
-    fn from(value: u8) -> Type {
+impl From<u16> for Type {
+    fn from(value: u16) -> Type {
         match value {
-            0b00000001 => Type::Int,
-            0b00000010 => Type::Float,
-            0b00000100 => Type::String,
-            0b00001000 => Type::List,
-            0b00010000 => Type::Range,
-            0b00100000 => Type::Bool,
-            0b01000000 => Type::Function,
-            0b10000000 => Type::Null,
+            0b000000001 => Type::Int,
+            0b000000010 => Type::Float,
+            0b000000100 => Type::String,
+            0b000001000 => Type::List,
+            0b000010000 => Type::Object,
+            0b000100000 => Type::Range,
+            0b001000000 => Type::Bool,
+            0b010000000 => Type::Function,
+            0b100000000 => Type::Null,
             n => panic!(
-                "Invalid u8 {}, this method is only meant to be called with valid tags.",
+                "Invalid u16 {}, this method is only meant to be called with valid tags.",
                 n
             ),
         }
@@ -82,6 +84,7 @@ impl fmt::Display for Type {
                 Type::Float => "float",
                 Type::String => "string",
                 Type::List => "list",
+                Type::Object => "object",
                 Type::Range => "range",
                 Type::Bool => "bool",
                 Type::Function => "function",
@@ -120,6 +123,7 @@ impl Value {
             Value::Float(_) => Type::Float,
             Value::String(_) => Type::String,
             Value::List(_) => Type::List,
+            Value::Object(_) => Type::Object,
             Value::Range(..) => Type::Range,
             Value::Function(_) => Type::Function,
             Value::Null => Type::Null,

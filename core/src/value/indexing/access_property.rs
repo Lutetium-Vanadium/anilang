@@ -19,6 +19,13 @@ impl Value {
                 "pop" => Ok(make_fn(self, native::pop)),
                 _ => err(self, Rc::clone(&p)),
             },
+            Value::Object(o) => {
+                if let Some(val) = o.borrow().get(property.as_str()) {
+                    return Ok(val.clone());
+                }
+
+                err(self, Rc::clone(&p))
+            }
             Value::Range(s, e) => match property.as_str() {
                 "start" => Ok(Value::Int(*s)),
                 "end" => Ok(Value::Int(*e)),
@@ -32,7 +39,7 @@ impl Value {
         }
     }
 
-    pub fn set_property(self, p: Ref<String>, _value: Value) -> Result<Value> {
+    pub fn set_property(self, p: Ref<String>, value: Value) -> Result<Value> {
         let err_invalid = |val, property| Err(ErrorKind::InvalidProperty { val, property });
         let err_readonly = |val, property| Err(ErrorKind::ReadonlyProperty { val, property });
 
@@ -47,6 +54,11 @@ impl Value {
                 "len" | "push" | "pop" => err_readonly(self, Rc::clone(&p)),
                 _ => err_invalid(self, Rc::clone(&p)),
             },
+            Value::Object(o) => {
+                drop(property);
+                o.borrow_mut().insert(copy_str(p), value.clone());
+                Ok(value)
+            }
             Value::Range(..) => match property.as_str() {
                 "start" | "end" => err_readonly(self, Rc::clone(&p)),
                 _ => err_invalid(self, Rc::clone(&p)),
@@ -62,4 +74,10 @@ impl Value {
 
 fn make_fn(this: Value, native_fn: NativeFn) -> Value {
     Value::Function(Rc::new(Function::native_fn(native_fn).with_this(this)))
+}
+
+fn copy_str(string: Ref<String>) -> String {
+    Rc::try_unwrap(string)
+        .map(std::cell::RefCell::into_inner)
+        .unwrap_or_else(|string| string.borrow().as_str().to_owned())
 }

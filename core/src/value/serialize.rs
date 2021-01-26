@@ -4,7 +4,6 @@ use crate::types::Type;
 use std::cell::RefCell;
 use std::io::{self, prelude::*};
 use std::rc::Rc;
-use std::slice;
 
 impl Serialize for Value {
     fn serialize<W: Write>(&self, buf: &mut W) -> io::Result<usize> {
@@ -28,12 +27,8 @@ impl Serialize for Value {
                 Ok(17)
             }
             Value::List(l) => Ok(1 + l.borrow().serialize(buf)?),
-            Value::String(s) => {
-                let s = s.borrow();
-
-                s.serialize(buf)?;
-                Ok(2 + s.len())
-            }
+            Value::String(s) => Ok(1 + s.borrow().serialize(buf)?),
+            Value::Object(o) => Ok(1 + o.borrow().serialize(buf)?),
             Value::Function(f) => {
                 let f = f
                     .as_anilang_fn()
@@ -50,8 +45,7 @@ impl DeserializeCtx<DeserializationContext> for Value {
         data: &mut R,
         ctx: &mut DeserializationContext,
     ) -> io::Result<Value> {
-        let mut tag = 0;
-        data.read_exact(slice::from_mut(&mut tag))?;
+        let tag = u16::deserialize(data)?;
 
         Ok(match Type::from(tag) {
             Type::Int => Value::Int(i64::deserialize(data)?),
@@ -66,6 +60,9 @@ impl DeserializeCtx<DeserializationContext> for Value {
                 data, ctx,
             )?))),
             Type::String => Value::String(Rc::new(RefCell::new(String::deserialize(data)?))),
+            Type::Object => Value::Object(Rc::new(RefCell::new(
+                std::collections::HashMap::deserialize_with_context(data, ctx)?,
+            ))),
             Type::Function => {
                 let args = Vec::deserialize(data)?;
                 let body = Vec::deserialize_with_context(data, ctx)?;

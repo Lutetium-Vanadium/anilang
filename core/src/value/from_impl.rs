@@ -9,7 +9,7 @@
 ///     _ => unreachable!()
 /// }
 /// ```
-use super::{Function, List, Value};
+use super::{Function, List, Object, Value};
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
@@ -63,6 +63,7 @@ impl From<Value> for bool {
         match val {
             Value::String(s) => s.borrow().len() != 0,
             Value::List(l) => l.borrow().len() != 0,
+            Value::Object(o) => o.borrow().len() != 0,
             // A range is considered truthy as long as it doesn't have a length of zero
             Value::Range(s, e) => s != e,
             Value::Int(i) => i != 0,
@@ -82,6 +83,7 @@ impl From<&Value> for bool {
         match val {
             Value::String(s) => s.borrow().len() != 0,
             Value::List(l) => l.borrow().len() != 0,
+            Value::Object(o) => o.borrow().len() != 0,
             // A range is considered truthy as long as it doesn't have a length of zero
             Value::Range(s, e) => s != e,
             Value::Int(i) => i != &0,
@@ -121,12 +123,19 @@ impl Value {
         }
     }
 
+    pub fn into_str(self) -> String {
+        Rc::try_unwrap(self.into_rc_str())
+            .map(RefCell::into_inner)
+            .unwrap_or_else(|rc| rc.borrow().as_str().to_owned())
+    }
+
     pub fn to_ref_str(&self) -> Ref<String> {
         match self {
             Value::String(ref s) => s.borrow(),
             _ => unreachable!(),
         }
     }
+
     pub fn into_rc_list(self) -> Rc<RefCell<List>> {
         match self {
             Value::List(l) => l,
@@ -144,6 +153,20 @@ impl Value {
     pub fn into_rc_fn(self) -> Rc<Function> {
         match self {
             Value::Function(f) => f,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn into_rc_obj(self) -> Rc<RefCell<Object>> {
+        match self {
+            Value::Object(o) => o,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn to_ref_obj(&self) -> Ref<Object> {
+        match self {
+            Value::Object(ref o) => o.borrow(),
             _ => unreachable!(),
         }
     }

@@ -4,6 +4,7 @@ use crate::scope;
 use crate::types::Type;
 use crate::value::{ErrorKind, Value};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[cfg(test)]
@@ -460,8 +461,30 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         self.stack.push(Value::List(Rc::new(RefCell::new(list))));
     }
 
-    fn evaluate_make_object(&mut self, _len: usize) {
-        todo!()
+    fn evaluate_make_object(&mut self, len: usize) {
+        let e_msg = || {
+            panic!("Expect {} values on the stack", len * 2,);
+        };
+
+        let mut map = HashMap::with_capacity(len);
+        for _ in 0..len {
+            let k = self.stack.pop().unwrap_or_else(e_msg);
+            let v = self.stack.pop().unwrap_or_else(e_msg);
+            if k.type_() != Type::String {
+                self.diagnostics.from_value_error(
+                    ErrorKind::IncorrectType {
+                        got: k.type_(),
+                        expected: Type::String.into(),
+                    },
+                    self.bytecode[self.instr_i].span.clone(),
+                );
+                return;
+            }
+
+            map.insert(k.into_str(), v);
+        }
+
+        self.stack.push(Value::Object(Rc::new(RefCell::new(map))));
     }
 
     fn evaluate_make_range(&mut self) {

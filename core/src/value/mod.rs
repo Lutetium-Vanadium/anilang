@@ -15,6 +15,7 @@ mod tests;
 pub use function::{AnilangFn, Function, NativeFn};
 
 pub type List = Vec<Value>;
+pub type Object = std::collections::HashMap<String, Value>;
 pub type Ref<T> = Rc<RefCell<T>>;
 type Result<T> = std::result::Result<T, ErrorKind>;
 
@@ -43,11 +44,15 @@ pub enum Value {
     /// so instead of directly using `Rc<String>`, we use `Rc<RefCell<String>>` to provide mutable
     /// strings.
     String(Ref<String>),
-    /// `Vec`s are expensive to copy, so a `Rc` is used, copying the reference to the String,
-    /// and not the string itself. `Rc<T>` however gives only immutable access to the inner `T`,
-    /// so instead of directly using `Rc<Vec>`, we use `Rc<RefCell<Vec>>` to provide mutable
-    /// strings.
+    /// `Vec`s are expensive to copy, so a `Rc` is used, copying the reference to the List, and not
+    /// the list itself. `Rc<T>` however gives only immutable access to the inner `T`, so instead
+    /// of directly using `Rc<Vec>`, we use `Rc<RefCell<Vec>>` to provide mutable lists.
     List(Ref<List>),
+    /// `HashMap`s are expensive to copy so a `Rc` is used, copying the reference to the Object, and
+    /// not the object itself. `Rc<T>` however gives only immutable access to the inner `T`, so
+    /// instead of directly using `Rc<HashMap>`, we use `Rc<RefCell<HashMap>>` to provide mutable
+    /// objects.
+    Object(Ref<Object>),
     /// A pointer to a function, see `core/src/value/function/mod.rs` for more information, easy to
     /// copy so not placed in a `Rc`.
     Function(Rc<Function>),

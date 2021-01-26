@@ -56,7 +56,7 @@ impl Value {
         match self.type_() {
             Type::String if (Type::Int | Type::Range | Type::String).contains(index_type) => true,
             Type::List if (Type::Int | Type::Range | Type::String).contains(index_type) => true,
-            Type::Function | Type::Range if index_type == Type::String => true,
+            Type::Function | Type::Range | Type::Object if index_type == Type::String => true,
             _ => false,
         }
     }

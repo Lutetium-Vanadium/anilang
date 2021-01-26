@@ -486,11 +486,19 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
                 format!("TypeError: expected {} args, got {} args", expected, got)
             }
             value::ErrorKind::InvalidProperty { val, property } => {
-                format!(
-                    "InvalidProperty: property '{}' does not exist on type <{}>",
-                    property.borrow().as_str(),
-                    val.type_()
-                )
+                if let value::Value::Object(_) = val {
+                    format!(
+                        "InvalidProperty: property '{}' does not exist on object {}",
+                        property.borrow().as_str(),
+                        val,
+                    )
+                } else {
+                    format!(
+                        "InvalidProperty: property '{}' does not exist on type <{}>",
+                        property.borrow().as_str(),
+                        val.type_()
+                    )
+                }
             }
             value::ErrorKind::ReadonlyProperty { val, property } => {
                 format!(
