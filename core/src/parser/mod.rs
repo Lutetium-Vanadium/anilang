@@ -103,32 +103,42 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     }
 
     fn is_index_assign(&self) -> AssignmentType {
-        let mut i = self.index() + 2;
-        let mut open_bracket_count = 1;
+        let mut i = self.index() + 1;
+        let mut open_bracket_count = 0;
 
         while i < self.tokens.len() - 1 {
             match self.tokens[i].kind {
                 TokenKind::OpenBracket => open_bracket_count += 1,
-                TokenKind::CloseBracket if open_bracket_count == 1 => {
-                    if self.tokens[i + 1].is_calc_assign()
-                        && self.tokens[i + 2].kind == TokenKind::AssignmentOperator
-                    {
-                        return AssignmentType::CalcAssignment;
+                TokenKind::DotOperator => {
+                    // Probably illegal syntax, so no point checking
+                    if self.tokens[i + 1].kind != TokenKind::Ident {
+                        return AssignmentType::None;
                     }
-                    match self.tokens[i + 1].kind {
-                        // Add an extra so that the OpenBracket is skipped, and do not change
-                        // open_bracket_count since it needs to be decremented for the CloseBracket
-                        // and incremented for the OpenBracket
-                        TokenKind::OpenBracket => i += 1,
-                        TokenKind::AssignmentOperator => return AssignmentType::Assignment,
-                        _ => return AssignmentType::None,
-                    }
+                    i += 1;
                 }
                 TokenKind::CloseBracket => open_bracket_count -= 1,
                 _ => {}
             };
 
             i += 1;
+
+            if open_bracket_count == 0 && self.tokens[i].kind != TokenKind::DotOperator {
+                if self.tokens[i].is_calc_assign()
+                    && self.tokens[i + 1].kind == TokenKind::AssignmentOperator
+                {
+                    return AssignmentType::CalcAssignment;
+                }
+
+                match self.tokens[i].kind {
+                    // Add an extra so that the OpenBracket is skipped
+                    TokenKind::OpenBracket => {
+                        open_bracket_count = 1;
+                        i += 1
+                    }
+                    TokenKind::AssignmentOperator => return AssignmentType::Assignment,
+                    _ => return AssignmentType::None,
+                }
+            }
         }
 
         AssignmentType::None
@@ -217,22 +227,23 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     }
 
     fn parse_statement(&self) -> SyntaxNode {
+        if self.cur().kind == TokenKind::Ident
+            && matches!(
+                self.peek(1).kind,
+                TokenKind::DotOperator | TokenKind::OpenBracket
+            )
+        {
+            match self.is_index_assign() {
+                AssignmentType::Assignment => return self.parse_assignment_expression(),
+                AssignmentType::CalcAssignment => return self.parse_calc_assignment_expression(),
+                AssignmentType::None => {}
+            }
+        }
+
         let statement = match self.cur().kind {
             TokenKind::LetKeyword => self.parse_declaration_expression(),
             TokenKind::Ident if self.peek(1).kind == TokenKind::AssignmentOperator => {
                 self.parse_assignment_expression()
-            }
-            TokenKind::Ident
-                if self.peek(1).kind == TokenKind::OpenBracket
-                    && self.is_index_assign() == AssignmentType::Assignment =>
-            {
-                self.parse_assignment_expression()
-            }
-            TokenKind::Ident
-                if self.peek(1).kind == TokenKind::OpenBracket
-                    && self.is_index_assign() == AssignmentType::CalcAssignment =>
-            {
-                self.parse_calc_assignment_expression()
             }
             TokenKind::Ident
                 if self.peek(1).is_calc_assign()
@@ -273,20 +284,34 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         ))
     }
 
-    fn parse_assignment_expression(&self) -> SyntaxNode {
-        let ident = self.next();
-
-        let indices = if self.cur().kind == TokenKind::OpenBracket {
+    fn try_parse_indices(&self) -> Option<Vec<SyntaxNode>> {
+        if self.cur().kind == TokenKind::OpenBracket || self.cur().kind == TokenKind::DotOperator {
             let mut indices = Vec::new();
-            while self.cur().kind == TokenKind::OpenBracket {
-                self.next();
-                indices.push(self.parse_statement());
-                self.match_token(TokenKind::CloseBracket);
+            loop {
+                match self.cur().kind {
+                    TokenKind::OpenBracket => {
+                        self.next();
+                        indices.push(self.parse_statement());
+                        self.match_token(TokenKind::CloseBracket);
+                    }
+                    TokenKind::DotOperator => {
+                        self.next();
+                        let ident = self.match_token(TokenKind::Ident);
+                        indices.push(self.literal_from_ident(ident));
+                    }
+                    _ => break,
+                }
             }
             Some(indices)
         } else {
             None
-        };
+        }
+    }
+
+    fn parse_assignment_expression(&self) -> SyntaxNode {
+        let ident = self.next();
+
+        let indices = self.try_parse_indices();
 
         self.next();
         let value = self.parse_statement();
@@ -296,17 +321,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     fn parse_calc_assignment_expression(&self) -> SyntaxNode {
         let ident = self.next();
 
-        let indices = if self.cur().kind == TokenKind::OpenBracket {
-            let mut indices = Vec::new();
-            while self.cur().kind == TokenKind::OpenBracket {
-                self.next();
-                indices.push(self.parse_statement());
-                self.match_token(TokenKind::CloseBracket);
-            }
-            Some(indices)
-        } else {
-            None
-        };
+        let indices = self.try_parse_indices();
 
         let op = self.next();
         let span = TextSpan::from_spans(&op.text_span, &self.next().text_span);
@@ -698,7 +713,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 #[repr(u8)]
 enum AssignmentType {
     Assignment,

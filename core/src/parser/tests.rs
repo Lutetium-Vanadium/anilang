@@ -91,6 +91,43 @@ fn parse_assignment_properly() {
             ..
         })
     ));
+
+    let tokens = vec![
+        Token::new(TokenKind::Ident, 0, 1),
+        Token::new(TokenKind::DotOperator, 1, 1),
+        Token::new(TokenKind::Ident, 2, 2),
+        Token::new(TokenKind::AssignmentOperator, 5, 1),
+        Token::new(TokenKind::Number, 7, 3),
+        Token::new(TokenKind::EOF, 10, 0),
+    ];
+    let root = parse("a.bc = 123", tokens);
+    assert_eq!(root.block.len(), 1);
+
+    let an = match &root.block[0] {
+        SyntaxNode::AssignmentNode(an) if &an.ident == "a" => an,
+        n => panic!("expected AssignmentNode with ident 'a', got {:?}", n),
+    };
+
+    assert_eq!(an.indices.as_ref().unwrap().len(), 1);
+    assert_eq!(
+        match &an.indices.as_ref().unwrap()[0] {
+            SyntaxNode::LiteralNode(node::LiteralNode {
+                value: Value::String(s),
+                ..
+            }) => s,
+            n => panic!("Expected Literal string, got {:?}", n),
+        }
+        .borrow()
+        .as_str(),
+        "bc"
+    );
+    assert!(matches!(
+        *an.value,
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(123),
+            ..
+        })
+    ));
 }
 
 #[test]
@@ -127,6 +164,101 @@ fn parse_calc_assignment_properly() {
             ..
         })
     ));
+
+    let tokens = vec![
+        Token::new(TokenKind::Ident, 0, 1),
+        Token::new(TokenKind::OpenBracket, 1, 1),
+        Token::new(TokenKind::Number, 2, 1),
+        Token::new(TokenKind::CloseBracket, 3, 1),
+        Token::new(TokenKind::DotOperator, 4, 1),
+        Token::new(TokenKind::Ident, 5, 1),
+        Token::new(TokenKind::PlusOperator, 7, 1),
+        Token::new(TokenKind::AssignmentOperator, 8, 1),
+        Token::new(TokenKind::Number, 10, 3),
+        Token::new(TokenKind::EOF, 10, 0),
+    ];
+    let root = dbg!(parse("a[0].b += 123", tokens));
+    assert_eq!(root.block.len(), 1);
+
+    let an = match &root.block[0] {
+        SyntaxNode::AssignmentNode(an) if &an.ident == "a" => an,
+        n => panic!("expected AssignmentNode with ident 'a', got {:?}", n),
+    };
+
+    let bn = match &*an.value {
+        SyntaxNode::BinaryNode(bn) if bn.operator == TokenKind::PlusOperator => bn,
+        n => panic!("expected BinaryNode with PlusOperator, got {:?}", n),
+    };
+
+    let (left_index, left_child) = match &*bn.left {
+        SyntaxNode::IndexNode(node::IndexNode { index, child, .. }) => (&**index, &**child),
+        n => panic!("expected index node, got {:?}", n),
+    };
+
+    let (left_child_index, left_child_child) = match left_child {
+        SyntaxNode::IndexNode(node::IndexNode { index, child, .. }) => (&**index, &**child),
+        n => panic!("expected index node, got {:?}", n),
+    };
+
+    assert!(matches!(
+        left_child_index,
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(0),
+            ..
+        })
+    ));
+
+    assert_eq!(
+        match left_child_child {
+            SyntaxNode::VariableNode(node::VariableNode { ident, .. }) => ident,
+            n => panic!("expected variable node, got {:?}", n),
+        }
+        .as_str(),
+        "a"
+    );
+
+    assert_eq!(
+        match left_index {
+            SyntaxNode::LiteralNode(node::LiteralNode {
+                value: Value::String(s),
+                ..
+            }) => s,
+            n => panic!("expected literal string, got {:?}", n),
+        }
+        .borrow()
+        .as_str(),
+        "b"
+    );
+
+    assert!(matches!(
+        &*bn.right,
+        &SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(123),
+            ..
+        })
+    ));
+
+    assert_eq!(an.indices.as_ref().unwrap().len(), 2);
+    assert!(matches!(
+        an.indices.as_ref().unwrap()[0],
+        SyntaxNode::LiteralNode(node::LiteralNode {
+            value: Value::Int(0),
+            ..
+        })
+    ));
+
+    assert_eq!(
+        match &an.indices.as_ref().unwrap()[1] {
+            SyntaxNode::LiteralNode(node::LiteralNode {
+                value: Value::String(s),
+                ..
+            }) => s,
+            n => panic!("Expected Literal string, got {:?}", n),
+        }
+        .borrow()
+        .as_str(),
+        "b"
+    );
 }
 
 #[test]
