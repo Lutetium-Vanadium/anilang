@@ -7,35 +7,35 @@ use std::rc::Rc;
 
 impl Serialize for Value {
     fn serialize<W: Write>(&self, buf: &mut W) -> io::Result<usize> {
-        buf.write_all(&[self.type_() as u8])?;
+        (self.type_() as u16).serialize(buf)?;
         match self {
             Value::Int(i) => {
                 i.serialize(buf)?;
-                Ok(9)
+                Ok(10)
             }
             Value::Float(f) => {
                 f.serialize(buf)?;
-                Ok(9)
+                Ok(10)
             }
             Value::Bool(b) => {
                 b.serialize(buf)?;
-                Ok(2)
+                Ok(3)
             }
             Value::Range(s, e) => {
                 s.serialize(buf)?;
                 e.serialize(buf)?;
-                Ok(17)
+                Ok(18)
             }
-            Value::List(l) => Ok(1 + l.borrow().serialize(buf)?),
-            Value::String(s) => Ok(1 + s.borrow().serialize(buf)?),
-            Value::Object(o) => Ok(1 + o.borrow().serialize(buf)?),
+            Value::List(l) => Ok(2 + l.borrow().serialize(buf)?),
+            Value::String(s) => Ok(2 + s.borrow().serialize(buf)?),
+            Value::Object(o) => Ok(2 + o.borrow().serialize(buf)?),
             Value::Function(f) => {
                 let f = f
                     .as_anilang_fn()
                     .expect("Native Function cannot be serialized");
-                Ok(1 + f.args.serialize(buf)? + f.body.serialize(buf)?)
+                Ok(2 + f.args.serialize(buf)? + f.body.serialize(buf)?)
             }
-            Value::Null => Ok(1),
+            Value::Null => Ok(2),
         }
     }
 }
@@ -106,12 +106,12 @@ mod tests {
 
     #[test]
     fn int_serialize() {
-        test_serialize(i(12), vec![1, 12, 0, 0, 0, 0, 0, 0, 0]);
+        test_serialize(i(12), vec![1, 0, 12, 0, 0, 0, 0, 0, 0, 0]);
     }
 
     #[test]
     fn float_serialize() {
-        test_serialize(f(2.71), vec![2, 174, 71, 225, 122, 20, 174, 5, 64]);
+        test_serialize(f(2.71), vec![2, 0, 174, 71, 225, 122, 20, 174, 5, 64]);
     }
 
     #[test]
@@ -119,19 +119,24 @@ mod tests {
         test_serialize(
             s("Hello, World!"),
             vec![
-                4, b'H', b'e', b'l', b'l', b'o', b',', b' ', b'W', b'o', b'r', b'l', b'd', b'!',
+                4, 0, b'H', b'e', b'l', b'l', b'o', b',', b' ', b'W', b'o', b'r', b'l', b'd', b'!',
                 b'\0',
             ],
         );
     }
 
     #[test]
+    #[rustfmt::skip]
     fn list_serialize() {
         test_serialize(
             l(vec![i(21), b(true), l(vec![s("string"), n()])]),
             vec![
-                8, 3, 0, 0, 0, 0, 0, 0, 0, 1, 21, 0, 0, 0, 0, 0, 0, 0, 32, 1, 8, 2, 0, 0, 0, 0, 0,
-                0, 0, 4, b's', b't', b'r', b'i', b'n', b'g', b'\0', 128,
+                8, 0, 3, 0, 0, 0, 0, 0, 0, 0,                    // Outer list tag + len
+                1, 0, 21, 0, 0, 0, 0, 0, 0, 0,                   // int 21
+                64, 0, 1,                                        // bool true
+                8, 0, 2, 0, 0, 0, 0, 0, 0, 0,                    // Inner list tag + len
+                4, 0, b's', b't', b'r', b'i', b'n', b'g', b'\0', // String
+                0, 1,                                            // Null
             ],
         );
     }
@@ -140,14 +145,14 @@ mod tests {
     fn range_serialize() {
         test_serialize(
             r(0, 12),
-            vec![16, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0],
+            vec![32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0],
         );
     }
 
     #[test]
     fn bool_serialize() {
-        test_serialize(b(false), vec![32, 0]);
-        test_serialize(b(true), vec![32, 1]);
+        test_serialize(b(false), vec![64, 0, 0]);
+        test_serialize(b(true), vec![64, 0, 1]);
     }
 
     #[test]
@@ -171,7 +176,7 @@ mod tests {
         )));
 
         test_serialize(f, vec![
-            64, // Value tag
+            128, 0, // Value tag
             2, 0, 0, 0, 0, 0, 0, 0, // Length of args
             b'a', b'\0', b'b', b'\0', // Args
             5, 0, 0, 0, 0, 0, 0, 0, // Length of Instructions
@@ -191,6 +196,6 @@ mod tests {
 
     #[test]
     fn null_serialize() {
-        test_serialize(n(), vec![128]);
+        test_serialize(n(), vec![0, 1]);
     }
 }

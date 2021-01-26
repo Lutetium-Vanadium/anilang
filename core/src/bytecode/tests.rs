@@ -109,7 +109,7 @@ fn serialize_instr_pop() {
 fn serialize_instr_push() {
     test_serialize(
         InstructionKind::Push { value: i(2) },
-        vec![18, 1, 2, 0, 0, 0, 0, 0, 0, 0],
+        vec![18, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0],
     );
 }
 
