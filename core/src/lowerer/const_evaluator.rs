@@ -330,6 +330,34 @@ mod tests {
     }
 
     #[test]
+    fn evaluate_object_properly() {
+        let obj = eval(SyntaxNode::ObjectNode(node::ObjectNode {
+            span: span(),
+            elements: vec![
+                SyntaxNode::LiteralNode(node::LiteralNode {
+                    span: span(),
+                    value: s("key"),
+                }),
+                SyntaxNode::BinaryNode(node::BinaryNode {
+                    operator: TokenKind::PlusOperator,
+                    span: span(),
+                    left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: s("val"),
+                    })),
+                    right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: s("ue"),
+                    })),
+                }),
+            ],
+        }));
+        let obj = obj.to_ref_obj();
+        assert_eq!(obj.len(), 1);
+        assert_eq!(obj.get("key").unwrap().to_ref_str().as_str(), "value");
+    }
+
+    #[test]
     fn evaluate_range_properly() {
         assert_eq!(
             eval(SyntaxNode::BinaryNode(node::BinaryNode {

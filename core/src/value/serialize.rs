@@ -142,6 +142,19 @@ mod tests {
     }
 
     #[test]
+    #[rustfmt::skip]
+    fn object_serialize() {
+        test_serialize(
+            o(vec![("key", s("value"))]),
+            vec![
+                16, 0, 1, 0, 0, 0, 0, 0, 0, 0,              // Object tag + len
+                b'k', b'e', b'y', b'\0',                    // key string
+                4, 0, b'v', b'a', b'l', b'u', b'e', b'\0',  // value object
+            ],
+        );
+    }
+
+    #[test]
     fn range_serialize() {
         test_serialize(
             r(0, 12),

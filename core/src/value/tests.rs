@@ -48,6 +48,7 @@ fn unary_plus_invalid() {
     assert_eq!(b(true).plus(), err_it(Type::Bool));
     assert_eq!(s("a").plus(), err_it(Type::String));
     assert_eq!(l(vec![]).plus(), err_it(Type::List));
+    assert_eq!(o(vec![]).plus(), err_it(Type::Object));
     assert_eq!(r(0, 1).plus(), err_it(Type::Range));
     assert_eq!(func().plus(), err_it(Type::Function));
     assert_eq!(n().plus(), err_it(Type::Null));
@@ -64,6 +65,7 @@ fn unary_minus_invalid() {
     assert_eq!(-b(true), err_it(Type::Bool));
     assert_eq!(-s("a"), err_it(Type::String));
     assert_eq!(-l(vec![]), err_it(Type::List));
+    assert_eq!(-o(vec![]), err_it(Type::Object));
     assert_eq!(-r(0, 1), err_it(Type::Range));
     assert_eq!(-func(), err_it(Type::Function));
     assert_eq!(-n(), err_it(Type::Null));
@@ -85,6 +87,9 @@ fn unary_not() {
 
     assert_eq!(bool::from(!l(vec![i(0)])), false);
     assert_eq!(bool::from(!l(vec![])), true);
+
+    assert_eq!(bool::from(!o(vec![("key", i(0))])), false);
+    assert_eq!(bool::from(!o(vec![])), true);
 
     assert_eq!(bool::from(!r(0, 1)), false);
     assert_eq!(bool::from(!r(0, 0)), true);
@@ -115,6 +120,7 @@ fn binary_range_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -150,6 +156,7 @@ fn binary_add_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -178,6 +185,7 @@ fn binary_sub_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -206,6 +214,7 @@ fn binary_mult_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -234,6 +243,7 @@ fn binary_div_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -264,6 +274,7 @@ fn binary_mod_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -294,6 +305,7 @@ fn binary_pow_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -329,12 +341,21 @@ fn binary_or() {
     assert_eq!(s("").or(s("world")), s("world"));
 
     assert_eq!(
-        l(vec![i(0), f(2.0), b(true)]).or(l(vec![i(0), f(2.0), b(true)])),
+        l(vec![i(0), f(2.0), b(true)]).or(l(vec![i(2), f(6.0), b(false)])),
         l(vec![i(0), f(2.0), b(true)])
     );
     assert_eq!(
         l(vec![]).or(l(vec![i(0), f(2.0), b(true)])),
         l(vec![i(0), f(2.0), b(true)])
+    );
+
+    assert_eq!(
+        o(vec![("key", s("value"))]).or(o(vec![])),
+        o(vec![("key", s("value"))])
+    );
+    assert_eq!(
+        o(vec![]).or(o(vec![("key", s("value"))])),
+        o(vec![("key", s("value"))])
     );
 
     assert_eq!(r(0, 1).or(r(2, 3)), r(0, 1));
@@ -396,6 +417,7 @@ fn binary_eq() {
         l(vec![i(0), f(2.0), b(true)]),
         l(vec![i(0), f(2.0), b(true)])
     );
+    assert_eq!(o(vec![("key", s("value"))]), o(vec![("key", s("value"))]),);
     assert_eq!(r(0, 1), r(0, 1));
     assert_eq!(b(true), b(true));
     assert_eq!(b(false), b(false));
@@ -415,6 +437,7 @@ fn binary_ne() {
         l(vec![i(0), f(2.0), b(true)]),
         l(vec![s("world"), f(2.0), b(true)]),
     );
+    assert_ne!(o(vec![("key", s("value"))]), o(vec![]),);
     assert_ne!(r(0, 1), r(2, 3));
     assert_ne!(b(true), b(false));
     assert_ne!(b(false), b(true));

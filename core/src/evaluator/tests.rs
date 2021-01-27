@@ -269,6 +269,20 @@ fn evaluate_list_properly() {
 }
 
 #[test]
+fn evaluate_obj_properly() {
+    let bytecode = vec![
+        InstructionKind::Push { value: s("value") }.into(),
+        InstructionKind::Push { value: s("key") }.into(),
+        InstructionKind::MakeObject { len: 1 }.into(),
+    ];
+
+    let obj = eval(bytecode);
+    let obj = obj.to_ref_obj();
+    assert_eq!(obj.len(), 1);
+    assert_eq!(obj.get("key").unwrap().to_ref_str().as_str(), "value");
+}
+
+#[test]
 fn evaluate_assignment_properly() {
     let scope = gen_scope(0, None);
     scope.declare("a".to_owned(), i(0)).unwrap();

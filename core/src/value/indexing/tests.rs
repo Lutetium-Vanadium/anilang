@@ -47,6 +47,7 @@ fn indexable_valid() {
     assert!(l(vec![]).indexable(Type::Int));
     assert!(s("string").indexable(Type::String));
     assert!(l(vec![]).indexable(Type::String));
+    assert!(o(vec![]).indexable(Type::String));
     assert!(r(0, 1).indexable(Type::String));
     assert!(func().indexable(Type::String));
 }
@@ -60,6 +61,7 @@ fn indexable_invalid() {
         n(),
         r(0, 1),
         func(),
+        o(vec![]),
         s("string"),
         l(vec![]),
     ];
@@ -68,11 +70,14 @@ fn indexable_invalid() {
         assert!(!value.indexable(Type::Float));
         assert!(!value.indexable(Type::Bool));
         assert!(!value.indexable(Type::Function));
+        assert!(!value.indexable(Type::Object));
+        assert!(!value.indexable(Type::List));
         assert!(!value.indexable(Type::Null));
     }
 
-    for value in &values[..6] {
+    for value in &values[..7] {
         assert!(!value.indexable(Type::Int));
+        assert!(!value.indexable(Type::Range));
     }
 
     for value in &values[..4] {
@@ -107,8 +112,16 @@ fn get_at_valid() {
             .unwrap(),
         i(4)
     );
-    assert!(l(vec! {}).get_at(s("push")).is_ok());
-    assert!(l(vec! {}).get_at(s("pop")).is_ok());
+    assert!(l(vec![]).get_at(s("push")).is_ok());
+    assert!(l(vec![]).get_at(s("pop")).is_ok());
+
+    assert_eq!(o(vec![("key", i(0))]).get_at(s("key")).unwrap(), i(0));
+    assert_eq!(
+        o(vec![("unicode└", b(false))])
+            .get_at(s("unicode└"))
+            .unwrap(),
+        b(false)
+    );
 
     assert_eq!(r(0, 1).get_at(s("start")).unwrap(), i(0));
     assert_eq!(r(0, 1).get_at(s("end")).unwrap(), i(1));
@@ -129,6 +142,8 @@ fn get_at_invalid() {
         err_ior(-12, 3)
     );
     test_invalid_prop(l(vec![i(0), f(2.0), b(true)]), "unknown_property");
+
+    test_invalid_prop(o(vec![]), "unknown_property");
 
     test_invalid_prop(r(0, 1), "unknown_property");
     test_invalid_prop(func(), "unknown_property");
@@ -197,6 +212,15 @@ fn set_at_valid() {
             .to_ref_list()[..],
         [i(0), b(false), s("string"), b(true)]
     );
+
+    let obj = o(vec![("already_exists", n())]);
+    assert_eq!(obj.clone().set_at(s("already_exists"), i(1)).unwrap(), i(1));
+    assert_eq!(obj.clone().set_at(s("doesnt_exist"), i(2)).unwrap(), i(2));
+
+    let obj = obj.to_ref_obj();
+
+    assert_eq!(*obj.get("already_exists").unwrap(), i(1));
+    assert_eq!(*obj.get("doesnt_exist").unwrap(), i(2));
 }
 
 #[test]

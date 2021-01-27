@@ -89,6 +89,16 @@ pub mod v {
         Value::List(Rc::new(RefCell::new(l)))
     }
 
+    /// Creates an `anilang::Value::Object()`
+    #[allow(dead_code)]
+    pub fn o(o: Vec<(&str, Value)>) -> Value {
+        let mut obj = std::collections::HashMap::new();
+        for (k, v) in o {
+            obj.insert(k.to_owned(), v);
+        }
+        Value::Object(Rc::new(RefCell::new(obj)))
+    }
+
     /// Creates an `anilang::Value::Null`
     #[allow(dead_code)]
     pub fn n() -> Value {
@@ -96,6 +106,7 @@ pub mod v {
     }
 }
 
+// FIXME: No longer true, replace all is_null() with == Value::Null
 /// null != null, therefore checking if a value is null be using `assert_eq` or `==`, gives false
 /// negative, this should be used instead
 pub trait IsNull {

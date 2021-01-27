@@ -199,9 +199,19 @@ mod tests {
         assert_eq!(bool::from(b(true)), true);
         assert_eq!(bool::from(b(false)), false);
 
+        assert_eq!(bool::from(r(0, 1)), true);
+        assert_eq!(bool::from(r(0, 0)), false);
+
         assert_eq!(bool::from(s("s")), true);
         assert_eq!(bool::from(s("")), false);
 
+        assert_eq!(bool::from(l(vec![i(0)])), true);
+        assert_eq!(bool::from(l(vec![])), false);
+
+        assert_eq!(bool::from(o(vec![("hello", i(0))])), true);
+        assert_eq!(bool::from(o(vec![])), false);
+
+        assert_eq!(bool::from(func()), true);
         assert_eq!(bool::from(n()), false);
     }
 
@@ -217,6 +227,11 @@ mod tests {
     }
 
     #[test]
+    fn val_to_str() {
+        assert_eq!(s("string").into_str().as_str(), "string");
+    }
+
+    #[test]
     fn val_to_ref_list() {
         assert_eq!(
             l(vec![i(0), i(1), s("s")]).into_rc_list().borrow()[..],
@@ -226,6 +241,22 @@ mod tests {
             l(vec![i(0), i(1), s("s")]).to_ref_list()[..],
             [i(0), i(1), s("s")]
         );
+    }
+
+    #[test]
+    fn val_to_ref_obj() {
+        let obj = o(vec![("a", i(0)), ("b", b(true))]);
+
+        let ref_obj = obj.to_ref_obj();
+
+        assert_eq!(*ref_obj.get("a").unwrap(), i(0));
+        assert_eq!(*ref_obj.get("b").unwrap(), b(true));
+        drop(ref_obj);
+
+        let rc_obj = obj.into_rc_obj();
+
+        assert_eq!(*rc_obj.borrow().get("a").unwrap(), i(0));
+        assert_eq!(*rc_obj.borrow().get("b").unwrap(), b(true));
     }
 
     #[test]
