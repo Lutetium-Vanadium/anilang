@@ -4,7 +4,9 @@ use crate::Value;
 fn parse(text: &str, tokens: Vec<Token>) -> node::BlockNode {
     let src = SourceText::new(text);
     let diagnostics = Diagnostics::new(&src).no_print();
-    Parser::parse(tokens, &src, &diagnostics)
+    let root = Parser::parse(tokens, &src, &diagnostics);
+    assert!(!diagnostics.any());
+    root
 }
 
 #[test]
@@ -965,22 +967,29 @@ fn parse_object_properly() {
 
     let tokens = vec![
         Token::new(TokenKind::OpenBrace, 0, 1),
-        Token::new(TokenKind::Number, 2, 1),
-        Token::new(TokenKind::ColonOperator, 3, 1),
-        Token::new(TokenKind::Number, 5, 1),
-        Token::new(TokenKind::CloseBrace, 7, 1),
-        Token::new(TokenKind::EOF, 8, 0),
+        Token::new(TokenKind::OpenParan, 2, 1),
+        Token::new(TokenKind::String, 3, 3),
+        Token::new(TokenKind::CloseParan, 6, 1),
+        Token::new(TokenKind::ColonOperator, 7, 1),
+        Token::new(TokenKind::Number, 9, 1),
+        Token::new(TokenKind::CloseBrace, 11, 1),
+        Token::new(TokenKind::EOF, 12, 0),
     ];
-    let elements = get_el("{ 1: 2 }", tokens);
+    let elements = get_el("{ ('a'): 2, }", tokens);
     assert_eq!(elements.len(), 2);
 
-    assert!(matches!(
-        elements[0],
-        SyntaxNode::LiteralNode(node::LiteralNode {
-            value: Value::Int(1),
-            ..
-        })
-    ));
+    assert_eq!(
+        match &elements[0] {
+            SyntaxNode::LiteralNode(node::LiteralNode {
+                value: Value::String(s),
+                ..
+            }) => s,
+            n => panic!("expected string literal, got {:?}", n),
+        }
+        .borrow()
+        .as_str(),
+        "a"
+    );
 
     assert!(matches!(
         elements[1],

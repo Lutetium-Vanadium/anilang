@@ -634,13 +634,14 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 }
             }
 
-            let next = self.next();
-            match next.kind {
-                TokenKind::CommaOperator => {}
+            match self.cur().kind {
+                TokenKind::CommaOperator => {
+                    self.next();
+                }
                 TokenKind::CloseBrace => break,
                 _ => {
                     self.diagnostics
-                        .unexpected_token(next, Some(&TokenKind::CommaOperator));
+                        .unexpected_token(self.next(), Some(&TokenKind::CommaOperator));
                     break;
                 }
             }
