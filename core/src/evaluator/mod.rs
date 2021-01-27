@@ -472,9 +472,11 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             let v = self.stack.pop().unwrap_or_else(e_msg);
             if k.type_() != Type::String {
                 self.diagnostics.from_value_error(
-                    ErrorKind::IncorrectType {
-                        got: k.type_(),
-                        expected: Type::String.into(),
+                    ErrorKind::Other {
+                        message: format!(
+                            "IncorrectType: Object Keys must be of type <string>, got <{}>",
+                            k.type_()
+                        ),
                     },
                     self.bytecode[self.instr_i].span.clone(),
                 );
