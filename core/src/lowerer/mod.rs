@@ -189,6 +189,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
                 SyntaxNode::LiteralNode(literal) => self.lower_literal(literal),
                 SyntaxNode::ListNode(node) => self.lower_list(node),
                 SyntaxNode::ObjectNode(node) => self.lower_object(node),
+                SyntaxNode::InterfaceNode(_) => todo!(),
                 SyntaxNode::VariableNode(variable) => self.lower_variable(variable),
                 SyntaxNode::IndexNode(node) => self.lower_index(node),
                 SyntaxNode::IfNode(node) => self.lower_if(node),

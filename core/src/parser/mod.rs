@@ -252,6 +252,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 self.parse_calc_assignment_expression()
             }
             TokenKind::FnKeyword => self.parse_fn_declaration_statement(self.next()),
+            TokenKind::InterfaceKeyword => self.parse_interface_statement(),
             TokenKind::IfKeyword => self.parse_if_statement(),
             TokenKind::BreakKeyword => {
                 SyntaxNode::BreakNode(node::BreakNode::new(self.next().text_span.clone()))
@@ -396,6 +397,67 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             ident,
             args,
             block,
+        ))
+    }
+
+    fn parse_interface_statement(&self) -> SyntaxNode {
+        let interface_token = self.next();
+        let interface_ident = self.src[&self.match_token(TokenKind::Ident).text_span].to_owned();
+        self.match_token(TokenKind::OpenBrace);
+
+        let mut values = Vec::new();
+
+        let mut found_constructor = false;
+
+        let close_brace = loop {
+            let next = self.next();
+            match next.kind {
+                // fn <ident>(<args>...) { <-------.
+                //     ...                         | Declare functions which exist on the object, or
+                // }                               | can be used statically from the interface
+                // ^-------------------------------'
+                TokenKind::FnKeyword => {
+                    let ident = self.src[&self.match_token(TokenKind::Ident).text_span].to_owned();
+                    let function = self.parse_fn_declaration_statement(next);
+                    values.push((ident, function));
+                }
+                // <interface-name>(<args>...) { <-----.
+                //     ...                             | Special function which acts as a
+                // }                                   | constructor
+                // ^-----------------------------------'
+                TokenKind::Ident if self.src[&next.text_span] == interface_ident[..] => {
+                    let function = self.parse_fn_declaration_statement(next);
+                    if found_constructor {
+                        self.diagnostics
+                            .already_declared(interface_ident.as_str(), function.span().clone());
+                    } else {
+                        values.push((interface_ident.clone(), function));
+                        found_constructor = true;
+                    }
+                }
+                // <ident> = <stmt>
+                // ^^^^^^^^^^^^^^^^-- Declare regular properties which have some particular value
+                TokenKind::Ident => {
+                    let ident = self.src[&next.text_span].to_owned();
+                    self.match_token(TokenKind::AssignmentOperator);
+                    let value = self.parse_statement();
+                    values.push((ident, value));
+                }
+                // End of interface declaration
+                TokenKind::CloseBrace => {
+                    break next;
+                }
+                _ => self
+                    .diagnostics
+                    .unexpected_token(next, Some(&TokenKind::CloseBrace)),
+            }
+        };
+
+        SyntaxNode::InterfaceNode(node::InterfaceNode::new(
+            interface_token,
+            interface_ident,
+            values,
+            close_brace,
         ))
     }
 
