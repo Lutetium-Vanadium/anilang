@@ -97,6 +97,7 @@ fn print_token(
         TokenKind::IfKeyword
         | TokenKind::ElseKeyword
         | TokenKind::FnKeyword
+        | TokenKind::InterfaceKeyword
         | TokenKind::BreakKeyword
         | TokenKind::WhileKeyword
         | TokenKind::LoopKeyword

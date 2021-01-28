@@ -221,6 +221,7 @@ impl<'diagnostics, 'src, T: TextBase> Lexer<'diagnostics, 'src, T> {
                 "while" => TokenKind::WhileKeyword,
                 "let" => TokenKind::LetKeyword,
                 "fn" => TokenKind::FnKeyword,
+                "interface" => TokenKind::InterfaceKeyword,
                 _ => TokenKind::Ident,
             },
             start => e - start
