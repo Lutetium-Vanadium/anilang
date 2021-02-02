@@ -137,6 +137,8 @@ fn print_token(
         TokenKind::Ident => {
             if let Some(TokenKind::OpenParan) = next_token {
                 Color::DarkGreen
+            } else if text == "self" {
+                PURPLE
             } else {
                 Color::Reset
             }

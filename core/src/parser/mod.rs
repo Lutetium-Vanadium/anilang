@@ -421,6 +421,15 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 TokenKind::FnKeyword => {
                     let ident = self.src[&self.match_token(TokenKind::Ident).text_span].to_owned();
                     let function = self.parse_fn_declaration_statement(next);
+                    if ident == interface_ident {
+                        if found_constructor {
+                            self.diagnostics
+                                .already_declared(ident.as_str(), function.span().clone());
+                            continue;
+                        } else {
+                            found_constructor = true;
+                        }
+                    }
                     values.push((ident, function));
                 }
                 // <interface-name>(<args>...) { <-----.
@@ -448,6 +457,10 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 // End of interface declaration
                 TokenKind::CloseBrace => {
                     break next;
+                }
+                TokenKind::EOF => {
+                    self.diagnostics.unexpected_eof(next.text_span.clone());
+                    return SyntaxNode::BadNode(next.text_span.clone());
                 }
                 _ => self
                     .diagnostics

@@ -51,9 +51,10 @@ impl InterfaceNode {
                 style::SetForegroundColor(style::Color::Grey),
                 style::Print(&indent),
                 style::Print("├── "),
-                style::SetForegroundColor(style::Color::Green),
+                style::SetForegroundColor(style::Color::Yellow),
                 style::Print(&self.values[i].0),
                 style::ResetColor,
+                style::Print('\n'),
             );
             self.values[i]
                 .1

@@ -1,6 +1,18 @@
+use anilang::function::{native, Function};
 use std::rc::Rc;
 
 type Result = std::result::Result<anilang::Value, ()>;
+
+fn base_scope() -> Rc<anilang::Scope> {
+    let scope = Rc::new(anilang::Scope::new(0, None));
+    scope
+        .declare(
+            "assert".to_owned(),
+            anilang::Value::Function(Rc::new(Function::native_fn(native::assert))),
+        )
+        .expect("Could not declare assert");
+    scope
+}
 
 #[allow(dead_code)]
 fn _execute(code: &str, scope: Rc<anilang::Scope>) -> Result {
@@ -21,13 +33,13 @@ fn _execute(code: &str, scope: Rc<anilang::Scope>) -> Result {
 #[allow(dead_code)]
 /// Executes one statement
 pub fn execute(code: &str) -> Result {
-    _execute(code, Rc::new(anilang::Scope::new(0, None)))
+    _execute(code, base_scope())
 }
 
 #[allow(dead_code)]
 /// Executes many statements, with the same global scope
 pub fn execute_many(code: Vec<&str>) -> Vec<Result> {
-    let scope = Rc::new(anilang::Scope::new(0, None));
+    let scope = base_scope();
     code.iter()
         .map(|code| _execute(code, Rc::clone(&scope)))
         .collect()

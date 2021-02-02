@@ -82,7 +82,7 @@ impl fmt::Display for FunctionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             FunctionType::AnilangFn(func) => write!(f, "{}", func),
-            FunctionType::NativeFn(_) => write!(f, "Native function"),
+            FunctionType::NativeFn(_) => write!(f, "native function"),
         }
     }
 }

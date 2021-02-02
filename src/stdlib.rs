@@ -20,6 +20,7 @@ pub fn make_std() -> Rc<Scope> {
 
     declare_native_fn!(scope => print);
     declare_native_fn!(scope => input);
+    declare_native_fn!(scope => assert);
 
     scope
 }

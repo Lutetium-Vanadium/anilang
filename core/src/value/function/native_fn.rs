@@ -93,3 +93,15 @@ pub fn pop(args: Vec<Value>) -> Result<Value> {
         }),
     }
 }
+
+pub fn assert(args: Vec<Value>) -> Result<Value> {
+    for arg in args {
+        if !bool::from(&arg) {
+            return Err(ErrorKind::Other {
+                message: format!("Assertion failed: {} is not truthy", arg),
+            });
+        }
+    }
+
+    Ok(Value::Null)
+}
