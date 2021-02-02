@@ -119,7 +119,8 @@ fn print_token(
         | TokenKind::LTOperator
         | TokenKind::GTOperator
         | TokenKind::LEOperator
-        | TokenKind::GEOperator => RED,
+        | TokenKind::GEOperator
+        | TokenKind::ColonColonOperator => RED,
 
         TokenKind::Comment => Color::DarkGrey,
 
