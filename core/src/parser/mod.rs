@@ -327,7 +327,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         let op = self.next();
         let span = TextSpan::from_spans(&op.text_span, &self.next().text_span);
 
-        let mut left = SyntaxNode::VariableNode(node::VariableNode::new(ident, self.src));
+        let mut left =
+            SyntaxNode::VariableNode(node::VariableNode::new(ident.text_span.clone(), self.src));
         if let Some(ref indices) = indices {
             for index in indices {
                 left = SyntaxNode::IndexNode(node::IndexNode::from_span(
@@ -581,7 +582,13 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 self.parse_literal_expression()
             }
             TokenKind::Ident => {
-                SyntaxNode::VariableNode(node::VariableNode::new(self.next(), self.src))
+                let mut span = self.next().text_span.clone();
+                if let TokenKind::ColonColonOperator = self.cur().kind {
+                    self.next();
+                    span =
+                        TextSpan::from_spans(&span, &self.match_token(TokenKind::Ident).text_span);
+                }
+                SyntaxNode::VariableNode(node::VariableNode::new(span, self.src))
             }
             TokenKind::OpenBrace if self.is_object_declaration() => self.parse_object_expression(),
             TokenKind::OpenBrace => {
@@ -696,7 +703,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 TokenKind::Ident if self.peek(1).kind == TokenKind::CommaOperator => {
                     elements.push(self.literal_from_ident(self.cur()));
                     elements.push(SyntaxNode::VariableNode(node::VariableNode::new(
-                        self.next(),
+                        self.next().text_span.clone(),
                         self.src,
                     )))
                 }

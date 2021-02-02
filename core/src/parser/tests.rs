@@ -836,6 +836,15 @@ fn parse_variable_properly() {
     let tokens = vec![Token::new(TokenKind::Ident, 0, 1)];
     let root = parse("a", tokens);
     match_variable(root, "a");
+
+    let tokens = vec![
+        Token::new(TokenKind::Ident, 0, 1),
+        Token::new(TokenKind::ColonColonOperator, 1, 2),
+        Token::new(TokenKind::Ident, 3, 1),
+    ];
+
+    let root = parse("I::a", tokens);
+    match_variable(root, "I::a");
 }
 
 #[test]
