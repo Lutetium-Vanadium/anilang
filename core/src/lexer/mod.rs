@@ -91,7 +91,14 @@ impl<'diagnostics, 'src, T: TextBase> Lexer<'diagnostics, 'src, T> {
                         }
                     }
                     ',' => add!(self, TokenKind::CommaOperator, i => 1),
-                    ':' => add!(self, TokenKind::ColonOperator, i => 1),
+                    ':' => {
+                        if let Some((_, ':')) = self.chars.peek() {
+                            add!(self, TokenKind::ColonColonOperator, i => 2);
+                            self.chars.next();
+                        } else {
+                            add!(self, TokenKind::ColonOperator, i => 1);
+                        }
+                    }
 
                     '-' => add!(self, TokenKind::MinusOperator, i => 1),
                     '+' => add!(self, TokenKind::PlusOperator, i => 1),

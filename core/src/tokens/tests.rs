@@ -23,6 +23,7 @@ fn correct_unary_precedence() {
     assert_eq!(t(RangeOperator).unary_precedence(), 0);
     assert_eq!(t(CommaOperator).unary_precedence(), 0);
     assert_eq!(t(ColonOperator).unary_precedence(), 0);
+    assert_eq!(t(ColonColonOperator).unary_precedence(), 0);
     assert_eq!(t(AssignmentOperator).unary_precedence(), 0);
     assert_eq!(t(StarOperator).unary_precedence(), 0);
     assert_eq!(t(SlashOperator).unary_precedence(), 0);
@@ -85,6 +86,7 @@ fn correct_binary_precedence() {
     assert_eq!(t(RangeOperator).binary_precedence(), 0);
     assert_eq!(t(CommaOperator).binary_precedence(), 0);
     assert_eq!(t(ColonOperator).binary_precedence(), 0);
+    assert_eq!(t(ColonColonOperator).binary_precedence(), 0);
     assert_eq!(t(AssignmentOperator).binary_precedence(), 0);
     assert_eq!(t(OpenParan).binary_precedence(), 0);
     assert_eq!(t(CloseParan).binary_precedence(), 0);
@@ -133,6 +135,7 @@ fn is_calc_assign() {
     assert_eq!(t(RangeOperator).is_calc_assign(), false);
     assert_eq!(t(CommaOperator).is_calc_assign(), false);
     assert_eq!(t(ColonOperator).is_calc_assign(), false);
+    assert_eq!(t(ColonColonOperator).is_calc_assign(), false);
     assert_eq!(t(AssignmentOperator).is_calc_assign(), false);
     assert_eq!(t(OpenParan).is_calc_assign(), false);
     assert_eq!(t(CloseParan).is_calc_assign(), false);
