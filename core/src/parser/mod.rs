@@ -402,7 +402,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
     fn parse_interface_statement(&self) -> SyntaxNode {
         let interface_token = self.next();
-        let interface_ident = self.src[&self.match_token(TokenKind::Ident).text_span].to_owned();
+        let interface_ident_span = self.match_token(TokenKind::Ident).text_span.clone();
+        let interface_ident = self.src[&interface_ident_span].to_owned();
         self.match_token(TokenKind::OpenBrace);
 
         let mut values = Vec::new();
@@ -452,6 +453,19 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                     .unexpected_token(next, Some(&TokenKind::CloseBrace)),
             }
         };
+
+        if !found_constructor {
+            // Push an empty constructor
+            values.push((
+                interface_ident.clone(),
+                SyntaxNode::FnDeclarationNode(node::FnDeclarationNode::with_span(
+                    None,
+                    Vec::new(),
+                    node::BlockNode::new(vec![], interface_ident_span.clone()),
+                    interface_ident_span,
+                )),
+            ))
+        }
 
         SyntaxNode::InterfaceNode(node::InterfaceNode::new(
             interface_token,

@@ -94,6 +94,12 @@ impl From<FunctionType> for Value {
     }
 }
 
+impl From<AnilangFn> for FunctionType {
+    fn from(anilang_fn: AnilangFn) -> FunctionType {
+        FunctionType::AnilangFn(anilang_fn)
+    }
+}
+
 impl fmt::Debug for FunctionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

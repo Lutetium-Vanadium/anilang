@@ -25,6 +25,10 @@ impl DeclarationNode {
         }
     }
 
+    pub fn from_span(ident: String, value: Box<SyntaxNode>, span: TextSpan) -> Self {
+        Self { ident, value, span }
+    }
+
     pub(super) fn _prt(&self, mut indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
         let _ = print_node(style::Color::Blue, &indent, self, is_last, stdout);
 

@@ -619,7 +619,9 @@ fn parse_interface_properly() {
         Token::new(TokenKind::CloseBrace, 13, 1),
     ];
     let root = parse("interface A {}", tokens);
-    match_interface(root, "A", 0);
+    let (ident, val) = match_interface(root, "A", 1).pop().unwrap();
+    assert_eq!(ident.as_str(), "A");
+    match_fn_declaration(val, None, vec![], 0);
 
     let tokens = vec![
         Token::new(TokenKind::InterfaceKeyword, 0, 9),
@@ -631,9 +633,15 @@ fn parse_interface_properly() {
         Token::new(TokenKind::CloseBrace, 22, 1),
     ];
     let root = parse("interface A { b = 123 }", tokens);
-    let (ident, value) = match_interface(root, "A", 1).pop().unwrap();
+    let mut values = match_interface(root, "A", 2).into_iter();
+
+    let (ident, val) = values.next().unwrap();
     assert_eq!(ident.as_str(), "b");
-    match_literal(value, i(123));
+    match_literal(val, i(123));
+
+    let (ident, val) = values.next().unwrap();
+    assert_eq!(ident.as_str(), "A");
+    match_fn_declaration(val, None, vec![], 0);
 
     let tokens = vec![
         Token::new(TokenKind::InterfaceKeyword, 0, 9),
@@ -649,10 +657,16 @@ fn parse_interface_properly() {
         Token::new(TokenKind::CloseBrace, 30, 1),
     ];
     let root = parse("interface A { fn b() { 123 } }", tokens);
-    let (ident, value) = match_interface(root, "A", 1).pop().unwrap();
+    let mut values = match_interface(root, "A", 2).into_iter();
+
+    let (ident, val) = values.next().unwrap();
     assert_eq!(ident.as_str(), "b");
-    let mut body = match_fn_declaration(value, None, vec![], 1);
+    let mut body = match_fn_declaration(val, None, vec![], 1);
     match_literal(body.pop().unwrap(), i(123));
+
+    let (ident, val) = values.next().unwrap();
+    assert_eq!(ident.as_str(), "A");
+    match_fn_declaration(val, None, vec![], 0);
 
     let tokens = vec![
         Token::new(TokenKind::InterfaceKeyword, 0, 9),

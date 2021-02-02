@@ -1,6 +1,7 @@
 use super::*;
 use crate::test_helpers::*;
 use crate::text_span::*;
+use crate::types::Type;
 
 // These tests are leveraging the fact that scopes are compared through id only, in a real world
 // environment, this would be erroneous
@@ -27,139 +28,239 @@ fn lower(node: SyntaxNode) -> Bytecode {
     bytecode
 }
 
+fn test(a: Bytecode, b: Vec<InstructionKind>) {
+    let a: Vec<_> = a.into_iter().map(|i| i.kind).collect();
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "Failed test: different lengths: {} != {}\nleft: {:?}\nright: {:?}\n",
+        a.len(),
+        b.len(),
+        a,
+        b
+    );
+
+    for i in 0..a.len() {
+        assert_eq!(&a[i], &b[i]);
+    }
+}
+
+fn make_assignment(ident: &str, value: SyntaxNode, indices: Option<Vec<SyntaxNode>>) -> SyntaxNode {
+    SyntaxNode::AssignmentNode(node::AssignmentNode {
+        ident: ident.to_owned(),
+        value: Box::new(value),
+        indices,
+        span: span(),
+    })
+}
+
+fn make_binary(operator: TokenKind, left: SyntaxNode, right: SyntaxNode) -> SyntaxNode {
+    SyntaxNode::BinaryNode(node::BinaryNode {
+        operator,
+        left: Box::new(left),
+        right: Box::new(right),
+        span: span(),
+    })
+}
+
+fn block_from_vec(block: Vec<SyntaxNode>) -> node::BlockNode {
+    node::BlockNode::new(block, span())
+}
+
+fn make_break() -> SyntaxNode {
+    SyntaxNode::BreakNode(node::BreakNode::new(span()))
+}
+
+fn make_declaration(ident: &str, value: SyntaxNode) -> SyntaxNode {
+    SyntaxNode::DeclarationNode(node::DeclarationNode {
+        ident: ident.to_owned(),
+        value: Box::new(value),
+        span: span(),
+    })
+}
+
+fn make_fn_call(child: SyntaxNode, args: Vec<SyntaxNode>) -> SyntaxNode {
+    SyntaxNode::FnCallNode(node::FnCallNode {
+        child: Box::new(child),
+        args,
+        span: span(),
+    })
+}
+
+fn make_fn_declaration(ident: Option<&str>, args: Vec<&str>, block: Vec<SyntaxNode>) -> SyntaxNode {
+    SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
+        ident: ident.map(str::to_owned),
+        args: args.into_iter().map(str::to_owned).collect(),
+        block: block_from_vec(block),
+        span: span(),
+    })
+}
+
+fn make_if(
+    cond: SyntaxNode,
+    if_block: Vec<SyntaxNode>,
+    else_block: Option<Vec<SyntaxNode>>,
+) -> SyntaxNode {
+    SyntaxNode::IfNode(node::IfNode {
+        cond: Box::new(cond),
+        if_block: block_from_vec(if_block),
+        else_block: else_block.map(block_from_vec),
+        span: span(),
+    })
+}
+
+fn make_index(child: SyntaxNode, index: SyntaxNode) -> SyntaxNode {
+    SyntaxNode::IndexNode(node::IndexNode {
+        child: Box::new(child),
+        index: Box::new(index),
+        span: span(),
+    })
+}
+
+fn make_interface(ident: &str, values: Vec<(&str, SyntaxNode)>) -> SyntaxNode {
+    SyntaxNode::InterfaceNode(node::InterfaceNode {
+        ident: ident.to_owned(),
+        values: values.into_iter().map(|(a, b)| (a.to_owned(), b)).collect(),
+        span: span(),
+    })
+}
+
+fn make_list(elements: Vec<SyntaxNode>) -> SyntaxNode {
+    SyntaxNode::ListNode(node::ListNode {
+        elements,
+        span: span(),
+    })
+}
+
+fn make_literal(value: Value) -> SyntaxNode {
+    SyntaxNode::LiteralNode(node::LiteralNode {
+        value,
+        span: span(),
+    })
+}
+
+fn make_loop(block: Vec<SyntaxNode>) -> SyntaxNode {
+    SyntaxNode::LoopNode(node::LoopNode {
+        block,
+        span: span(),
+    })
+}
+
+fn make_object(elements: Vec<SyntaxNode>) -> SyntaxNode {
+    SyntaxNode::ObjectNode(node::ObjectNode {
+        elements,
+        span: span(),
+    })
+}
+
+fn make_return(value: Option<SyntaxNode>) -> SyntaxNode {
+    SyntaxNode::ReturnNode(node::ReturnNode {
+        value: value.map(|v| Box::new(v)),
+        span: span(),
+    })
+}
+
+fn make_unary(operator: TokenKind, child: SyntaxNode) -> SyntaxNode {
+    SyntaxNode::UnaryNode(node::UnaryNode {
+        child: Box::new(child),
+        operator,
+        span: span(),
+    })
+}
+
+fn make_variable(ident: &str) -> SyntaxNode {
+    SyntaxNode::VariableNode(node::VariableNode {
+        ident: ident.to_owned(),
+        span: span(),
+    })
+}
+
 #[test]
 fn lower_block_properly() {
-    let bytecode = lower_b(node::BlockNode {
-        span: span(),
-        block: vec![
-            SyntaxNode::DeclarationNode(node::DeclarationNode {
-                ident: "a".to_owned(),
-                span: span(),
-                value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                    span: span(),
-                    value: i(3),
-                })),
-            }),
-            SyntaxNode::AssignmentNode(node::AssignmentNode {
-                ident: "a".to_owned(),
-                span: span(),
-                indices: None,
-                value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
-                    operator: TokenKind::MinusOperator,
-                    span: span(),
-                    left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                        ident: "a".to_owned(),
-                        span: span(),
-                    })),
-                    right: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                        ident: "global".to_owned(),
-                        span: span(),
-                    })),
-                })),
-            }),
-            SyntaxNode::BinaryNode(node::BinaryNode {
-                operator: TokenKind::PlusOperator,
-                span: span(),
-                left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                    ident: "a".to_owned(),
-                    span: span(),
-                })),
-                right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(1),
-                    span: span(),
-                })),
-            }),
-        ],
-    });
+    let bytecode = lower_b(block_from_vec(vec![
+        make_declaration("a", make_literal(i(3))),
+        make_assignment(
+            "a",
+            make_binary(
+                TokenKind::MinusOperator,
+                make_variable("a"),
+                make_variable("global"),
+            ),
+            None,
+        ),
+        make_binary(
+            TokenKind::PlusOperator,
+            make_variable("a"),
+            make_literal(i(1)),
+        ),
+    ]));
 
-    assert_eq!(
+    test(
         bytecode,
         vec![
             InstructionKind::PushVar {
-                scope: gen_scope(0)
-            }
-            .into(),
-            InstructionKind::Push { value: i(3) }.into(),
+                scope: gen_scope(0),
+            },
+            InstructionKind::Push { value: i(3) },
             InstructionKind::Store {
                 ident: "a".to_owned(),
-                declaration: true
-            }
-            .into(),
-            InstructionKind::Pop.into(),
+                declaration: true,
+            },
+            InstructionKind::Pop,
             InstructionKind::Load {
-                ident: "global".to_owned()
-            }
-            .into(),
+                ident: "global".to_owned(),
+            },
             InstructionKind::Load {
-                ident: "a".to_owned()
-            }
-            .into(),
-            InstructionKind::BinarySubtract.into(),
+                ident: "a".to_owned(),
+            },
+            InstructionKind::BinarySubtract,
             InstructionKind::Store {
                 ident: "a".to_owned(),
-                declaration: false
-            }
-            .into(),
-            InstructionKind::Pop.into(),
-            InstructionKind::Push { value: i(1) }.into(),
+                declaration: false,
+            },
+            InstructionKind::Pop,
+            InstructionKind::Push { value: i(1) },
             InstructionKind::Load {
-                ident: "a".to_owned()
-            }
-            .into(),
-            InstructionKind::BinaryAdd.into(),
-            InstructionKind::PopVar.into(),
-        ]
+                ident: "a".to_owned(),
+            },
+            InstructionKind::BinaryAdd,
+            InstructionKind::PopVar,
+        ],
     );
 }
 
 #[test]
 fn lower_variable_properly() {
-    assert_eq!(
-        lower(SyntaxNode::VariableNode(node::VariableNode {
-            ident: "a".to_owned(),
-            span: span()
-        })),
+    test(
+        lower(make_variable("a")),
         vec![InstructionKind::Load {
-            ident: "a".to_owned()
-        }
-        .into()],
+            ident: "a".to_owned(),
+        }],
     );
 }
 
 #[test]
 fn lower_index_properly() {
-    let bytecode = lower(SyntaxNode::IndexNode(node::IndexNode {
-        span: span(),
-        index: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
-            span: span(),
-            operator: TokenKind::StarOperator,
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                span: span(),
-                value: i(2),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                span: span(),
-                value: i(3),
-            })),
-        })),
-        child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-            ident: "a".to_owned(),
-            span: span(),
-        })),
-    }));
+    let bytecode = lower(make_index(
+        make_variable("a"),
+        make_binary(
+            TokenKind::StarOperator,
+            make_literal(i(2)),
+            make_literal(i(3)),
+        ),
+    ));
 
-    assert_eq!(
+    test(
         bytecode,
         vec![
-            InstructionKind::Push { value: i(3) }.into(),
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::BinaryMultiply.into(),
+            InstructionKind::Push { value: i(3) },
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::BinaryMultiply,
             InstructionKind::Load {
-                ident: "a".to_owned()
-            }
-            .into(),
-            InstructionKind::GetIndex.into(),
-        ]
+                ident: "a".to_owned(),
+            },
+            InstructionKind::GetIndex,
+        ],
     );
 }
 
@@ -183,315 +284,434 @@ fn lower_index_properly() {
 // ```
 #[test]
 fn lower_if_properly() {
-    let bytecode = lower(SyntaxNode::IfNode(node::IfNode {
-        span: span(),
-        cond: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-            value: b(true),
-            span: span(),
-        })),
-        if_block: node::BlockNode {
-            span: span(),
-            block: vec![SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(0),
-                span: span(),
-            })],
-        },
-        else_block: Some(node::BlockNode {
-            span: span(),
-            block: vec![SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })],
-        }),
-    }));
+    let bytecode = lower(make_if(
+        make_literal(b(true)),
+        vec![make_literal(i(0))],
+        Some(vec![make_literal(i(1))]),
+    ));
 
-    assert_eq!(
+    test(
         bytecode,
         vec![
-            InstructionKind::Push { value: b(true) }.into(),
-            InstructionKind::PopJumpIfTrue { label: 0 }.into(),
+            InstructionKind::Push { value: b(true) },
+            InstructionKind::PopJumpIfTrue { label: 0 },
             InstructionKind::PushVar {
-                scope: gen_scope(1)
-            }
-            .into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::PopVar.into(),
-            InstructionKind::JumpTo { label: 1 }.into(),
-            InstructionKind::Label { number: 0 }.into(),
+                scope: gen_scope(1),
+            },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::PopVar,
+            InstructionKind::JumpTo { label: 1 },
+            InstructionKind::Label { number: 0 },
             InstructionKind::PushVar {
-                scope: gen_scope(2)
-            }
-            .into(),
-            InstructionKind::Push { value: i(0) }.into(),
-            InstructionKind::PopVar.into(),
-            InstructionKind::Label { number: 1 }.into(),
-        ]
+                scope: gen_scope(2),
+            },
+            InstructionKind::Push { value: i(0) },
+            InstructionKind::PopVar,
+            InstructionKind::Label { number: 1 },
+        ],
     );
 }
 
 #[test]
 fn lower_loop_properly() {
-    let bytecode = lower(SyntaxNode::LoopNode(node::LoopNode {
-        span: span(),
-        block: vec![
-            SyntaxNode::IfNode(node::IfNode {
-                span: span(),
-                cond: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
-                    operator: TokenKind::GEOperator,
-                    span: span(),
-                    left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                        ident: "a".to_owned(),
-                        span: span(),
-                    })),
-                    right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                        value: i(100),
-                        span: span(),
-                    })),
-                })),
-                if_block: node::BlockNode {
-                    span: span(),
-                    block: vec![SyntaxNode::BreakNode(node::BreakNode::new(span()))],
-                },
-                else_block: None,
-            }),
-            SyntaxNode::AssignmentNode(node::AssignmentNode {
-                ident: "a".to_owned(),
-                span: span(),
-                indices: None,
-                value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
-                    operator: TokenKind::PlusOperator,
-                    span: span(),
-                    left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                        ident: "a".to_owned(),
-                        span: span(),
-                    })),
-                    right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                        value: i(5),
-                        span: span(),
-                    })),
-                })),
-            }),
-        ],
-    }));
+    let bytecode = lower(make_loop(vec![
+        make_if(
+            make_binary(
+                TokenKind::GEOperator,
+                make_variable("a"),
+                make_literal(i(100)),
+            ),
+            vec![make_break()],
+            None,
+        ),
+        make_assignment(
+            "a",
+            make_binary(
+                TokenKind::PlusOperator,
+                make_variable("a"),
+                make_literal(i(5)),
+            ),
+            None,
+        ),
+    ]));
 
     let loop_start = 0;
     let loop_end = 1;
     let if_then = 2;
     let if_end = 3;
 
-    let temp = vec![
-        InstructionKind::PushVar {
-            scope: gen_scope(1),
-        }
-        .into(),
-        InstructionKind::Label { number: loop_start }.into(),
-        InstructionKind::Push { value: i(100) }.into(),
-        InstructionKind::Load {
-            ident: "a".to_owned(),
-        }
-        .into(),
-        InstructionKind::CompareGE.into(),
-        InstructionKind::PopJumpIfTrue { label: if_then }.into(),
-        InstructionKind::Push { value: n() }.into(),
-        InstructionKind::JumpTo { label: if_end }.into(),
-        InstructionKind::Label { number: if_then }.into(),
-        InstructionKind::PushVar {
-            scope: gen_scope(2),
-        }
-        .into(),
-        InstructionKind::PopVar.into(),
-        InstructionKind::JumpTo { label: loop_end }.into(),
-        InstructionKind::PopVar.into(),
-        InstructionKind::Label { number: if_end }.into(),
-        InstructionKind::Pop.into(),
-        InstructionKind::Push { value: i(5) }.into(),
-        InstructionKind::Load {
-            ident: "a".to_owned(),
-        }
-        .into(),
-        InstructionKind::BinaryAdd.into(),
-        InstructionKind::Store {
-            ident: "a".to_owned(),
-            declaration: false,
-        }
-        .into(),
-        InstructionKind::Pop.into(),
-        InstructionKind::JumpTo { label: loop_start }.into(),
-        InstructionKind::Label { number: loop_end }.into(),
-        InstructionKind::PopVar.into(),
-        InstructionKind::Push { value: n() }.into(),
-    ];
-
-    assert_eq!(bytecode, temp, "LEFT {:#?}\nRIGHT {:#?}", bytecode, temp,);
+    test(
+        bytecode,
+        vec![
+            InstructionKind::PushVar {
+                scope: gen_scope(1),
+            },
+            InstructionKind::Label { number: loop_start },
+            InstructionKind::Push { value: i(100) },
+            InstructionKind::Load {
+                ident: "a".to_owned(),
+            },
+            InstructionKind::CompareGE,
+            InstructionKind::PopJumpIfTrue { label: if_then },
+            InstructionKind::Push { value: n() },
+            InstructionKind::JumpTo { label: if_end },
+            InstructionKind::Label { number: if_then },
+            InstructionKind::PushVar {
+                scope: gen_scope(2),
+            },
+            InstructionKind::PopVar,
+            InstructionKind::JumpTo { label: loop_end },
+            InstructionKind::PopVar,
+            InstructionKind::Label { number: if_end },
+            InstructionKind::Pop,
+            InstructionKind::Push { value: i(5) },
+            InstructionKind::Load {
+                ident: "a".to_owned(),
+            },
+            InstructionKind::BinaryAdd,
+            InstructionKind::Store {
+                ident: "a".to_owned(),
+                declaration: false,
+            },
+            InstructionKind::Pop,
+            InstructionKind::JumpTo { label: loop_start },
+            InstructionKind::Label { number: loop_end },
+            InstructionKind::PopVar,
+            InstructionKind::Push { value: n() },
+        ],
+    );
 }
 
 #[test]
 fn lower_literal_properly() {
-    let values = [i(0), f(0.0), b(false), s("a")];
-    for val in values.iter() {
-        assert_eq!(
-            lower(SyntaxNode::LiteralNode(node::LiteralNode {
-                span: span(),
-                value: val.clone()
-            })),
-            vec![InstructionKind::Push { value: val.clone() }.into()],
+    let values = vec![i(0), f(0.0), b(false), s("a")];
+    for val in values {
+        test(
+            lower(make_literal(val.clone())),
+            vec![InstructionKind::Push { value: val }],
         );
     }
 }
 
 #[test]
 fn lower_list_properly() {
-    let elements = [i(0), s("a"), l(vec![f(0.0), b(false)])];
+    let elements = vec![i(0), s("a"), l(vec![f(0.0), b(false)])];
 
-    assert_eq!(
-        lower(SyntaxNode::ListNode(node::ListNode {
-            span: span(),
-            elements: elements
-                .iter()
-                .map(|e| {
-                    SyntaxNode::LiteralNode(node::LiteralNode {
-                        span: span(),
-                        value: e.clone(),
-                    })
-                })
-                .collect(),
-        })),
+    test(
+        lower(make_list(elements.into_iter().map(make_literal).collect())),
         vec![
             InstructionKind::Push {
-                value: l(vec![f(0.0), b(false)]) // This list is not created in the syntax tree
-            }
-            .into(),
-            InstructionKind::Push { value: s("a") }.into(),
-            InstructionKind::Push { value: i(0) }.into(),
-            InstructionKind::MakeList { len: 3 }.into(),
+                value: l(vec![f(0.0), b(false)]), // This list is not created in the syntax tree
+            },
+            InstructionKind::Push { value: s("a") },
+            InstructionKind::Push { value: i(0) },
+            InstructionKind::MakeList { len: 3 },
         ],
     );
 }
 
 #[test]
 fn lower_object_properly() {
-    let elements = [s("a"), i(0), s("b"), l(vec![f(0.0), b(false)])];
+    let elements = vec![s("a"), i(0), s("b"), l(vec![f(0.0), b(false)])];
 
-    assert_eq!(
-        lower(SyntaxNode::ObjectNode(node::ObjectNode {
-            span: span(),
-            elements: elements
-                .iter()
-                .map(|e| {
-                    SyntaxNode::LiteralNode(node::LiteralNode {
-                        span: span(),
-                        value: e.clone(),
-                    })
-                })
-                .collect(),
-        })),
+    test(
+        lower(make_object(
+            elements.into_iter().map(make_literal).collect(),
+        )),
         vec![
             InstructionKind::Push {
-                value: l(vec![f(0.0), b(false)]) // This list is not created in the syntax tree
-            }
-            .into(),
-            InstructionKind::Push { value: s("b") }.into(),
-            InstructionKind::Push { value: i(0) }.into(),
-            InstructionKind::Push { value: s("a") }.into(),
-            InstructionKind::MakeObject { len: 2 }.into(),
+                value: l(vec![f(0.0), b(false)]), // This list is not created in the syntax tree
+            },
+            InstructionKind::Push { value: s("b") },
+            InstructionKind::Push { value: i(0) },
+            InstructionKind::Push { value: s("a") },
+            InstructionKind::MakeObject { len: 2 },
         ],
     );
 }
 
 #[test]
-fn lower_assignment_properly() {
+fn lower_interface_properly() {
+    // interface I {}
+    let mut bytecode = lower(make_interface(
+        "I",
+        vec![("I", make_fn_declaration(None, vec![], vec![]))],
+    ))
+    .into_iter();
+
+    match bytecode.next().unwrap().kind {
+        InstructionKind::Push { value } if value.type_() == Type::Function => {
+            let f = value.into_rc_fn();
+            let f = f.as_anilang_fn().unwrap();
+            assert!(f.args.is_empty());
+            test(
+                f.body.clone(),
+                vec![
+                    InstructionKind::PushVar {
+                        scope: gen_scope(1),
+                    },
+                    InstructionKind::MakeObject { len: 0 },
+                    InstructionKind::Store {
+                        ident: "self".to_owned(),
+                        declaration: true,
+                    },
+                    InstructionKind::Pop,
+                    InstructionKind::Load {
+                        ident: "self".to_owned(),
+                    },
+                    InstructionKind::PopVar,
+                    InstructionKind::Label { number: 0 },
+                ],
+            );
+        }
+        i => panic!("expected InstructionKind::Push function, got {:?}", i),
+    }
+
     assert_eq!(
-        lower(SyntaxNode::AssignmentNode(node::AssignmentNode {
-            ident: "a".to_owned(),
-            span: span(),
-            indices: None,
-            value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: s("world"),
-                span: span(),
-            })),
-        })),
+        bytecode.next().unwrap().kind,
+        InstructionKind::Store {
+            ident: "I".to_owned(),
+            declaration: true
+        }
+    );
+    assert_eq!(bytecode.next(), None);
+
+    // interface I {
+    //     I(val) {
+    //         self.val = val
+    //     }
+    //
+    //     val = 3
+    //
+    //     fn val_10(self) {
+    //         self.val + 10
+    //     }
+    // }
+    let mut bytecode = lower(make_interface(
+        "I",
         vec![
-            InstructionKind::Push { value: s("world") }.into(),
-            InstructionKind::Store {
-                ident: "a".to_owned(),
-                declaration: false
-            }
-            .into(),
+            (
+                "I",
+                make_fn_declaration(
+                    None,
+                    vec!["val"],
+                    vec![make_assignment(
+                        "self",
+                        make_variable("val"),
+                        Some(vec![make_literal(s("val"))]),
+                    )],
+                ),
+            ),
+            ("val", make_literal(i(3))),
+            (
+                "val_10",
+                make_fn_declaration(
+                    None,
+                    vec!["self"],
+                    vec![make_binary(
+                        TokenKind::PlusOperator,
+                        make_index(make_variable("self"), make_literal(s("val"))),
+                        make_literal(i(10)),
+                    )],
+                ),
+            ),
         ],
+    ))
+    .into_iter();
+
+    let mut body = match bytecode.next().unwrap().kind {
+        InstructionKind::Push { value } if value.type_() == Type::Function => {
+            let f = value.into_rc_fn();
+            let f = f.as_anilang_fn().unwrap();
+            assert_eq!(f.args, vec!["val".to_owned()]);
+            f.body.clone()
+        }
+        i => panic!("expected InstructionKind::Push function, got {:?}", i),
+    }
+    .into_iter();
+
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::PushVar {
+            scope: gen_scope(1)
+        }
+    );
+
+    let match_val_10 = |instr: Instruction, delta: usize| match instr.kind {
+        InstructionKind::Push { value } if value.type_() == Type::Function => {
+            let f = value.into_rc_fn();
+            let f = f.as_anilang_fn().unwrap();
+            assert_eq!(f.args, vec!["self".to_owned()]);
+            test(
+                f.body.clone(),
+                vec![
+                    InstructionKind::PushVar {
+                        scope: gen_scope(2 + delta),
+                    },
+                    InstructionKind::Push { value: i(10) },
+                    InstructionKind::Push { value: s("val") },
+                    InstructionKind::Load {
+                        ident: "self".to_owned(),
+                    },
+                    InstructionKind::GetIndex,
+                    InstructionKind::BinaryAdd,
+                    InstructionKind::PopVar,
+                    InstructionKind::Label { number: 1 + delta }, // Return label
+                ],
+            );
+        }
+        i => panic!("expected InstructionKind::Push function, got {:?}", i),
+    };
+
+    match_val_10(body.next().unwrap(), 0);
+
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::Push { value: s("val_10") }
     );
 
     assert_eq!(
-        lower(SyntaxNode::AssignmentNode(node::AssignmentNode {
-            ident: "a".to_owned(),
-            span: span(),
-            indices: Some(vec![
-                SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(0),
-                    span: span(),
-                }),
-                SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(1),
-                    span: span(),
-                })
-            ]),
-            value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: s("a"),
-                span: span(),
-            })),
-        })),
+        body.next().unwrap().kind,
+        InstructionKind::Push { value: i(3) }
+    );
+
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::Push { value: s("val") }
+    );
+
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::MakeObject { len: 2 }
+    );
+
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::Store {
+            ident: "self".to_owned(),
+            declaration: true
+        }
+    );
+    assert_eq!(body.next().unwrap().kind, InstructionKind::Pop);
+
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::Load {
+            ident: "val".to_owned()
+        }
+    );
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::Push { value: s("val") }
+    );
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::Load {
+            ident: "self".to_owned()
+        }
+    );
+    assert_eq!(body.next().unwrap().kind, InstructionKind::SetIndex);
+    assert_eq!(body.next().unwrap().kind, InstructionKind::Pop);
+
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::Load {
+            ident: "self".to_owned()
+        }
+    );
+    assert_eq!(body.next().unwrap().kind, InstructionKind::PopVar);
+    assert_eq!(
+        body.next().unwrap().kind,
+        InstructionKind::Label { number: 0 }
+    );
+    assert_eq!(body.next(), None);
+
+    assert_eq!(
+        bytecode.next().unwrap().kind,
+        InstructionKind::Store {
+            ident: "I".to_owned(),
+            declaration: true
+        }
+    );
+    assert_eq!(
+        bytecode.next().unwrap().kind,
+        InstructionKind::Push { value: i(3) }
+    );
+    assert_eq!(
+        bytecode.next().unwrap().kind,
+        InstructionKind::Store {
+            ident: "I::val".to_owned(),
+            declaration: true
+        }
+    );
+
+    match_val_10(bytecode.next().unwrap(), 1);
+    assert_eq!(
+        bytecode.next().unwrap().kind,
+        InstructionKind::Store {
+            ident: "I::val_10".to_owned(),
+            declaration: true
+        }
+    );
+    assert_eq!(bytecode.next(), None);
+}
+
+#[test]
+fn lower_assignment_properly() {
+    test(
+        lower(make_assignment("a", make_literal(s("world")), None)),
         vec![
-            InstructionKind::Push { value: s("a") }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::Push { value: i(0) }.into(),
+            InstructionKind::Push { value: s("world") },
+            InstructionKind::Store {
+                ident: "a".to_owned(),
+                declaration: false,
+            },
+        ],
+    );
+
+    test(
+        lower(make_assignment(
+            "a",
+            make_literal(s("a")),
+            Some(vec![make_literal(i(0)), make_literal(i(1))]),
+        )),
+        vec![
+            InstructionKind::Push { value: s("a") },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::Push { value: i(0) },
             InstructionKind::Load {
-                ident: "a".to_owned()
-            }
-            .into(),
-            InstructionKind::GetIndex.into(),
-            InstructionKind::SetIndex.into(),
-            InstructionKind::Pop.into(),
+                ident: "a".to_owned(),
+            },
+            InstructionKind::GetIndex,
+            InstructionKind::SetIndex,
+            InstructionKind::Pop,
             InstructionKind::Load {
-                ident: "a".to_owned()
-            }
-            .into(),
-        ]
+                ident: "a".to_owned(),
+            },
+        ],
     );
 }
 
 #[test]
 fn lowerer_declaration_properly() {
-    assert_eq!(
-        lower(SyntaxNode::DeclarationNode(node::DeclarationNode {
-            ident: "a".to_owned(),
-            span: span(),
-            value: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(0),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_declaration("a", make_literal(i(0)))),
         vec![
-            InstructionKind::Push { value: i(0) }.into(),
+            InstructionKind::Push { value: i(0) },
             InstructionKind::Store {
                 ident: "a".to_owned(),
-                declaration: true
-            }
-            .into(),
-        ]
+                declaration: true,
+            },
+        ],
     );
 }
 
 #[test]
 fn lower_fn_declaration_properly() {
-    let bytecode = lower(SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
-        ident: Some("a".to_owned()),
-        span: span(),
-        args: vec!["arg1".to_owned()],
-        block: node::BlockNode {
-            span: span(),
-            block: vec![],
-        },
-    }));
+    let bytecode = lower(make_fn_declaration(Some("a"), vec!["arg1"], vec![]));
+
     assert_eq!(bytecode.len(), 2);
+
     match &bytecode[0].kind {
         InstructionKind::Push {
             value: crate::Value::Function(f),
@@ -512,29 +732,21 @@ fn lower_fn_declaration_properly() {
     );
 
     // Anonymous function
-    let bytecode = lower(SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
-        ident: None,
-        span: span(),
-        args: vec!["arg1".to_owned()],
-        block: node::BlockNode {
-            span: span(),
-            block: vec![SyntaxNode::ReturnNode(node::ReturnNode {
-                value: Some(Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: Value::Int(123),
-                    span: span(),
-                }))),
-                span: span(),
-            })],
-        },
-    }));
+    let bytecode = lower(make_fn_declaration(
+        None,
+        vec!["arg1"],
+        vec![make_return(Some(make_literal(i(123))))],
+    ));
+
     assert_eq!(bytecode.len(), 1);
+
     let body = match &bytecode[0].kind {
         InstructionKind::Push {
             value: crate::Value::Function(f),
         } => {
             let f = f.as_anilang_fn().unwrap();
             assert_eq!(f.args, vec!["arg1".to_owned()]);
-            &f.body
+            f.body.clone()
         }
         i => panic!("Expected Push Value::Function, got {:?}", i),
     };
@@ -542,425 +754,275 @@ fn lower_fn_declaration_properly() {
     let bytecode = vec![
         InstructionKind::PushVar {
             scope: gen_scope(1),
-        }
-        .into(),
-        InstructionKind::Push { value: i(123) }.into(),
-        InstructionKind::PopVar.into(),
-        InstructionKind::JumpTo { label: 0 }.into(),
-        InstructionKind::PopVar.into(),
-        InstructionKind::Label { number: 0 }.into(),
+        },
+        InstructionKind::Push { value: i(123) },
+        InstructionKind::PopVar,
+        InstructionKind::JumpTo { label: 0 },
+        InstructionKind::PopVar,
+        InstructionKind::Label { number: 0 },
     ];
 
-    assert_eq!(*body, bytecode);
+    test(body, bytecode);
 }
 
 #[test]
 fn lower_fn_call_properly() {
-    assert_eq!(
-        lower(SyntaxNode::FnCallNode(node::FnCallNode {
-            child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                ident: "add".to_owned(),
-                span: span(),
-            })),
-            span: span(),
-            args: vec![
-                SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(1),
-                    span: span(),
-                }),
-                SyntaxNode::LiteralNode(node::LiteralNode {
-                    value: i(2),
-                    span: span(),
-                }),
-            ],
-        })),
+    test(
+        lower(make_fn_call(
+            make_variable("add"),
+            vec![make_literal(i(1)), make_literal(i(2))],
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
             InstructionKind::Load {
-                ident: "add".to_owned()
-            }
-            .into(),
-            InstructionKind::CallFunction { num_args: 2 }.into(),
-        ]
+                ident: "add".to_owned(),
+            },
+            InstructionKind::CallFunction { num_args: 2 },
+        ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::FnCallNode(node::FnCallNode {
-            child: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                ident: "print".to_owned(),
-                span: span(),
-            })),
-            span: span(),
-            args: vec![SyntaxNode::LiteralNode(node::LiteralNode {
-                value: s("Hello World!"),
-                span: span(),
-            })],
-        })),
+    test(
+        lower(make_fn_call(
+            make_variable("print"),
+            vec![make_literal(s("Hello World!"))],
+        )),
         vec![
             InstructionKind::Push {
-                value: s("Hello World!")
-            }
-            .into(),
+                value: s("Hello World!"),
+            },
             InstructionKind::Load {
                 ident: "print".to_owned(),
-            }
-            .into(),
-            InstructionKind::CallFunction { num_args: 1 }.into(),
+            },
+            InstructionKind::CallFunction { num_args: 1 },
         ],
     );
 }
 
 #[test]
 fn lower_range_properly() {
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::RangeOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::RangeOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::MakeRange.into(),
-        ]
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::MakeRange,
+        ],
     );
 }
 
 #[test]
 fn lower_binary_properly() {
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::PlusOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::PlusOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::BinaryAdd.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::BinaryAdd,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::MinusOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::MinusOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::BinarySubtract.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::BinarySubtract,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::StarOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::StarOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::BinaryMultiply.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::BinaryMultiply,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::SlashOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: f(2.0),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::SlashOperator,
+            make_literal(i(1)),
+            make_literal(f(2.0)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::BinaryDivide.into(),
+            InstructionKind::Push { value: f(2.0) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::BinaryDivide,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::ModOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(17),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(7),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::ModOperator,
+            make_literal(i(17)),
+            make_literal(i(7)),
+        )),
         vec![
-            InstructionKind::Push { value: i(7) }.into(),
-            InstructionKind::Push { value: i(17) }.into(),
-            InstructionKind::BinaryMod.into(),
+            InstructionKind::Push { value: i(7) },
+            InstructionKind::Push { value: i(17) },
+            InstructionKind::BinaryMod,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::CaretOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(5),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::CaretOperator,
+            make_literal(i(2)),
+            make_literal(i(5)),
+        )),
         vec![
-            InstructionKind::Push { value: i(5) }.into(),
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::BinaryPower.into(),
+            InstructionKind::Push { value: i(5) },
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::BinaryPower,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::OrOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(false),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(true),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::OrOperator,
+            make_literal(b(false)),
+            make_literal(b(true)),
+        )),
         vec![
-            InstructionKind::Push { value: b(true) }.into(),
-            InstructionKind::Push { value: b(false) }.into(),
-            InstructionKind::BinaryOr.into(),
+            InstructionKind::Push { value: b(true) },
+            InstructionKind::Push { value: b(false) },
+            InstructionKind::BinaryOr,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::AndOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(false),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(true),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::AndOperator,
+            make_literal(b(false)),
+            make_literal(b(true)),
+        )),
         vec![
-            InstructionKind::Push { value: b(true) }.into(),
-            InstructionKind::Push { value: b(false) }.into(),
-            InstructionKind::BinaryAnd.into(),
+            InstructionKind::Push { value: b(true) },
+            InstructionKind::Push { value: b(false) },
+            InstructionKind::BinaryAnd,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::NEOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::NEOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::CompareNE.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::CompareNE,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::EqOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::EqOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::CompareEQ.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::CompareEQ,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::LTOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::LTOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::CompareLT.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::CompareLT,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::GTOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::GTOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::CompareGT.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::CompareGT,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::LEOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::LEOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::CompareLE.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::CompareLE,
         ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::BinaryNode(node::BinaryNode {
-            operator: TokenKind::GEOperator,
-            span: span(),
-            left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-            right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(2),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_binary(
+            TokenKind::GEOperator,
+            make_literal(i(1)),
+            make_literal(i(2)),
+        )),
         vec![
-            InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::CompareGE.into(),
+            InstructionKind::Push { value: i(2) },
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::CompareGE,
         ],
     );
 }
 
 #[test]
 fn lower_unary_properly() {
-    assert_eq!(
-        lower(SyntaxNode::UnaryNode(node::UnaryNode {
-            operator: TokenKind::PlusOperator,
-            span: span(),
-            child: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_unary(TokenKind::PlusOperator, make_literal(i(1)))),
         vec![
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::UnaryPositive.into(),
-        ]
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::UnaryPositive,
+        ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::UnaryNode(node::UnaryNode {
-            operator: TokenKind::MinusOperator,
-            span: span(),
-            child: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: i(1),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_unary(TokenKind::MinusOperator, make_literal(i(1)))),
         vec![
-            InstructionKind::Push { value: i(1) }.into(),
-            InstructionKind::UnaryNegative.into(),
-        ]
+            InstructionKind::Push { value: i(1) },
+            InstructionKind::UnaryNegative,
+        ],
     );
 
-    assert_eq!(
-        lower(SyntaxNode::UnaryNode(node::UnaryNode {
-            operator: TokenKind::NotOperator,
-            span: span(),
-            child: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
-                value: b(true),
-                span: span(),
-            })),
-        })),
+    test(
+        lower(make_unary(TokenKind::NotOperator, make_literal(b(true)))),
         vec![
-            InstructionKind::Push { value: b(true) }.into(),
-            InstructionKind::UnaryNot.into(),
-        ]
+            InstructionKind::Push { value: b(true) },
+            InstructionKind::UnaryNot,
+        ],
     );
 }

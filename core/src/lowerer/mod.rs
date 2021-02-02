@@ -2,10 +2,10 @@ use crate::bytecode::*;
 use crate::scope::Scope;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
-use crate::value::Function;
-use crate::value::Value;
+use crate::value::{Function, Value};
 use crate::Diagnostics;
 use node::SyntaxNode;
+use std::cell::RefCell;
 use std::mem;
 use std::ops::RangeFrom;
 use std::rc::Rc;
@@ -189,7 +189,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
                 SyntaxNode::LiteralNode(literal) => self.lower_literal(literal),
                 SyntaxNode::ListNode(node) => self.lower_list(node),
                 SyntaxNode::ObjectNode(node) => self.lower_object(node),
-                SyntaxNode::InterfaceNode(_) => todo!(),
+                SyntaxNode::InterfaceNode(node) => self.lower_interface(node),
                 SyntaxNode::VariableNode(variable) => self.lower_variable(variable),
                 SyntaxNode::IndexNode(node) => self.lower_index(node),
                 SyntaxNode::IfNode(node) => self.lower_if(node),
@@ -286,6 +286,89 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             InstructionKind::MakeObject { len },
             object.span,
         ));
+    }
+
+    fn lower_interface(&mut self, mut interface: node::InterfaceNode) {
+        let constructor_idx = interface
+            .values
+            .iter()
+            .position(|(k, _)| *k == interface.ident)
+            .expect("Constructor must be present");
+
+        let constructor_span = interface.values[constructor_idx].1.span().clone();
+
+        let mut object_elements = Vec::new();
+
+        for (k, v) in interface.values.iter() {
+            if let SyntaxNode::FnDeclarationNode(ref node) = v {
+                // Got a function, if first arg is 'self', we want to include it in the object
+                if let Some("self") = node.args.first().map(String::as_str) {
+                    object_elements.push(SyntaxNode::LiteralNode(node::LiteralNode::from_val(
+                        Value::String(Rc::new(RefCell::new(k.clone()))),
+                        v.span().clone(),
+                    )));
+                    object_elements.push(v.clone());
+                }
+            } else {
+                object_elements.push(SyntaxNode::LiteralNode(node::LiteralNode::from_val(
+                    Value::String(Rc::new(RefCell::new(k.clone()))),
+                    v.span().clone(),
+                )));
+                object_elements.push(v.clone());
+            }
+        }
+
+        let self_declaration = SyntaxNode::DeclarationNode(node::DeclarationNode::from_span(
+            "self".to_owned(),
+            Box::new(SyntaxNode::ObjectNode(node::ObjectNode::from_span(
+                object_elements,
+                interface.span,
+            ))),
+            constructor_span.clone(),
+        ));
+        let return_self =
+            SyntaxNode::VariableNode(node::VariableNode::raw("self".to_owned(), constructor_span));
+
+        match &mut interface.values[constructor_idx].1 {
+            SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
+                block: node::BlockNode { block, .. },
+                ..
+            }) => {
+                block.insert(0, self_declaration);
+                block.push(return_self);
+            }
+            _ => unreachable!("Constructor must a function"),
+        }
+
+        interface.ident += "::";
+
+        let interface_ident = &interface.ident[..(interface.ident.len() - 2)];
+
+        for (mut k, v) in interface.values {
+            if k.as_str() == interface_ident {
+                if let SyntaxNode::FnDeclarationNode(mut node) = v {
+                    node.ident = Some(k);
+
+                    self.lower_fn_declaration(node);
+                } else {
+                    unreachable!("Got constructor which was not a function");
+                }
+            } else {
+                let span = v.span().clone();
+
+                // Make ident in the form of <interface-name>::<ident>
+                k.insert_str(0, interface.ident.as_str());
+
+                self.lower_node(v);
+                self.bytecode.push(Instruction::new(
+                    InstructionKind::Store {
+                        ident: k,
+                        declaration: true,
+                    },
+                    span,
+                ));
+            }
+        }
     }
 
     fn lower_variable(&mut self, variable: node::VariableNode) {

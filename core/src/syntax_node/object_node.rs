@@ -21,6 +21,10 @@ impl ObjectNode {
         }
     }
 
+    pub fn from_span(elements: Vec<SyntaxNode>, span: TextSpan) -> Self {
+        Self { elements, span }
+    }
+
     pub(crate) fn _prt(&self, mut indent: String, is_last: bool, stdout: &mut std::io::Stdout) {
         let _ = print_node(style::Color::Blue, &indent, self, is_last, stdout);
 
