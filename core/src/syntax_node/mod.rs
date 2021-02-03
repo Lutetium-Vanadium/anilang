@@ -7,8 +7,10 @@ mod fn_call_node;
 mod fn_declaration_node;
 mod if_node;
 mod index_node;
+mod interface_node;
 mod list_node;
 mod loop_node;
+mod object_node;
 mod return_node;
 mod unary_node;
 mod variable_node;
@@ -29,9 +31,11 @@ pub use fn_call_node::*;
 pub use fn_declaration_node::*;
 pub use if_node::*;
 pub use index_node::*;
+pub use interface_node::*;
 pub use list_node::*;
 pub use literal_node::*;
 pub use loop_node::*;
+pub use object_node::*;
 pub use return_node::*;
 pub use unary_node::*;
 pub use variable_node::*;
@@ -68,9 +72,11 @@ pub enum SyntaxNode {
     FnDeclarationNode(FnDeclarationNode),
     IfNode(IfNode),
     IndexNode(IndexNode),
+    InterfaceNode(InterfaceNode),
     ListNode(ListNode),
     LiteralNode(LiteralNode),
     LoopNode(LoopNode),
+    ObjectNode(ObjectNode),
     ReturnNode(ReturnNode),
     UnaryNode(UnaryNode),
     VariableNode(VariableNode),
@@ -90,9 +96,11 @@ impl fmt::Display for SyntaxNode {
             SyntaxNode::FnDeclarationNode(ref n) => write!(f, "{}", n),
             SyntaxNode::IfNode(ref n) => write!(f, "{}", n),
             SyntaxNode::IndexNode(ref n) => write!(f, "{}", n),
+            SyntaxNode::InterfaceNode(ref n) => write!(f, "{}", n),
             SyntaxNode::ListNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LiteralNode(ref n) => write!(f, "{}", n),
             SyntaxNode::LoopNode(ref n) => write!(f, "{}", n),
+            SyntaxNode::ObjectNode(ref n) => write!(f, "{}", n),
             SyntaxNode::ReturnNode(ref n) => write!(f, "{}", n),
             SyntaxNode::UnaryNode(ref n) => write!(f, "{}", n),
             SyntaxNode::VariableNode(ref n) => write!(f, "{}", n),
@@ -113,9 +121,11 @@ impl SyntaxNode {
             SyntaxNode::FnDeclarationNode(ref n) => &n.span,
             SyntaxNode::IfNode(ref n) => &n.span,
             SyntaxNode::IndexNode(ref n) => &n.span,
+            SyntaxNode::InterfaceNode(ref n) => &n.span,
             SyntaxNode::ListNode(ref n) => &n.span,
             SyntaxNode::LiteralNode(ref n) => &n.span,
             SyntaxNode::LoopNode(ref n) => &n.span,
+            SyntaxNode::ObjectNode(ref n) => &n.span,
             SyntaxNode::ReturnNode(ref n) => &n.span,
             SyntaxNode::UnaryNode(ref n) => &n.span,
             SyntaxNode::VariableNode(ref n) => &n.span,
@@ -139,9 +149,11 @@ impl SyntaxNode {
             SyntaxNode::FnDeclarationNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::IfNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::IndexNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::InterfaceNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::ListNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::LiteralNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::LoopNode(ref n) => n._prt(indent, is_last, stdout),
+            SyntaxNode::ObjectNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::ReturnNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::UnaryNode(ref n) => n._prt(indent, is_last, stdout),
             SyntaxNode::VariableNode(ref n) => n._prt(indent, is_last, stdout),
@@ -166,6 +178,7 @@ impl SyntaxNode {
             }
             SyntaxNode::IndexNode(ref n) => n.child.can_const_eval() && n.index.can_const_eval(),
             SyntaxNode::ListNode(ref n) => n.elements.iter().all(|n| n.can_const_eval()),
+            SyntaxNode::ObjectNode(ref n) => n.elements.iter().all(|n| n.can_const_eval()),
             SyntaxNode::UnaryNode(ref n) => n.child.can_const_eval(),
             SyntaxNode::LiteralNode(_) => true,
 
@@ -174,6 +187,7 @@ impl SyntaxNode {
             SyntaxNode::DeclarationNode(_) => false,
             SyntaxNode::FnDeclarationNode(_) => false,
             SyntaxNode::FnCallNode(_) => false,
+            SyntaxNode::InterfaceNode(_) => false,
             SyntaxNode::LoopNode(_) => false,
             SyntaxNode::ReturnNode(_) => false,
             SyntaxNode::VariableNode(_) => false,

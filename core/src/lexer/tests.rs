@@ -8,7 +8,7 @@ fn lex(text: &str) -> Vec<Token> {
 
 fn lex_one(text: &str) -> Token {
     let tokens = lex(text);
-    assert!(tokens.len() == 2, "Expected 2 tokens, got {:#?}", tokens);
+    assert_eq!(tokens.len(), 2, "Expected 2 tokens, got {:#?}", tokens);
     tokens.into_iter().next().unwrap()
 }
 
@@ -62,6 +62,8 @@ fn lexes_kind_properly() {
     assert_eq!(lex_one(".").kind, TokenKind::DotOperator);
     assert_eq!(lex_one("..").kind, TokenKind::RangeOperator);
     assert_eq!(lex_one(",").kind, TokenKind::CommaOperator);
+    assert_eq!(lex_one(":").kind, TokenKind::ColonOperator);
+    assert_eq!(lex_one("::").kind, TokenKind::ColonColonOperator);
     assert_eq!(lex_one("=").kind, TokenKind::AssignmentOperator);
     assert_eq!(lex_one("+").kind, TokenKind::PlusOperator);
     assert_eq!(lex_one("-").kind, TokenKind::MinusOperator);
@@ -94,6 +96,7 @@ fn lexes_kind_properly() {
     assert_eq!(lex_one("loop").kind, TokenKind::LoopKeyword);
     assert_eq!(lex_one("let").kind, TokenKind::LetKeyword);
     assert_eq!(lex_one("fn").kind, TokenKind::FnKeyword);
+    assert_eq!(lex_one("interface").kind, TokenKind::InterfaceKeyword);
 
     assert_eq!(lex_one(";").kind, TokenKind::Bad);
 }

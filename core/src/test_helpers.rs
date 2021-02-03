@@ -1,4 +1,4 @@
-use crate::value::Value;
+use crate::value::{Object, Value};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -22,12 +22,23 @@ pub fn l(l: Vec<Value>) -> Value {
     Value::List(Rc::new(RefCell::new(l)))
 }
 
+pub fn o(o: Vec<(&str, Value)>) -> Value {
+    let mut obj = Object::new();
+    for (k, v) in o {
+        obj.insert(k.to_owned(), v);
+    }
+    Value::Object(Rc::new(RefCell::new(obj)))
+}
+
 pub fn r(s: i64, e: i64) -> Value {
     Value::Range(s, e)
 }
 
 pub fn func() -> Value {
-    super::function::Function::new(vec![], vec![]).into()
+    Value::Function(std::rc::Rc::new(super::function::Function::anilang_fn(
+        vec![],
+        vec![],
+    )))
 }
 
 pub fn n() -> Value {

@@ -1,6 +1,18 @@
+use anilang::function::{native, Function};
 use std::rc::Rc;
 
 type Result = std::result::Result<anilang::Value, ()>;
+
+fn base_scope() -> Rc<anilang::Scope> {
+    let scope = Rc::new(anilang::Scope::new(0, None));
+    scope
+        .declare(
+            "assert".to_owned(),
+            anilang::Value::Function(Rc::new(Function::native_fn(native::assert))),
+        )
+        .expect("Could not declare assert");
+    scope
+}
 
 #[allow(dead_code)]
 fn _execute(code: &str, scope: Rc<anilang::Scope>) -> Result {
@@ -21,13 +33,13 @@ fn _execute(code: &str, scope: Rc<anilang::Scope>) -> Result {
 #[allow(dead_code)]
 /// Executes one statement
 pub fn execute(code: &str) -> Result {
-    _execute(code, Rc::new(anilang::Scope::new(0, None)))
+    _execute(code, base_scope())
 }
 
 #[allow(dead_code)]
 /// Executes many statements, with the same global scope
 pub fn execute_many(code: Vec<&str>) -> Vec<Result> {
-    let scope = Rc::new(anilang::Scope::new(0, None));
+    let scope = base_scope();
     code.iter()
         .map(|code| _execute(code, Rc::clone(&scope)))
         .collect()
@@ -89,6 +101,16 @@ pub mod v {
         Value::List(Rc::new(RefCell::new(l)))
     }
 
+    /// Creates an `anilang::Value::Object()`
+    #[allow(dead_code)]
+    pub fn o(o: Vec<(&str, Value)>) -> Value {
+        let mut obj = std::collections::HashMap::new();
+        for (k, v) in o {
+            obj.insert(k.to_owned(), v);
+        }
+        Value::Object(Rc::new(RefCell::new(obj)))
+    }
+
     /// Creates an `anilang::Value::Null`
     #[allow(dead_code)]
     pub fn n() -> Value {
@@ -96,6 +118,7 @@ pub mod v {
     }
 }
 
+// FIXME: No longer true, replace all is_null() with == Value::Null
 /// null != null, therefore checking if a value is null be using `assert_eq` or `==`, gives false
 /// negative, this should be used instead
 pub trait IsNull {

@@ -22,7 +22,7 @@ where
 }
 
 macro_rules! impl_serialize {
-    ($type:tt) => {
+    ($type:tt $size:expr) => {
         impl Serialize for $type {
             fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
                 buf.write(&self.to_le_bytes())
@@ -31,7 +31,7 @@ macro_rules! impl_serialize {
 
         impl Deserialize for $type {
             fn deserialize<R: BufRead>(data: &mut R) -> Result<Self> {
-                let mut buf = [0; 8];
+                let mut buf = [0; $size];
                 data.read_exact(&mut buf)?;
                 Ok(Self::from_le_bytes(buf))
             }
@@ -53,8 +53,9 @@ impl Deserialize for bool {
     }
 }
 
-impl_serialize!(i64);
-impl_serialize!(f64);
+impl_serialize!(u16 2);
+impl_serialize!(i64 8);
+impl_serialize!(f64 8);
 
 impl Serialize for usize {
     fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
@@ -131,6 +132,36 @@ impl<T1: Serialize, T2: Serialize> Serialize for (T1, T2) {
 impl<T1: Deserialize, T2: Deserialize> Deserialize for (T1, T2) {
     fn deserialize<R: BufRead>(data: &mut R) -> Result<Self> {
         Ok((T1::deserialize(data)?, T2::deserialize(data)?))
+    }
+}
+
+use std::collections::HashMap;
+
+impl<K: Serialize, V: Serialize> Serialize for HashMap<K, V> {
+    fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
+        let mut bytes_written = self.len().serialize(buf)?;
+        for (k, v) in self.iter() {
+            bytes_written += k.serialize(buf)?;
+            bytes_written += v.serialize(buf)?;
+        }
+        Ok(bytes_written)
+    }
+}
+
+impl<K, C, V> DeserializeCtx<C> for HashMap<K, V>
+where
+    K: Deserialize + std::hash::Hash + Eq,
+    V: DeserializeCtx<C>,
+{
+    fn deserialize_with_context<R: BufRead>(data: &mut R, ctx: &mut C) -> Result<Self> {
+        let len = usize::deserialize(data)?;
+        let mut map = Self::with_capacity(len);
+        for _ in 0..len {
+            let k = K::deserialize(data)?;
+            let v = V::deserialize_with_context(data, ctx)?;
+            map.insert(k, v);
+        }
+        Ok(map)
     }
 }
 

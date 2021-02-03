@@ -168,3 +168,24 @@ fn index_assign_variables() {
         v::s("helllllo")
     );
 }
+
+#[test]
+fn access_property_variables() {
+    assert_eq!(
+        execute(
+            "let a = 0..2
+            a.start"
+        )
+        .unwrap(),
+        v::i(0)
+    );
+
+    assert_eq!(
+        execute(
+            "let a = 0..2
+            a.end"
+        )
+        .unwrap(),
+        v::i(2)
+    );
+}

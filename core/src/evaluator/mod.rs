@@ -1,10 +1,10 @@
 use crate::bytecode::*;
 use crate::diagnostics::Diagnostics;
-use crate::function::Function;
 use crate::scope;
 use crate::types::Type;
 use crate::value::{ErrorKind, Value};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[cfg(test)]
@@ -138,6 +138,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 }
                 InstructionKind::Label { .. } => {}
                 InstructionKind::MakeList { len } => self.evaluate_make_list(*len),
+                InstructionKind::MakeObject { len } => self.evaluate_make_object(*len),
                 InstructionKind::MakeRange => self.evaluate_make_range(),
                 InstructionKind::PushVar { scope } => self.evaluate_push_var(Rc::clone(scope)),
                 InstructionKind::PopVar => self.evaluate_pop_var(),
@@ -341,15 +342,15 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         }
     }
 
-    fn evaluate_call_function(&mut self, num_args: usize) {
-        let e_msg = || {
+    fn evaluate_call_function(&mut self, mut num_args: usize) {
+        let e_msg = |num_args| {
             panic!(
                 "Expect {} value{} on the stack",
                 num_args + 1,
                 if num_args == 0 { "" } else { "s" }
             );
         };
-        let v = self.stack.pop().unwrap_or_else(e_msg);
+        let v = self.stack.pop().unwrap_or_else(|| e_msg(num_args));
         if v.type_() != Type::Function {
             self.diagnostics.from_value_error(
                 ErrorKind::IncorrectType {
@@ -361,12 +362,24 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             return;
         }
 
-        if let Value::Function(Function::NativeFn(f)) = v {
+        let func = v.into_rc_fn();
+
+        if let Some(ref this) = func.this {
+            self.stack.push(this.clone());
+            num_args += 1;
+        }
+
+        if let Some(f) = func.as_native_fn() {
             if self.stack.len() < num_args {
-                e_msg();
+                e_msg(num_args);
             }
 
-            let v = match f(&self.stack[(self.stack.len() - num_args)..]) {
+            let mut args = Vec::with_capacity(num_args);
+            for _ in 0..num_args {
+                args.push(self.stack.pop().unwrap());
+            }
+
+            let v = match f(args) {
                 Ok(v) => v,
                 Err(e) => {
                     self.diagnostics
@@ -375,13 +388,12 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 }
             };
 
-            self.stack.truncate(self.stack.len() - num_args);
             self.stack.push(v);
 
             return;
         }
 
-        let func = v.into_rc_fn();
+        let func = func.as_anilang_fn().unwrap();
         if func.args.len() != num_args {
             self.diagnostics.from_value_error(
                 ErrorKind::IncorrectArgCount {
@@ -419,7 +431,10 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
 
         for arg in func.args.iter() {
             fn_scope
-                .declare(arg.clone(), self.stack.pop().unwrap_or_else(e_msg))
+                .declare(
+                    arg.clone(),
+                    self.stack.pop().unwrap_or_else(|| e_msg(num_args)),
+                )
                 // Since this is a cloned scope, it should be empty, so there shouldn't be any
                 // issues in declaring the variable
                 .unwrap();
@@ -444,6 +459,34 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         }
 
         self.stack.push(Value::List(Rc::new(RefCell::new(list))));
+    }
+
+    fn evaluate_make_object(&mut self, len: usize) {
+        let e_msg = || {
+            panic!("Expect {} values on the stack", len * 2,);
+        };
+
+        let mut map = HashMap::with_capacity(len);
+        for _ in 0..len {
+            let k = self.stack.pop().unwrap_or_else(e_msg);
+            let v = self.stack.pop().unwrap_or_else(e_msg);
+            if k.type_() != Type::String {
+                self.diagnostics.from_value_error(
+                    ErrorKind::Other {
+                        message: format!(
+                            "IncorrectType: Object Keys must be of type <string>, got <{}>",
+                            k.type_()
+                        ),
+                    },
+                    self.bytecode[self.instr_i].span.clone(),
+                );
+                return;
+            }
+
+            map.insert(k.into_str(), v);
+        }
+
+        self.stack.push(Value::Object(Rc::new(RefCell::new(map))));
     }
 
     fn evaluate_make_range(&mut self) {

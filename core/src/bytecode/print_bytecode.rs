@@ -119,6 +119,11 @@ fn print_instr(
             style::Print("MakeList\t\t"),
             style::Print(format!("len: {}", len))
         ),
+        InstructionKind::MakeObject { len } => queue!(
+            stdout,
+            style::Print("MakeObject\t\t"),
+            style::Print(format!("len: {}", len))
+        ),
         InstructionKind::MakeRange => queue!(stdout, style::Print("MakeRange\t\t")),
         InstructionKind::PushVar { scope } => queue!(
             stdout,
@@ -169,6 +174,16 @@ fn print_value(value: &crate::value::Value, stdout: &mut std::io::Stdout) -> Res
         Type::List => {
             queue!(stdout, style::Print("["))?;
             for v in value.to_ref_list().iter() {
+                print_value(v, stdout)?;
+                queue!(stdout, style::Print(", "))?;
+            }
+            queue!(stdout, crossterm::cursor::MoveLeft(2), style::Print("]"))
+        }
+        Type::Object => {
+            queue!(stdout, style::Print("{"))?;
+            for (k, v) in value.to_ref_obj().iter() {
+                stdout.write_all(k.as_bytes())?;
+                queue!(stdout, style::Print(": "))?;
                 print_value(v, stdout)?;
                 queue!(stdout, style::Print(", "))?;
             }

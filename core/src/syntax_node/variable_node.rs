@@ -1,6 +1,5 @@
 use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
-use crate::tokens::Token;
 use crossterm::style;
 
 #[derive(Debug, Clone)]
@@ -10,10 +9,10 @@ pub struct VariableNode {
 }
 
 impl VariableNode {
-    pub fn new(token: &Token, src: &SourceText) -> Self {
+    pub fn new(span: TextSpan, src: &SourceText) -> Self {
         Self {
-            ident: src[&token.text_span].to_owned(),
-            span: token.text_span.clone(),
+            ident: src[&span].to_owned(),
+            span,
         }
     }
 

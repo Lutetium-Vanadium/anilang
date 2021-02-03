@@ -16,8 +16,16 @@ fn detect_implicit_cast() {
         Cast::Implicit(Type::String)
     );
     assert_eq!(
+        Type::Object.cast_type(&Type::Object),
+        Cast::Implicit(Type::Object)
+    );
+    assert_eq!(
         Type::Range.cast_type(&Type::Range),
         Cast::Implicit(Type::Range)
+    );
+    assert_eq!(
+        Type::Function.cast_type(&Type::Function),
+        Cast::Implicit(Type::Function)
     );
     assert_eq!(
         (Type::Bool).cast_type(&Type::Bool),
@@ -27,6 +35,7 @@ fn detect_implicit_cast() {
         (Type::Null).cast_type(&Type::Null),
         Cast::Implicit(Type::Null)
     );
+
     assert_eq!(
         (Type::Int).cast_type(&Type::Float),
         Cast::Implicit(Type::Float)
@@ -42,6 +51,7 @@ fn detect_explicit_cast() {
     assert_eq!((Type::Int).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::Int).cast_type(&Type::String), Cast::Explicit);
     assert_eq!((Type::Int).cast_type(&Type::List), Cast::Explicit);
+    assert_eq!((Type::Int).cast_type(&Type::Object), Cast::Explicit);
     assert_eq!((Type::Int).cast_type(&Type::Range), Cast::Explicit);
     assert_eq!((Type::Int).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::Int).cast_type(&Type::Null), Cast::Explicit);
@@ -49,6 +59,7 @@ fn detect_explicit_cast() {
     assert_eq!((Type::Bool).cast_type(&Type::Int), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::Int), Cast::Explicit);
     assert_eq!((Type::List).cast_type(&Type::Int), Cast::Explicit);
+    assert_eq!((Type::Object).cast_type(&Type::Int), Cast::Explicit);
     assert_eq!((Type::Range).cast_type(&Type::Int), Cast::Explicit);
     assert_eq!((Type::Function).cast_type(&Type::Int), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::Int), Cast::Explicit);
@@ -56,6 +67,7 @@ fn detect_explicit_cast() {
     assert_eq!((Type::Float).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::Float).cast_type(&Type::String), Cast::Explicit);
     assert_eq!((Type::Float).cast_type(&Type::List), Cast::Explicit);
+    assert_eq!((Type::Float).cast_type(&Type::Object), Cast::Explicit);
     assert_eq!((Type::Float).cast_type(&Type::Range), Cast::Explicit);
     assert_eq!((Type::Float).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::Float).cast_type(&Type::Null), Cast::Explicit);
@@ -63,6 +75,7 @@ fn detect_explicit_cast() {
     assert_eq!((Type::Bool).cast_type(&Type::Float), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::Float), Cast::Explicit);
     assert_eq!((Type::List).cast_type(&Type::Float), Cast::Explicit);
+    assert_eq!((Type::Object).cast_type(&Type::Float), Cast::Explicit);
     assert_eq!((Type::Range).cast_type(&Type::Float), Cast::Explicit);
     assert_eq!((Type::Function).cast_type(&Type::Float), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::Float), Cast::Explicit);
@@ -70,38 +83,52 @@ fn detect_explicit_cast() {
     assert_eq!((Type::Bool).cast_type(&Type::String), Cast::Explicit);
     assert_eq!((Type::Function).cast_type(&Type::String), Cast::Explicit);
     assert_eq!((Type::List).cast_type(&Type::String), Cast::Explicit);
+    assert_eq!((Type::Object).cast_type(&Type::String), Cast::Explicit);
     assert_eq!((Type::Range).cast_type(&Type::String), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::String), Cast::Explicit);
 
     assert_eq!((Type::String).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::List), Cast::Explicit);
+    assert_eq!((Type::String).cast_type(&Type::Object), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::Range), Cast::Explicit);
     assert_eq!((Type::String).cast_type(&Type::Null), Cast::Explicit);
 
     assert_eq!((Type::Bool).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::Bool).cast_type(&Type::List), Cast::Explicit);
+    assert_eq!((Type::Bool).cast_type(&Type::Object), Cast::Explicit);
     assert_eq!((Type::Bool).cast_type(&Type::Range), Cast::Explicit);
     assert_eq!((Type::Bool).cast_type(&Type::Null), Cast::Explicit);
 
     assert_eq!((Type::Function).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::List).cast_type(&Type::Bool), Cast::Explicit);
+    assert_eq!((Type::Object).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::Range).cast_type(&Type::Bool), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::Bool), Cast::Explicit);
 
     assert_eq!((Type::Function).cast_type(&Type::List), Cast::Explicit);
+    assert_eq!((Type::Function).cast_type(&Type::Object), Cast::Explicit);
     assert_eq!((Type::Function).cast_type(&Type::Range), Cast::Explicit);
     assert_eq!((Type::Function).cast_type(&Type::Null), Cast::Explicit);
 
     assert_eq!((Type::List).cast_type(&Type::Function), Cast::Explicit);
+    assert_eq!((Type::Object).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::Range).cast_type(&Type::Function), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::Function), Cast::Explicit);
 
+    assert_eq!((Type::Object).cast_type(&Type::List), Cast::Explicit);
     assert_eq!((Type::Range).cast_type(&Type::List), Cast::Explicit);
     assert_eq!((Type::Null).cast_type(&Type::List), Cast::Explicit);
 
+    assert_eq!((Type::List).cast_type(&Type::Object), Cast::Explicit);
     assert_eq!((Type::List).cast_type(&Type::Range), Cast::Explicit);
     assert_eq!((Type::List).cast_type(&Type::Null), Cast::Explicit);
+
+    assert_eq!((Type::Range).cast_type(&Type::Object), Cast::Explicit);
+    assert_eq!((Type::Null).cast_type(&Type::Object), Cast::Explicit);
+
+    assert_eq!((Type::Object).cast_type(&Type::Range), Cast::Explicit);
+    assert_eq!((Type::Object).cast_type(&Type::Null), Cast::Explicit);
 
     assert_eq!((Type::Null).cast_type(&Type::Range), Cast::Explicit);
     assert_eq!((Type::Range).cast_type(&Type::Null), Cast::Explicit);
@@ -118,7 +145,7 @@ fn bitflag_type_to_string() {
         &(Type::Function | Type::Range | Type::String).to_string(),
         "string | range | function"
     );
-    assert_eq!(&BitFlags::from(Type::Bool).to_string(), "bool");
+    assert_eq!(&BitFlags::from(Type::Object).to_string(), "object");
 }
 
 use crate::test_helpers::*;
@@ -129,6 +156,7 @@ fn get_correct_type() {
     assert_eq!(f(0.0).type_(), Type::Float);
     assert_eq!(s("hello").type_(), Type::String);
     assert_eq!(l(vec![i(0), f(2.0), b(true)]).type_(), Type::List);
+    assert_eq!(o(vec![]).type_(), Type::Object);
     assert_eq!(r(0, 1).type_(), Type::Range);
     assert_eq!(b(true).type_(), Type::Bool);
     assert_eq!(func().type_(), Type::Function);
@@ -146,6 +174,10 @@ fn try_cast_success() {
     assert_eq!(
         l(vec![i(0), f(2.0), b(true)]).try_cast(Type::List).unwrap(),
         l(vec![i(0), f(2.0), b(true)])
+    );
+    assert_eq!(
+        o(vec![("key", s("value"))]).try_cast(Type::Object).unwrap(),
+        o(vec![("key", s("value"))])
     );
     assert_eq!(r(0, 1).try_cast(Type::Range).unwrap(), r(0, 1));
     assert_eq!(b(true).try_cast(Type::Bool).unwrap(), b(true));
@@ -166,7 +198,7 @@ fn try_cast_fail() {
         Cast::Explicit
     );
     assert_eq!(
-        r(0, 1).try_cast(Type::Function).err().unwrap(),
+        r(0, 1).try_cast(Type::Object).err().unwrap(),
         Cast::Explicit
     );
     assert_eq!(

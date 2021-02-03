@@ -345,6 +345,10 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     ///         ^^^^
     /// An OpenBrace is expected, but a number was found
     pub fn unexpected_token(&self, unexpected: &Token, expected: Option<&TokenKind>) {
+        if unexpected.kind == TokenKind::EOF {
+            return self.unexpected_eof(TextSpan::new(unexpected.text_span.start() - 2, 1));
+        }
+
         if unexpected.kind != TokenKind::Bad {
             if let Some(correct) = expected {
                 self.report_err(
@@ -481,9 +485,32 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
             value::ErrorKind::IncorrectArgCount { got, expected } => {
                 format!("TypeError: expected {} args, got {} args", expected, got)
             }
+            value::ErrorKind::InvalidProperty { val, property } => {
+                if let value::Value::Object(_) = val {
+                    format!(
+                        "InvalidProperty: property '{}' does not exist on object {}",
+                        property.borrow().as_str(),
+                        val,
+                    )
+                } else {
+                    format!(
+                        "InvalidProperty: property '{}' does not exist on type <{}>",
+                        property.borrow().as_str(),
+                        val.type_()
+                    )
+                }
+            }
+            value::ErrorKind::ReadonlyProperty { val, property } => {
+                format!(
+                    "ReadonlyProperty: property '{}' is immutable for type <{}>",
+                    property.borrow().as_str(),
+                    val.type_()
+                )
+            }
             value::ErrorKind::CannotCompare { left, right } => {
                 format!("Cannot compare values of type <{}> and <{}>", left, right)
             }
+            value::ErrorKind::Other { message } => message,
         };
 
         self.report_err(msg, span)

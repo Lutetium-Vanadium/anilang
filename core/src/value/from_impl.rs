@@ -9,7 +9,7 @@
 ///     _ => unreachable!()
 /// }
 /// ```
-use super::{AnilangFn, Function, List, Value};
+use super::{Function, List, Object, Value};
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
@@ -63,6 +63,7 @@ impl From<Value> for bool {
         match val {
             Value::String(s) => s.borrow().len() != 0,
             Value::List(l) => l.borrow().len() != 0,
+            Value::Object(o) => o.borrow().len() != 0,
             // A range is considered truthy as long as it doesn't have a length of zero
             Value::Range(s, e) => s != e,
             Value::Int(i) => i != 0,
@@ -82,6 +83,7 @@ impl From<&Value> for bool {
         match val {
             Value::String(s) => s.borrow().len() != 0,
             Value::List(l) => l.borrow().len() != 0,
+            Value::Object(o) => o.borrow().len() != 0,
             // A range is considered truthy as long as it doesn't have a length of zero
             Value::Range(s, e) => s != e,
             Value::Int(i) => i != &0,
@@ -90,15 +92,6 @@ impl From<&Value> for bool {
             Value::Bool(b) => *b,
             Value::Function(_) => true,
             Value::Null => false,
-        }
-    }
-}
-
-impl From<Value> for Function {
-    fn from(val: Value) -> Function {
-        match val {
-            Value::Function(f) => f,
-            _ => unreachable!(),
         }
     }
 }
@@ -130,12 +123,19 @@ impl Value {
         }
     }
 
+    pub fn into_str(self) -> String {
+        Rc::try_unwrap(self.into_rc_str())
+            .map(RefCell::into_inner)
+            .unwrap_or_else(|rc| rc.borrow().as_str().to_owned())
+    }
+
     pub fn to_ref_str(&self) -> Ref<String> {
         match self {
             Value::String(ref s) => s.borrow(),
             _ => unreachable!(),
         }
     }
+
     pub fn into_rc_list(self) -> Rc<RefCell<List>> {
         match self {
             Value::List(l) => l,
@@ -150,9 +150,23 @@ impl Value {
         }
     }
 
-    pub fn into_rc_fn(self) -> Rc<AnilangFn> {
+    pub fn into_rc_fn(self) -> Rc<Function> {
         match self {
-            Value::Function(Function::AnilangFn(f)) => f,
+            Value::Function(f) => f,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn into_rc_obj(self) -> Rc<RefCell<Object>> {
+        match self {
+            Value::Object(o) => o,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn to_ref_obj(&self) -> Ref<Object> {
+        match self {
+            Value::Object(ref o) => o.borrow(),
             _ => unreachable!(),
         }
     }
@@ -185,9 +199,19 @@ mod tests {
         assert_eq!(bool::from(b(true)), true);
         assert_eq!(bool::from(b(false)), false);
 
+        assert_eq!(bool::from(r(0, 1)), true);
+        assert_eq!(bool::from(r(0, 0)), false);
+
         assert_eq!(bool::from(s("s")), true);
         assert_eq!(bool::from(s("")), false);
 
+        assert_eq!(bool::from(l(vec![i(0)])), true);
+        assert_eq!(bool::from(l(vec![])), false);
+
+        assert_eq!(bool::from(o(vec![("hello", i(0))])), true);
+        assert_eq!(bool::from(o(vec![])), false);
+
+        assert_eq!(bool::from(func()), true);
         assert_eq!(bool::from(n()), false);
     }
 
@@ -203,6 +227,11 @@ mod tests {
     }
 
     #[test]
+    fn val_to_str() {
+        assert_eq!(s("string").into_str().as_str(), "string");
+    }
+
+    #[test]
     fn val_to_ref_list() {
         assert_eq!(
             l(vec![i(0), i(1), s("s")]).into_rc_list().borrow()[..],
@@ -215,20 +244,28 @@ mod tests {
     }
 
     #[test]
-    fn val_to_fn() {
-        let f = Function::new(vec![], vec![]);
-        let val_f = Value::from(f.clone());
-        assert_eq!(Function::from(val_f), f)
+    fn val_to_ref_obj() {
+        let obj = o(vec![("a", i(0)), ("b", b(true))]);
+
+        let ref_obj = obj.to_ref_obj();
+
+        assert_eq!(*ref_obj.get("a").unwrap(), i(0));
+        assert_eq!(*ref_obj.get("b").unwrap(), b(true));
+        drop(ref_obj);
+
+        let rc_obj = obj.into_rc_obj();
+
+        assert_eq!(*rc_obj.borrow().get("a").unwrap(), i(0));
+        assert_eq!(*rc_obj.borrow().get("b").unwrap(), b(true));
     }
 
     #[test]
     fn val_to_ref_fn() {
-        let f: Value =
-            Function::new(vec!["a".to_owned(), "b".to_owned()], Default::default()).into();
-        let rc_f = match f.clone() {
-            Value::Function(Function::AnilangFn(f)) => f,
-            _ => unreachable!(),
-        };
+        let rc_f = Rc::new(Function::anilang_fn(
+            vec!["a".to_owned(), "b".to_owned()],
+            vec![],
+        ));
+        let f = Value::Function(Rc::clone(&rc_f));
         assert!(Rc::ptr_eq(&rc_f, &f.into_rc_fn()));
     }
 }

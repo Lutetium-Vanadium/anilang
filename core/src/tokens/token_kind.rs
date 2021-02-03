@@ -15,6 +15,8 @@ pub enum TokenKind {
     RangeOperator,      // '..'
     CommaOperator,      // ','
     AssignmentOperator, // '='
+    ColonOperator,      // ':'
+    ColonColonOperator, // '::'
 
     // Arithmetic operators
     PlusOperator,  // '+'
@@ -44,14 +46,15 @@ pub enum TokenKind {
     CloseBracket, // ']'
 
     // Keywords
-    IfKeyword,     // 'if'
-    ElseKeyword,   // 'else'
-    BreakKeyword,  // 'break'
-    ReturnKeyword, // 'return'
-    WhileKeyword,  // 'while'
-    LoopKeyword,   // 'loop'
-    LetKeyword,    // 'let'
-    FnKeyword,     // 'fn'
+    IfKeyword,        // 'if'
+    ElseKeyword,      // 'else'
+    BreakKeyword,     // 'break'
+    ReturnKeyword,    // 'return'
+    WhileKeyword,     // 'while'
+    LoopKeyword,      // 'loop'
+    LetKeyword,       // 'let'
+    FnKeyword,        // 'fn'
+    InterfaceKeyword, // `interface`
 
     // Unrecognised
     Bad,

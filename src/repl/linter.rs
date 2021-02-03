@@ -97,6 +97,7 @@ fn print_token(
         TokenKind::IfKeyword
         | TokenKind::ElseKeyword
         | TokenKind::FnKeyword
+        | TokenKind::InterfaceKeyword
         | TokenKind::BreakKeyword
         | TokenKind::WhileKeyword
         | TokenKind::LoopKeyword
@@ -118,7 +119,8 @@ fn print_token(
         | TokenKind::LTOperator
         | TokenKind::GTOperator
         | TokenKind::LEOperator
-        | TokenKind::GEOperator => RED,
+        | TokenKind::GEOperator
+        | TokenKind::ColonColonOperator => RED,
 
         TokenKind::Comment => Color::DarkGrey,
 
@@ -135,12 +137,25 @@ fn print_token(
         TokenKind::Ident => {
             if let Some(TokenKind::OpenParan) = next_token {
                 Color::DarkGreen
+            } else if text == "self" {
+                PURPLE
             } else {
                 Color::Reset
             }
         }
 
-        _ => Color::Reset,
+        TokenKind::DotOperator
+        | TokenKind::CommaOperator
+        | TokenKind::ColonOperator
+        | TokenKind::RangeOperator
+        | TokenKind::OpenParan
+        | TokenKind::OpenBracket
+        | TokenKind::OpenBrace
+        | TokenKind::CloseParan
+        | TokenKind::CloseBracket
+        | TokenKind::CloseBrace
+        | TokenKind::Whitespace
+        | TokenKind::EOF => Color::Reset,
     };
 
     queue!(

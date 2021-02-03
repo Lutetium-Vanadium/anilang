@@ -1,8 +1,10 @@
 use crate::diagnostics::Diagnostics;
 use crate::syntax_node as node;
 use crate::tokens::TokenKind;
-use crate::value::Value;
+use crate::types::Type;
+use crate::value::{ErrorKind, Value};
 use node::SyntaxNode;
+use std::collections::HashMap;
 
 /// An evaluator used to optimize constant expressions to a single value.
 /// It executes the constant expression directly in the form of the syntax tree independent of
@@ -28,6 +30,7 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
             SyntaxNode::IfNode(node) => self.evaluate_if(node),
             SyntaxNode::IndexNode(node) => self.evaluate_index(node),
             SyntaxNode::ListNode(node) => self.evaluate_list(node),
+            SyntaxNode::ObjectNode(node) => self.evaluate_object(node),
             SyntaxNode::UnaryNode(node) => self.evaluate_unary(node),
             SyntaxNode::LiteralNode(node) => node.value,
             _ => unreachable!(),
@@ -115,6 +118,31 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
             list.push(self.evaluate_node(e));
         }
         Value::List(std::rc::Rc::new(std::cell::RefCell::new(list)))
+    }
+
+    fn evaluate_object(&self, mut node: node::ObjectNode) -> Value {
+        let len = node.elements.len() / 2;
+        let mut map = HashMap::with_capacity(len);
+
+        for _ in 0..len {
+            let v = self.evaluate_node(node.elements.pop().unwrap());
+            let k_node = node.elements.pop().unwrap();
+            let k_span = k_node.span().clone();
+            let k = self.evaluate_node(k_node);
+            if k.type_() != Type::String {
+                self.diagnostics.from_value_error(
+                    ErrorKind::IncorrectType {
+                        got: k.type_(),
+                        expected: Type::String.into(),
+                    },
+                    k_span,
+                );
+            } else {
+                map.insert(k.into_str(), v);
+            }
+        }
+
+        Value::Object(std::rc::Rc::new(std::cell::RefCell::new(map)))
     }
 
     fn evaluate_unary(&self, node: node::UnaryNode) -> Value {
@@ -299,6 +327,34 @@ mod tests {
             .to_ref_list()[..],
             elements,
         );
+    }
+
+    #[test]
+    fn evaluate_object_properly() {
+        let obj = eval(SyntaxNode::ObjectNode(node::ObjectNode {
+            span: span(),
+            elements: vec![
+                SyntaxNode::LiteralNode(node::LiteralNode {
+                    span: span(),
+                    value: s("key"),
+                }),
+                SyntaxNode::BinaryNode(node::BinaryNode {
+                    operator: TokenKind::PlusOperator,
+                    span: span(),
+                    left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: s("val"),
+                    })),
+                    right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
+                        span: span(),
+                        value: s("ue"),
+                    })),
+                }),
+            ],
+        }));
+        let obj = obj.to_ref_obj();
+        assert_eq!(obj.len(), 1);
+        assert_eq!(obj.get("key").unwrap().to_ref_str().as_str(), "value");
     }
 
     #[test]

@@ -27,10 +27,6 @@ fn err_eb(got: i64) -> Result<Value> {
     })
 }
 
-fn err_ior(index: i64, len: i64) -> Result<Value> {
-    Err(ErrorKind::IndexOutOfRange { index, len })
-}
-
 impl Value {
     pub fn is_null(&self) -> bool {
         if let Type::Null = self.type_() {
@@ -52,6 +48,7 @@ fn unary_plus_invalid() {
     assert_eq!(b(true).plus(), err_it(Type::Bool));
     assert_eq!(s("a").plus(), err_it(Type::String));
     assert_eq!(l(vec![]).plus(), err_it(Type::List));
+    assert_eq!(o(vec![]).plus(), err_it(Type::Object));
     assert_eq!(r(0, 1).plus(), err_it(Type::Range));
     assert_eq!(func().plus(), err_it(Type::Function));
     assert_eq!(n().plus(), err_it(Type::Null));
@@ -68,6 +65,7 @@ fn unary_minus_invalid() {
     assert_eq!(-b(true), err_it(Type::Bool));
     assert_eq!(-s("a"), err_it(Type::String));
     assert_eq!(-l(vec![]), err_it(Type::List));
+    assert_eq!(-o(vec![]), err_it(Type::Object));
     assert_eq!(-r(0, 1), err_it(Type::Range));
     assert_eq!(-func(), err_it(Type::Function));
     assert_eq!(-n(), err_it(Type::Null));
@@ -90,156 +88,14 @@ fn unary_not() {
     assert_eq!(bool::from(!l(vec![i(0)])), false);
     assert_eq!(bool::from(!l(vec![])), true);
 
+    assert_eq!(bool::from(!o(vec![("key", i(0))])), false);
+    assert_eq!(bool::from(!o(vec![])), true);
+
     assert_eq!(bool::from(!r(0, 1)), false);
     assert_eq!(bool::from(!r(0, 0)), true);
 
     assert_eq!(bool::from(!func()), false);
     assert_eq!(bool::from(!n()), true);
-}
-
-#[test]
-fn indexable_valid() {
-    assert!(s("string").indexable(Type::Int));
-    assert!(l(vec![]).indexable(Type::Int));
-}
-
-#[test]
-fn indexable_invalid() {
-    let values = [s("string"), l(vec![])];
-
-    for value in values.iter() {
-        assert!(!value.indexable(Type::Float));
-        assert!(!value.indexable(Type::Bool));
-        assert!(!value.indexable(Type::String));
-        assert!(!value.indexable(Type::Function));
-        assert!(!value.indexable(Type::Null));
-    }
-
-    let values = [i(0), f(0.0), r(0, 1), b(false), func(), n()];
-
-    for value in values.iter() {
-        assert!(!value.indexable(Type::Int));
-        assert!(!value.indexable(Type::Float));
-        assert!(!value.indexable(Type::Range));
-        assert!(!value.indexable(Type::Bool));
-        assert!(!value.indexable(Type::String));
-        assert!(!value.indexable(Type::Function));
-        assert!(!value.indexable(Type::Null));
-    }
-}
-
-#[test]
-fn get_at_valid() {
-    assert_eq!(s("string").get_at(i(0)).unwrap().to_ref_str().as_str(), "s");
-    assert_eq!(
-        s("string").get_at(i(-2)).unwrap().to_ref_str().as_str(),
-        "n"
-    );
-    assert_eq!(
-        s("string").get_at(r(1, 4)).unwrap().to_ref_str().as_str(),
-        "tri"
-    );
-
-    assert_eq!(l(vec![i(0), f(2.0), b(true)]).get_at(i(0)).unwrap(), i(0));
-    assert_eq!(l(vec![i(0), f(2.0), b(true)]).get_at(i(-3)).unwrap(), i(0));
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true), b(false)])
-            .get_at(r(1, -1))
-            .unwrap(),
-        l(vec![f(2.0), b(true)])
-    );
-}
-
-#[test]
-fn get_at_invalid() {
-    assert_eq!(s("string").get_at(i(7)), err_ior(7, 6));
-    assert_eq!(s("string").get_at(i(-12)), err_ior(-12, 6));
-
-    assert_eq!(l(vec![i(0), f(2.0), b(true)]).get_at(i(7)), err_ior(7, 3));
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true)]).get_at(i(-12)),
-        err_ior(-12, 3)
-    );
-}
-
-#[test]
-fn set_at_valid() {
-    assert_eq!(
-        s("string")
-            .set_at(i(0), s("f"))
-            .unwrap()
-            .to_ref_str()
-            .as_str(),
-        "ftring"
-    );
-    assert_eq!(
-        s("string")
-            .set_at(i(-2), s("f"))
-            .unwrap()
-            .to_ref_str()
-            .as_str(),
-        "strifg"
-    );
-    assert_eq!(
-        s("string")
-            .set_at(r(2, -2), s("zz"))
-            .unwrap()
-            .to_ref_str()
-            .as_str(),
-        "stzzng"
-    );
-
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true)])
-            .set_at(i(0), s("string"))
-            .unwrap()
-            .to_ref_list()[..],
-        [s("string"), f(2.0), b(true)]
-    );
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true)])
-            .set_at(i(-2), s("string"))
-            .unwrap()
-            .to_ref_list()[..],
-        [i(0), s("string"), b(true)]
-    );
-
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true)])
-            .set_at(r(0, 2), l(vec![s("string")]))
-            .unwrap()
-            .to_ref_list()[..],
-        [s("string"), b(true)]
-    );
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true)])
-            .set_at(r(1, 3), l(vec![b(true), s("string")]))
-            .unwrap()
-            .to_ref_list()[..],
-        [i(0), b(true), s("string")]
-    );
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true)])
-            .set_at(r(1, 2), l(vec![b(false), s("string")]))
-            .unwrap()
-            .to_ref_list()[..],
-        [i(0), b(false), s("string"), b(true)]
-    );
-}
-
-#[test]
-fn set_at_invalid() {
-    assert_eq!(s("string").set_at(i(7), s("")), err_ior(7, 6));
-    assert_eq!(s("string").set_at(i(-12), s("")), err_ior(-12, 6));
-
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true)]).set_at(i(7), s("")),
-        err_ior(7, 3)
-    );
-    assert_eq!(
-        l(vec![i(0), f(2.0), b(true)]).set_at(i(-12), s("")),
-        err_ior(-12, 3)
-    );
 }
 
 #[test]
@@ -264,6 +120,7 @@ fn binary_range_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -299,6 +156,7 @@ fn binary_add_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -327,6 +185,7 @@ fn binary_sub_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -355,6 +214,7 @@ fn binary_mult_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -383,6 +243,7 @@ fn binary_div_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -413,6 +274,7 @@ fn binary_mod_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -443,6 +305,7 @@ fn binary_pow_invalid() {
         b(true),
         s("a"),
         l(vec![i(0), f(2.0), b(true)]),
+        o(vec![("key", s("value"))]),
         r(0, 1),
         func(),
         n(),
@@ -478,12 +341,21 @@ fn binary_or() {
     assert_eq!(s("").or(s("world")), s("world"));
 
     assert_eq!(
-        l(vec![i(0), f(2.0), b(true)]).or(l(vec![i(0), f(2.0), b(true)])),
+        l(vec![i(0), f(2.0), b(true)]).or(l(vec![i(2), f(6.0), b(false)])),
         l(vec![i(0), f(2.0), b(true)])
     );
     assert_eq!(
         l(vec![]).or(l(vec![i(0), f(2.0), b(true)])),
         l(vec![i(0), f(2.0), b(true)])
+    );
+
+    assert_eq!(
+        o(vec![("key", s("value"))]).or(o(vec![])),
+        o(vec![("key", s("value"))])
+    );
+    assert_eq!(
+        o(vec![]).or(o(vec![("key", s("value"))])),
+        o(vec![("key", s("value"))])
     );
 
     assert_eq!(r(0, 1).or(r(2, 3)), r(0, 1));
@@ -545,6 +417,7 @@ fn binary_eq() {
         l(vec![i(0), f(2.0), b(true)]),
         l(vec![i(0), f(2.0), b(true)])
     );
+    assert_eq!(o(vec![("key", s("value"))]), o(vec![("key", s("value"))]),);
     assert_eq!(r(0, 1), r(0, 1));
     assert_eq!(b(true), b(true));
     assert_eq!(b(false), b(false));
@@ -564,6 +437,7 @@ fn binary_ne() {
         l(vec![i(0), f(2.0), b(true)]),
         l(vec![s("world"), f(2.0), b(true)]),
     );
+    assert_ne!(o(vec![("key", s("value"))]), o(vec![]),);
     assert_ne!(r(0, 1), r(2, 3));
     assert_ne!(b(true), b(false));
     assert_ne!(b(false), b(true));

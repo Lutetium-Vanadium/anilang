@@ -165,6 +165,8 @@ pub enum InstructionKind {
     Label { number: LabelNumber },
     /// Take the top <len> elements of the stack and push a List on to the stack.
     MakeList { len: usize },
+    /// Take the top <len> * 2 elements of the stack and push a Object on to the stack.
+    MakeObject { len: usize },
     /// Take 2 values of the stack, create a range from the first to the second and push it to the
     /// stack.
     ///
@@ -241,12 +243,17 @@ impl Serialize for InstructionKind {
                 len.serialize(buf)?;
                 Ok(9)
             }
-            InstructionKind::MakeRange => buf.write(&[28]),
+            InstructionKind::MakeObject { len } => {
+                buf.write_all(&[28])?;
+                len.serialize(buf)?;
+                Ok(9)
+            }
+            InstructionKind::MakeRange => buf.write(&[29]),
             InstructionKind::PushVar { scope } => {
-                buf.write_all(&[29])?;
+                buf.write_all(&[30])?;
                 Ok(1 + scope.id.serialize(buf)?)
             }
-            InstructionKind::PopVar => buf.write(&[30]),
+            InstructionKind::PopVar => buf.write(&[31]),
         }
     }
 }
@@ -313,14 +320,18 @@ impl DeserializeCtx<DeserializationContext> for InstructionKind {
                 let len = usize::deserialize(data)?;
                 InstructionKind::MakeList { len }
             }
-            28 => InstructionKind::MakeRange,
-            29 => {
+            28 => {
+                let len = usize::deserialize(data)?;
+                InstructionKind::MakeObject { len }
+            }
+            29 => InstructionKind::MakeRange,
+            30 => {
                 let id = usize::deserialize(data)?;
                 InstructionKind::PushVar {
                     scope: ctx.get_scope(id),
                 }
             }
-            30 => InstructionKind::PopVar,
+            31 => InstructionKind::PopVar,
             n => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,

@@ -21,3 +21,8 @@ fn index_strings() {
     assert_eq!(execute(r#"'hello'[2..5]"#).unwrap(), v::s("llo"));
     assert_eq!(execute(r#"'hello'[-4..-2]"#).unwrap(), v::s("el"));
 }
+
+#[test]
+fn inbuilt_property_strings() {
+    assert_eq!(execute(r#"'hello'.len"#).unwrap(), v::i(5));
+}

@@ -102,7 +102,10 @@ impl<'s> TextBase for &'s str {
                 start = i;
             }
         }
-        lines.push((start, self.len()));
+
+        if !ignore {
+            lines.push((start, self.len()));
+        }
 
         lines
     }
