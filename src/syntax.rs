@@ -19,7 +19,10 @@ fn print_block(stdout: &mut std::io::Stdout, string: &str) {
 
 pub fn print() {
     let stdout = &mut std::io::stdout();
-    println!("The current syntax is subject to change.\n");
+    println!(
+        "This is the basics about the language, for more information go to \
+        https://github.com/Lutetium-Vanadium/anilang/blob/master/docs/syntax.md.\n"
+    );
     println!("To declare a variable:");
     print_block(stdout, "let a = <val>");
     println!("\nOnce declared variables can be reassigned to any other value");
