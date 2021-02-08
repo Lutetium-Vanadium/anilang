@@ -49,4 +49,3 @@ jobs:
               ${{ steps.read_bench.outputs.contents }}
               ```
             </details>
-          check_for_duplicate_msg: true
