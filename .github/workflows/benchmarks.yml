@@ -13,13 +13,16 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Install cargo-criterion
+        run: cargo install cargo-criterion
+
       - name: Checkout repository base
         uses: actions/checkout@v2
         with:
           ref: ${{ github.base_ref }}
 
-      - name: Run cargo bench on base
-        run: cargo bench -p anilang-core
+      - name: Run cargo criterion on base
+        run: cargo criterion -p anilang-core
 
       - name: Checkout repository head
         uses: actions/checkout@v2
@@ -27,8 +30,8 @@ jobs:
           ref: ${{ github.head_ref }}
           clean: false # Do not remove bench from base branch
 
-      - name: Run cargo bench on head
-        run: cargo bench -p anilang-core |& python3 ./.github/cleanup_bench.py &> bench.txt
+      - name: Run cargo criterion on head
+        run: cargo criterion -p anilang-core |& python3 ./.github/cleanup_bench.py &> bench.txt
       
       - name: "Read file contents"
         id: read_bench
