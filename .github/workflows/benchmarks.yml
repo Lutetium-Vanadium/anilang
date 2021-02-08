@@ -28,7 +28,7 @@ jobs:
           clean: false # Do not remove bench from base branch
 
       - name: Run cargo bench on head
-        run: cargo bench -p anilang-core | python3 ./.github/cleanup_bench.py &> bench.txt
+        run: cargo bench -p anilang-core |& python3 ./.github/cleanup_bench.py &> bench.txt
       
       - name: "Read file contents"
         id: read_bench
