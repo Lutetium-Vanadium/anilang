@@ -8,6 +8,14 @@ edition = "2018"
 [lib]
 name = "anilang"
 
+[[bench]]
+name = "anilang"
+harness = false
+
 [dependencies]
 crossterm = "0.18.2"
 enumflags2 = "0.6.4"
+
+[dev-dependencies]
+criterion = "0.3.4"
+rand = "0.8.3"

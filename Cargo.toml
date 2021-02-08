@@ -12,3 +12,9 @@ shelp = "0.2.1"
 anilang-core = { path="core" }
 crossterm = "0.18.2"
 structopt = "0.3"
+
+[workspace]
+members = [
+    ".",
+    "core",
+]
