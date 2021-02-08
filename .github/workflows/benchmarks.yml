@@ -28,7 +28,7 @@ jobs:
           clean: false # Do not remove bench from base branch
 
       - name: Run cargo bench on head
-        run: cargo bench -p anilang-core &> bench.txt
+        run: cargo bench -p anilang-core | python3 ./.github/cleanup_bench.py &> bench.txt
       
       - name: "Read file contents"
         id: read_bench
@@ -45,9 +45,9 @@ jobs:
             Comparing base (`${{ github.base_ref }}` with HEAD (`${{ github.head_ref }}`).
             <details>
               <summary>Benchmark Results</summary>
-              ```
 
+              ```
               ${{ steps.read_bench.outputs.contents }}
-
               ```
+
             </details>
