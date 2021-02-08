@@ -19,7 +19,7 @@ jobs:
           ref: ${{ github.base_ref }}
 
       - name: Run cargo bench on base
-        run: cargo bench
+        run: cargo bench -p anilang-core
 
       - name: Checkout repository head
         uses: actions/checkout@v2
@@ -28,7 +28,7 @@ jobs:
           clean: false # Do not remove bench from base branch
 
       - name: Run cargo bench on head
-        run: cargo bench &> bench.txt
+        run: cargo bench -p anilang-core &> bench.txt
       
       - name: "Read file contents"
         id: read_bench
@@ -46,6 +46,8 @@ jobs:
             <details>
               <summary>Benchmark Results</summary>
               ```
+
               ${{ steps.read_bench.outputs.contents }}
+
               ```
             </details>
