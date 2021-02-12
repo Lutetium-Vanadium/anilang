@@ -31,7 +31,7 @@ jobs:
           clean: false # Do not remove bench from base branch
 
       - name: Run cargo criterion on head
-        run: cargo criterion -p anilang-core |& python3 ./.github/cleanup_bench.py &> bench.txt
+        run: cargo criterion -p anilang-core --message-format=json | python3 ./.github/format_bench.py > bench.txt
       
       - name: "Read file contents"
         id: read_bench
@@ -44,6 +44,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          check_for_duplicate_msg: true
           msg: |
             Comparing base (`${{ github.base_ref }}` with HEAD (`${{ github.head_ref }}`).
             <details>
