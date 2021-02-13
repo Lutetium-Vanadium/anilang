@@ -170,12 +170,26 @@ fn many_blocks(c: &mut Criterion) {
     )
 }
 
+fn bench_loop(c: &mut Criterion) {
+    perform_test(
+        c,
+        "bench_loop",
+        "let sum = 0
+        let i = 0
+        while i < 1000 {
+            sum += (i += 1)
+        }",
+        false,
+    )
+}
+
 criterion_group!(
     benches,
     basic,
     huge_arithmetic_int,
     huge_arithmetic_float,
     factorial,
-    many_blocks
+    many_blocks,
+    bench_loop
 );
 criterion_main!(benches);

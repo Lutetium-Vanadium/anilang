@@ -46,12 +46,10 @@ jobs:
         with:
           check_for_duplicate_msg: true
           msg: |
-            Comparing base (`${{ github.base_ref }}` with HEAD (`${{ github.head_ref }}`).
+            Comparing base (`${{ github.base_ref }}`) with HEAD (`${{ github.head_ref }}`).
             <details>
               <summary>Benchmark Results</summary>
 
-              ```
               ${{ steps.read_bench.outputs.contents }}
-              ```
 
             </details>
