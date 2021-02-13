@@ -39,13 +39,40 @@ jobs:
         with:
           path: "bench.txt"
 
-      - name: Comment on PR
-        uses: unsplash/comment-on-pr@v1.2.0
+      - name: Find Comment
+        uses: peter-evans/find-comment@v1.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-includes: |
+            Comparing base (`${{ github.base_ref }}`) with HEAD (`${{ github.head_ref }}`).
+
+      - name: Create comment
+        if: ${{ steps.fc.outputs.comment-id == 0 }}
+        uses: peter-evans/create-or-update-comment@v1.4.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          check_for_duplicate_msg: true
-          msg: |
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Comparing base (`${{ github.base_ref }}`) with HEAD (`${{ github.head_ref }}`).
+            <details>
+              <summary>Benchmark Results</summary>
+
+              ${{ steps.read_bench.outputs.contents }}
+
+            </details>
+
+      - name: Update comment
+        if: ${{ steps.fc.outputs.comment-id != 0 }}
+        uses: peter-evans/create-or-update-comment@v1.4.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: |
             Comparing base (`${{ github.base_ref }}`) with HEAD (`${{ github.head_ref }}`).
             <details>
               <summary>Benchmark Results</summary>
