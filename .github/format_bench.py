@@ -44,7 +44,7 @@ for line in sys.stdin:
     cur, unit = try_bump_unit(typical_estimate, orig_unit)
     change_txt, change = format_change(json['change'])
 
-    print(f'| {id} | {cur} {cur_unit} |', end='')
+    print(f'| {id} | {cur} {unit} |', end='')
 
     if change:
         previous = typical_estimate * (1 + change)
