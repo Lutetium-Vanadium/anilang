@@ -72,6 +72,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
+          edit-mode: replace
           body: |
             Comparing base (`${{ github.base_ref }}`) with HEAD (`${{ github.head_ref }}`).
             <details>
