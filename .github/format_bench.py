@@ -16,6 +16,17 @@ def format_signed(num):
     else:
         return f'+{num}'
 
+units = ['ns', 'us', 'ms', 's']
+
+def try_bump_unit(num, unit):
+    unit_i = units.index(unit)
+
+    while unit_i < len(units) - 1 and abs(num) > 1000:
+        unit_i += 1
+        num /= 1000
+
+    return round(num, 2), units[unit_i]
+
 print('| benchmark | current time | previous time | diff | diff% | change |')
 print('| --------- | ------------ | ------------- | ---- | ----- | ------ |')
 
@@ -27,14 +38,18 @@ for line in sys.stdin:
     id = json['id']
     unit = json['unit']
     typical_estimate = json['typical']['estimate']
+    cur, cur_unit = try_bump_unit(typical_estimate, unit)
     change_txt, change = format_change(json['change'])
 
-    print(f'| {id} | {round(typical_estimate, 2)} {unit} |', end='')
+    print(f'| {id} | {cur} {cur_unit} |', end='')
 
     if change:
-        previous = round(typical_estimate * (1 + change), 2)
-        diff = round(previous - typical_estimate, 2)
+        previous = typical_estimate * (1 + change)
+
+        prev, prev_unit = try_bump_unit(previous, unit)
+        diff, diff_unit = try_bump_unit(previous - typical_estimate, unit)
         diff_percent = round(100 * change, 2)
-        print(f' {previous} {unit} | {format_signed(diff)} {unit} | {format_signed(diff_percent)}% | {change_txt} |')
+
+        print(f' {prev} {prev_unit} | {format_signed(diff)} {diff_unit} | {format_signed(diff_percent)}% | {change_txt} |')
     else:
         print(' - | - | - | - |')
