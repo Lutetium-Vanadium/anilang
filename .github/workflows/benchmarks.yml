@@ -1,0 +1,83 @@
+on: [pull_request]
+
+name: Benchmarks
+
+jobs:
+  bench_baseline:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-criterion
+        run: cargo install cargo-criterion
+
+      - name: Checkout repository base
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Run cargo criterion on base
+        run: cargo criterion -p anilang-core
+
+      - name: Checkout repository head
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+          clean: false # Do not remove bench from base branch
+
+      - name: Run cargo criterion on head
+        run: cargo criterion -p anilang-core --message-format=json | python3 ./.github/format_bench.py > bench.txt
+      
+      - name: "Read file contents"
+        id: read_bench
+        uses: andstor/file-reader-action@v1
+        with:
+          path: "bench.txt"
+
+      - name: Find Comment
+        uses: peter-evans/find-comment@v1.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-includes: |
+            Comparing base (`${{ github.base_ref }}`) with HEAD (`${{ github.head_ref }}`).
+
+      - name: Create comment
+        if: ${{ steps.fc.outputs.comment-id == 0 }}
+        uses: peter-evans/create-or-update-comment@v1.4.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Comparing base (`${{ github.base_ref }}`) with HEAD (`${{ github.head_ref }}`).
+            <details>
+              <summary>Benchmark Results</summary>
+
+              ${{ steps.read_bench.outputs.contents }}
+
+            </details>
+
+      - name: Update comment
+        if: ${{ steps.fc.outputs.comment-id != 0 }}
+        uses: peter-evans/create-or-update-comment@v1.4.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          edit-mode: replace
+          body: |
+            Comparing base (`${{ github.base_ref }}`) with HEAD (`${{ github.head_ref }}`).
+            <details>
+              <summary>Benchmark Results</summary>
+
+              ${{ steps.read_bench.outputs.contents }}
+
+            </details>
