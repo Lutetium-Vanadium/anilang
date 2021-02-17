@@ -1,9 +1,6 @@
 use std::io::{BufRead, Result, Write};
 
-pub trait Serialize
-where
-    Self: Sized,
-{
+pub trait Serialize {
     fn serialize<W: Write>(&self, writer: &mut W) -> Result<usize>;
 }
 
@@ -71,11 +68,29 @@ impl Deserialize for usize {
     }
 }
 
-impl Serialize for String {
+impl Serialize for str {
     fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
         buf.write_all(self.as_bytes())?;
         buf.write_all(b"\0")?;
         Ok(self.len() + 1)
+    }
+}
+
+impl Serialize for Rc<str> {
+    fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
+        str::serialize(&**self, buf)
+    }
+}
+
+impl Deserialize for Rc<str> {
+    fn deserialize<R: BufRead>(data: &mut R) -> Result<Rc<str>> {
+        String::deserialize(data).map(Into::into)
+    }
+}
+
+impl Serialize for String {
+    fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
+        self.as_str().serialize(buf)
     }
 }
 

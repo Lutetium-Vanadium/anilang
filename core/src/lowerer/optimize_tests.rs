@@ -31,7 +31,7 @@ fn lower(node: SyntaxNode) -> Bytecode {
 fn optimize_arithmetic_expr() {
     let bytecode = lower(SyntaxNode::BlockNode(node::BlockNode {
         block: vec![SyntaxNode::DeclarationNode(node::DeclarationNode {
-            ident: "a".to_owned(),
+            ident: "a".into(),
             value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
                 operator: TokenKind::StarOperator,
                 left: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
@@ -58,7 +58,7 @@ fn optimize_arithmetic_expr() {
             .into(),
             InstructionKind::Push { value: i(12) }.into(),
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: true
             }
             .into(),
@@ -71,7 +71,7 @@ fn optimize_arithmetic_expr() {
 fn optimize_index() {
     let bytecode = lower(SyntaxNode::BlockNode(node::BlockNode {
         block: vec![SyntaxNode::DeclarationNode(node::DeclarationNode {
-            ident: "a".to_owned(),
+            ident: "a".into(),
             value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
                 operator: TokenKind::StarOperator,
                 left: Box::new(SyntaxNode::IndexNode(node::IndexNode {
@@ -118,7 +118,7 @@ fn optimize_index() {
             .into(),
             InstructionKind::Push { value: i(12) }.into(),
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: true
             }
             .into(),
@@ -191,12 +191,12 @@ fn optimize_const_if_condition() {
                 })),
                 if_block: node::BlockNode {
                     block: vec![SyntaxNode::AssignmentNode(node::AssignmentNode {
-                        ident: "a".to_owned(),
+                        ident: "a".into(),
                         indices: None,
                         value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
                             operator: TokenKind::PlusOperator,
                             left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                                ident: "a".to_owned(),
+                                ident: "a".into(),
                                 span: span(),
                             })),
                             right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
@@ -211,12 +211,12 @@ fn optimize_const_if_condition() {
                 },
                 else_block: Some(node::BlockNode {
                     block: vec![SyntaxNode::AssignmentNode(node::AssignmentNode {
-                        ident: "b".to_owned(),
+                        ident: "b".into(),
                         indices: None,
                         value: Box::new(SyntaxNode::BinaryNode(node::BinaryNode {
                             operator: TokenKind::StarOperator,
                             left: Box::new(SyntaxNode::VariableNode(node::VariableNode {
-                                ident: "b".to_owned(),
+                                ident: "b".into(),
                                 span: span(),
                             })),
                             right: Box::new(SyntaxNode::LiteralNode(node::LiteralNode {
@@ -247,13 +247,10 @@ fn optimize_const_if_condition() {
             }
             .into(),
             InstructionKind::Push { value: i(2) }.into(),
-            InstructionKind::Load {
-                ident: "a".to_owned()
-            }
-            .into(),
+            InstructionKind::Load { ident: "a".into() }.into(),
             InstructionKind::BinaryAdd.into(),
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: false
             }
             .into(),
@@ -274,13 +271,10 @@ fn optimize_const_if_condition() {
             }
             .into(),
             InstructionKind::Push { value: i(4) }.into(),
-            InstructionKind::Load {
-                ident: "b".to_owned()
-            }
-            .into(),
+            InstructionKind::Load { ident: "b".into() }.into(),
             InstructionKind::BinaryMultiply.into(),
             InstructionKind::Store {
-                ident: "b".to_owned(),
+                ident: "b".into(),
                 declaration: false
             }
             .into(),

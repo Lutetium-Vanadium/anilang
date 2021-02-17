@@ -6,6 +6,7 @@ use crate::tokens::{Token, TokenKind};
 use crate::value::Value;
 use node::SyntaxNode;
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[cfg(test)]
@@ -42,6 +43,8 @@ pub struct Parser<'diagnostics, 'src> {
     tokens: Vec<Token>,
     /// index of position in tokens
     index: Cell<usize>,
+    /// A map of ident to Rc version to prevent unnecessary duplication of `String`s
+    idents: RefCell<HashMap<&'src str, Rc<str>>>,
 }
 
 impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
@@ -60,6 +63,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             src,
             tokens,
             index: Cell::new(0),
+            idents: RefCell::new(HashMap::new()),
         };
 
         parser.parse_block(TokenKind::EOF)
@@ -97,9 +101,21 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         cur
     }
 
+    // ----- Other helper Methods -----
+
     fn literal_from_ident(&self, ident: &Token) -> SyntaxNode {
         let value = Value::String(Rc::new(RefCell::new(self.src[&ident.text_span].to_owned())));
         SyntaxNode::LiteralNode(node::LiteralNode::from_val(value, ident.text_span.clone()))
+    }
+
+    fn new_ident(&self, span: &TextSpan) -> Rc<str> {
+        let ident = &self.src[span];
+        Rc::clone(
+            self.idents
+                .borrow_mut()
+                .entry(ident)
+                .or_insert_with(|| ident.into()),
+        )
     }
 
     fn is_index_assign(&self) -> AssignmentType {
@@ -279,9 +295,8 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         let value = self.parse_statement();
         SyntaxNode::DeclarationNode(node::DeclarationNode::new(
             declaration_token,
-            ident,
+            self.new_ident(&ident.text_span),
             value,
-            self.src,
         ))
     }
 
@@ -316,7 +331,12 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
         self.next();
         let value = self.parse_statement();
-        SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, indices, value, self.src))
+        SyntaxNode::AssignmentNode(node::AssignmentNode::new(
+            self.new_ident(&ident.text_span),
+            ident,
+            indices,
+            value,
+        ))
     }
 
     fn parse_calc_assignment_expression(&self) -> SyntaxNode {
@@ -327,8 +347,10 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         let op = self.next();
         let span = TextSpan::from_spans(&op.text_span, &self.next().text_span);
 
-        let mut left =
-            SyntaxNode::VariableNode(node::VariableNode::new(ident.text_span.clone(), self.src));
+        let mut left = SyntaxNode::VariableNode(node::VariableNode::new(
+            self.new_ident(&ident.text_span),
+            ident.text_span.clone(),
+        ));
         if let Some(ref indices) = indices {
             for index in indices {
                 left = SyntaxNode::IndexNode(node::IndexNode::from_span(
@@ -347,7 +369,12 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             span,
         ));
 
-        SyntaxNode::AssignmentNode(node::AssignmentNode::new(ident, indices, value, self.src))
+        SyntaxNode::AssignmentNode(node::AssignmentNode::new(
+            self.new_ident(&ident.text_span),
+            ident,
+            indices,
+            value,
+        ))
     }
 
     /// Parses function declaration assuming the fn keyword has already been processed
@@ -355,7 +382,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     /// It doesn't check for fn keyword so that it can be used while parsing objects
     fn parse_fn_declaration_statement(&self, start_token: &Token) -> SyntaxNode {
         let ident = if let TokenKind::Ident = self.cur().kind {
-            Some(self.src[&self.next().text_span].to_owned())
+            Some(self.new_ident(&self.next().text_span))
         } else {
             None
         };
@@ -368,7 +395,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 // `match_token()` not used because if the token is not an ident, loop should stop
                 let next = self.next();
                 if next.kind == TokenKind::Ident {
-                    args.push(self.src[&next.text_span].to_owned());
+                    args.push(self.new_ident(&next.text_span));
 
                     let next = self.next();
                     match next.kind {
@@ -404,10 +431,10 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     fn parse_interface_statement(&self) -> SyntaxNode {
         let interface_token = self.next();
         let interface_ident_span = self.match_token(TokenKind::Ident).text_span.clone();
-        let interface_ident = self.src[&interface_ident_span].to_owned();
+        let interface_ident = self.new_ident(&interface_ident_span);
         self.match_token(TokenKind::OpenBrace);
 
-        let mut values = Vec::new();
+        let mut values: Vec<(String, _)> = Vec::new();
 
         let mut found_constructor = false;
 
@@ -421,10 +448,10 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 TokenKind::FnKeyword => {
                     let ident = self.src[&self.match_token(TokenKind::Ident).text_span].to_owned();
                     let function = self.parse_fn_declaration_statement(next);
-                    if ident == interface_ident {
+                    if *ident == *interface_ident {
                         if found_constructor {
                             self.diagnostics
-                                .already_declared(ident.as_str(), function.span().clone());
+                                .already_declared(&*ident, function.span().clone());
                             continue;
                         } else {
                             found_constructor = true;
@@ -440,9 +467,9 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                     let function = self.parse_fn_declaration_statement(next);
                     if found_constructor {
                         self.diagnostics
-                            .already_declared(interface_ident.as_str(), function.span().clone());
+                            .already_declared(&*interface_ident, function.span().clone());
                     } else {
-                        values.push((interface_ident.clone(), function));
+                        values.push((interface_ident[..].to_owned(), function));
                         found_constructor = true;
                     }
                 }
@@ -471,7 +498,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         if !found_constructor {
             // Push an empty constructor
             values.push((
-                interface_ident.clone(),
+                interface_ident[..].to_owned(),
                 SyntaxNode::FnDeclarationNode(node::FnDeclarationNode::with_span(
                     None,
                     Vec::new(),
@@ -596,12 +623,14 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
             }
             TokenKind::Ident => {
                 let mut span = self.next().text_span.clone();
+
                 if let TokenKind::ColonColonOperator = self.cur().kind {
                     self.next();
                     span =
                         TextSpan::from_spans(&span, &self.match_token(TokenKind::Ident).text_span);
                 }
-                SyntaxNode::VariableNode(node::VariableNode::new(span, self.src))
+
+                SyntaxNode::VariableNode(node::VariableNode::new(self.new_ident(&span), span))
             }
             TokenKind::OpenBrace if self.is_object_declaration() => self.parse_object_expression(),
             TokenKind::OpenBrace => {
@@ -715,9 +744,10 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
                 //              which loads a variable
                 TokenKind::Ident if self.peek(1).kind == TokenKind::CommaOperator => {
                     elements.push(self.literal_from_ident(self.cur()));
+                    let span = self.next().text_span.clone();
                     elements.push(SyntaxNode::VariableNode(node::VariableNode::new(
-                        self.next().text_span.clone(),
-                        self.src,
+                        self.new_ident(&span),
+                        span,
                     )))
                 }
                 // { <statement>: ...

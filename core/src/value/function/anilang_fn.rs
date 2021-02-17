@@ -6,12 +6,12 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct AnilangFn {
-    pub args: Vec<String>,
+    pub args: Vec<Rc<str>>,
     pub body: Bytecode,
 }
 
 impl AnilangFn {
-    pub fn new(args: Vec<String>, body: Bytecode) -> Self {
+    pub fn new(args: Vec<Rc<str>>, body: Bytecode) -> Self {
         Self { args, body }
     }
 

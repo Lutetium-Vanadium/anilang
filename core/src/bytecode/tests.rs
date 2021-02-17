@@ -118,7 +118,7 @@ fn serialize_instr_store() {
     let test_store = |declaration| {
         test_serialize(
             InstructionKind::Store {
-                ident: "ident".to_owned(),
+                ident: "ident".into(),
                 declaration,
             },
             vec![
@@ -142,7 +142,7 @@ fn serialize_instr_store() {
 fn serialize_instr_load() {
     test_serialize(
         InstructionKind::Load {
-            ident: "some_ident".to_owned(),
+            ident: "some_ident".into(),
         },
         vec![
             20, b's', b'o', b'm', b'e', b'_', b'i', b'd', b'e', b'n', b't', b'\0',

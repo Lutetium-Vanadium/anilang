@@ -141,9 +141,9 @@ pub enum InstructionKind {
     ///
     /// stack = `[b, c, d, ...]`
     /// ident = a
-    Store { ident: String, declaration: bool },
+    Store { ident: Rc<str>, declaration: bool },
     /// Load the value of variable on to the stack.
-    Load { ident: String },
+    Load { ident: Rc<str> },
     /// Take 2 values from the stack, and index the first from the second, and push that onto the
     /// stack
     ///
@@ -290,12 +290,16 @@ impl DeserializeCtx<DeserializationContext> for InstructionKind {
                 InstructionKind::Push { value }
             }
             19 => {
-                let ident = String::deserialize(data)?;
+                // FIXME: This should probably reuse instances of Rc<str> if possible instead of
+                // creating a new one even if strings are the same.
+                let ident = String::deserialize(data)?.into();
                 let declaration = bool::deserialize(data)?;
                 InstructionKind::Store { ident, declaration }
             }
             20 => {
-                let ident = String::deserialize(data)?;
+                // FIXME: This should probably reuse instances of Rc<str> if possible instead of
+                // creating a new one even if strings are the same.
+                let ident = String::deserialize(data)?.into();
                 InstructionKind::Load { ident }
             }
             21 => InstructionKind::GetIndex,

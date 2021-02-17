@@ -9,11 +9,11 @@ macro_rules! par {
     };
 }
 
-fn make_fn(args: Vec<String>, body: Bytecode) -> Value {
+fn make_fn(args: Vec<Rc<str>>, body: Bytecode) -> Value {
     Value::Function(Rc::new(Function::anilang_fn(args, body)))
 }
 
-fn make_fn_with_this(args: Vec<String>, body: Bytecode, this: Value) -> Value {
+fn make_fn_with_this(args: Vec<Rc<str>>, body: Bytecode, this: Value) -> Value {
     Value::Function(Rc::new(Function::anilang_fn(args, body).with_this(this)))
 }
 
@@ -48,7 +48,7 @@ fn eval_s(mut bytecode: Bytecode, scope: Rc<scope::Scope>) -> Value {
 #[test]
 fn evaluate_block_properly() {
     let scope = gen_scope(0, None);
-    scope.declare("global".to_owned(), i(2)).unwrap();
+    scope.declare("global".into(), i(2)).unwrap();
 
     let bytecode = vec![
         InstructionKind::PushVar {
@@ -57,31 +57,25 @@ fn evaluate_block_properly() {
         .into(),
         InstructionKind::Push { value: i(3) }.into(),
         InstructionKind::Store {
-            ident: "a".to_owned(),
+            ident: "a".into(),
             declaration: true,
         }
         .into(),
         InstructionKind::Pop.into(),
         InstructionKind::Load {
-            ident: "global".to_owned(),
+            ident: "global".into(),
         }
         .into(),
-        InstructionKind::Load {
-            ident: "a".to_owned(),
-        }
-        .into(),
+        InstructionKind::Load { ident: "a".into() }.into(),
         InstructionKind::BinarySubtract.into(),
         InstructionKind::Store {
-            ident: "a".to_owned(),
+            ident: "a".into(),
             declaration: false,
         }
         .into(),
         InstructionKind::Pop.into(),
         InstructionKind::Push { value: i(1) }.into(),
-        InstructionKind::Load {
-            ident: "a".to_owned(),
-        }
-        .into(),
+        InstructionKind::Load { ident: "a".into() }.into(),
         InstructionKind::BinaryAdd.into(),
         InstructionKind::PopVar.into(),
     ];
@@ -92,24 +86,18 @@ fn evaluate_block_properly() {
 #[test]
 fn evaluate_variable_properly() {
     let scope = Rc::new(scope::Scope::new(0, None));
-    scope.declare("a".to_owned(), i(0)).unwrap();
-    let bytecode = vec![InstructionKind::Load {
-        ident: "a".to_owned(),
-    }
-    .into()];
+    scope.declare("a".into(), i(0)).unwrap();
+    let bytecode = vec![InstructionKind::Load { ident: "a".into() }.into()];
     assert_eq!(eval_s(bytecode, Rc::clone(&scope)), i(0));
 
     let bytecode = vec![
         InstructionKind::Push { value: i(0) }.into(),
         InstructionKind::Store {
-            ident: "a".to_owned(),
+            ident: "a".into(),
             declaration: true,
         }
         .into(),
-        InstructionKind::Load {
-            ident: "a".to_owned(),
-        }
-        .into(),
+        InstructionKind::Load { ident: "a".into() }.into(),
     ];
     assert_eq!(eval(bytecode), i(0));
 }
@@ -117,16 +105,13 @@ fn evaluate_variable_properly() {
 #[test]
 fn evaluate_index_properly() {
     let scope = gen_scope(0, None);
-    scope.declare("a".to_owned(), s("hello world")).unwrap();
+    scope.declare("a".into(), s("hello world")).unwrap();
 
     let bytecode = vec![
         InstructionKind::Push { value: i(3) }.into(),
         InstructionKind::Push { value: i(2) }.into(),
         InstructionKind::BinaryMultiply.into(),
-        InstructionKind::Load {
-            ident: "a".to_owned(),
-        }
-        .into(),
+        InstructionKind::Load { ident: "a".into() }.into(),
         InstructionKind::GetIndex.into(),
     ];
 
@@ -189,7 +174,7 @@ fn evaluate_if_properly() {
 #[test]
 fn evaluate_loop_properly() {
     let scope = gen_scope(0, None);
-    scope.declare("a".to_owned(), i(1)).unwrap();
+    scope.declare("a".into(), i(1)).unwrap();
 
     let loop_scope = gen_scope(1, par!(scope));
     let if_scope = gen_scope(2, par!(loop_scope));
@@ -203,10 +188,7 @@ fn evaluate_loop_properly() {
         InstructionKind::PushVar { scope: loop_scope }.into(),
         InstructionKind::Label { number: loop_start }.into(),
         InstructionKind::Push { value: i(100) }.into(),
-        InstructionKind::Load {
-            ident: "a".to_owned(),
-        }
-        .into(),
+        InstructionKind::Load { ident: "a".into() }.into(),
         InstructionKind::CompareGE.into(),
         InstructionKind::PopJumpIfTrue { label: if_then }.into(),
         InstructionKind::Push { value: n() }.into(),
@@ -219,13 +201,10 @@ fn evaluate_loop_properly() {
         InstructionKind::Label { number: if_end }.into(),
         InstructionKind::Pop.into(),
         InstructionKind::Push { value: i(5) }.into(),
-        InstructionKind::Load {
-            ident: "a".to_owned(),
-        }
-        .into(),
+        InstructionKind::Load { ident: "a".into() }.into(),
         InstructionKind::BinaryAdd.into(),
         InstructionKind::Store {
-            ident: "a".to_owned(),
+            ident: "a".into(),
             declaration: false,
         }
         .into(),
@@ -285,7 +264,7 @@ fn evaluate_obj_properly() {
 #[test]
 fn evaluate_assignment_properly() {
     let scope = gen_scope(0, None);
-    scope.declare("a".to_owned(), i(0)).unwrap();
+    scope.declare("a".into(), i(0)).unwrap();
 
     assert_eq!(i64::from(scope.try_get_value("a").unwrap()), 0);
     assert_eq!(
@@ -293,7 +272,7 @@ fn evaluate_assignment_properly() {
             vec![
                 InstructionKind::Push { value: s("world") }.into(),
                 InstructionKind::Store {
-                    ident: "a".to_owned(),
+                    ident: "a".into(),
                     declaration: false
                 }
                 .into(),
@@ -314,16 +293,10 @@ fn evaluate_assignment_properly() {
             vec![
                 InstructionKind::Push { value: s("a") }.into(),
                 InstructionKind::Push { value: i(1) }.into(),
-                InstructionKind::Load {
-                    ident: "a".to_owned()
-                }
-                .into(),
+                InstructionKind::Load { ident: "a".into() }.into(),
                 InstructionKind::SetIndex.into(),
                 InstructionKind::Pop.into(),
-                InstructionKind::Load {
-                    ident: "a".to_owned()
-                }
-                .into(),
+                InstructionKind::Load { ident: "a".into() }.into(),
             ],
             Rc::clone(&scope)
         )
@@ -345,7 +318,7 @@ fn evaluate_declaration_properly() {
             vec![
                 InstructionKind::Push { value: i(0) }.into(),
                 InstructionKind::Store {
-                    ident: "a".to_owned(),
+                    ident: "a".into(),
                     declaration: true
                 }
                 .into(),
@@ -363,11 +336,11 @@ fn evaluate_fn_declaration_properly() {
     let return_f = eval_s(
         vec![
             InstructionKind::Push {
-                value: make_fn(vec!["arg1".to_owned()], vec![]),
+                value: make_fn(vec!["arg1".into()], vec![]),
             }
             .into(),
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: true,
             }
             .into(),
@@ -379,7 +352,7 @@ fn evaluate_fn_declaration_properly() {
     assert!(Rc::ptr_eq(&return_f.into_rc_fn(), &func));
 
     let func = func.as_anilang_fn().unwrap();
-    assert_eq!(func.args, vec!["arg1".to_owned()]);
+    assert_eq!(func.args, vec!["arg1".into()]);
     assert_eq!(func.body.len(), 0);
 }
 
@@ -388,22 +361,16 @@ fn evaluate_fn_call_properly() {
     let scope = gen_scope(0, None);
     scope
         .declare(
-            "add".to_owned(),
+            "add".into(),
             make_fn(
-                vec!["a".to_owned(), "b".to_owned()],
+                vec!["a".into(), "b".into()],
                 vec![
                     InstructionKind::PushVar {
                         scope: gen_scope(1, par!(scope)),
                     }
                     .into(),
-                    InstructionKind::Load {
-                        ident: "b".to_owned(),
-                    }
-                    .into(),
-                    InstructionKind::Load {
-                        ident: "a".to_owned(),
-                    }
-                    .into(),
+                    InstructionKind::Load { ident: "b".into() }.into(),
+                    InstructionKind::Load { ident: "a".into() }.into(),
                     InstructionKind::BinaryAdd.into(),
                     InstructionKind::PopVar.into(),
                 ],
@@ -413,20 +380,20 @@ fn evaluate_fn_call_properly() {
 
     scope
         .declare(
-            "this_add".to_owned(),
+            "this_add".into(),
             make_fn_with_this(
-                vec!["self".to_owned(), "other".to_owned()],
+                vec!["self".into(), "other".into()],
                 vec![
                     InstructionKind::PushVar {
                         scope: gen_scope(1, par!(scope)),
                     }
                     .into(),
                     InstructionKind::Load {
-                        ident: "other".to_owned(),
+                        ident: "other".into(),
                     }
                     .into(),
                     InstructionKind::Load {
-                        ident: "self".to_owned(),
+                        ident: "self".into(),
                     }
                     .into(),
                     InstructionKind::BinaryAdd.into(),
@@ -443,7 +410,7 @@ fn evaluate_fn_call_properly() {
                 InstructionKind::Push { value: i(2) }.into(),
                 InstructionKind::Push { value: i(1) }.into(),
                 InstructionKind::Load {
-                    ident: "add".to_owned()
+                    ident: "add".into()
                 }
                 .into(),
                 InstructionKind::CallFunction { num_args: 2 }.into(),
@@ -458,7 +425,7 @@ fn evaluate_fn_call_properly() {
             vec![
                 InstructionKind::Push { value: i(2) }.into(),
                 InstructionKind::Load {
-                    ident: "this_add".to_owned()
+                    ident: "this_add".into()
                 }
                 .into(),
                 InstructionKind::CallFunction { num_args: 1 }.into(),

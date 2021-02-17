@@ -3,10 +3,11 @@ use crate::text_span::TextSpan;
 use crate::tokens::Token;
 use crossterm::{queue, style};
 use std::io::Write;
+use std::rc::Rc;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct InterfaceNode {
-    pub ident: String,
+    pub ident: Rc<str>,
     pub span: TextSpan,
     /// The default values present in the object produced from interface.
     ///
@@ -29,7 +30,7 @@ pub struct InterfaceNode {
 impl InterfaceNode {
     pub fn new(
         interface_token: &Token,
-        ident: String,
+        ident: Rc<str>,
         values: Vec<(String, SyntaxNode)>,
         close_brace: &Token,
     ) -> Self {

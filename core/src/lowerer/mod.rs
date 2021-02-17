@@ -292,7 +292,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         let constructor_idx = interface
             .values
             .iter()
-            .position(|(k, _)| *k == interface.ident)
+            .position(|(k, _)| **k == *interface.ident)
             .expect("Constructor must be present");
 
         let constructor_span = interface.values[constructor_idx].1.span().clone();
@@ -302,7 +302,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         for (k, v) in interface.values.iter() {
             if let SyntaxNode::FnDeclarationNode(ref node) = v {
                 // Got a function, if first arg is 'self', we want to include it in the object
-                if let Some("self") = node.args.first().map(String::as_str) {
+                if let Some("self") = node.args.first().map(Rc::as_ref) {
                     object_elements.push(SyntaxNode::LiteralNode(node::LiteralNode::from_val(
                         Value::String(Rc::new(RefCell::new(k.clone()))),
                         v.span().clone(),
@@ -319,7 +319,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
         }
 
         let self_declaration = SyntaxNode::DeclarationNode(node::DeclarationNode::from_span(
-            "self".to_owned(),
+            "self".into(),
             Box::new(SyntaxNode::ObjectNode(node::ObjectNode::from_span(
                 object_elements,
                 interface.span,
@@ -327,7 +327,7 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             constructor_span.clone(),
         ));
         let return_self =
-            SyntaxNode::VariableNode(node::VariableNode::raw("self".to_owned(), constructor_span));
+            SyntaxNode::VariableNode(node::VariableNode::new("self".into(), constructor_span));
 
         match &mut interface.values[constructor_idx].1 {
             SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
@@ -340,14 +340,10 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
             _ => unreachable!("Constructor must a function"),
         }
 
-        interface.ident += "::";
-
-        let interface_ident = &interface.ident[..(interface.ident.len() - 2)];
-
         for (mut k, v) in interface.values {
-            if k.as_str() == interface_ident {
+            if *k == *interface.ident {
                 if let SyntaxNode::FnDeclarationNode(mut node) = v {
-                    node.ident = Some(k);
+                    node.ident = Some(k.into());
 
                     self.lower_fn_declaration(node);
                 } else {
@@ -357,12 +353,13 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
                 let span = v.span().clone();
 
                 // Make ident in the form of <interface-name>::<ident>
-                k.insert_str(0, interface.ident.as_str());
+                k.insert_str(0, "::");
+                k.insert_str(0, &*interface.ident);
 
                 self.lower_node(v);
                 self.bytecode.push(Instruction::new(
                     InstructionKind::Store {
-                        ident: k,
+                        ident: k.into(),
                         declaration: true,
                     },
                     span,

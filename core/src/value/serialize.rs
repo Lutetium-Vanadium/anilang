@@ -172,15 +172,15 @@ mod tests {
     #[rustfmt::skip]
     fn function_serialize() {
         let f = Value::Function(Rc::new(Function::anilang_fn(
-            vec!["a".to_owned(), "b".to_owned()],
+            vec!["a".into(), "b".into()],
             vec![
                 InstructionKind::PushVar { scope: Rc::new(crate::Scope::new(0, None)) }.into(),
                 InstructionKind::Load {
-                    ident: "b".to_owned(),
+                    ident: "b".into(),
                 }
                 .into(),
                 InstructionKind::Load {
-                    ident: "a".to_owned(),
+                    ident: "a".into(),
                 }
                 .into(),
                 InstructionKind::BinaryAdd.into(),
