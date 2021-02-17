@@ -232,7 +232,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
 
     fn parse_block(&self, delim: TokenKind) -> node::BlockNode {
         let s = self.cur().text_span.start();
-        let mut block: Vec<SyntaxNode> = Vec::new();
+        let mut block = Vec::new();
 
         while self.cur().kind != delim {
             block.push(self.parse_statement());
@@ -434,7 +434,7 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
         let interface_ident = self.new_ident(&interface_ident_span);
         self.match_token(TokenKind::OpenBrace);
 
-        let mut values: Vec<(String, _)> = Vec::new();
+        let mut values = Vec::new();
 
         let mut found_constructor = false;
 
