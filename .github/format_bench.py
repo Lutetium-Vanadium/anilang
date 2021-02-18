@@ -28,6 +28,25 @@ def try_bump_unit(num, unit, max='s'):
 
     return round(num, 2), units[unit_i]
 
+def lower_to_unit(num, unit, to='ns'):
+    if unit == to:
+        return num
+
+    unit_i = units.index(unit)
+    to_i = units.index(to)
+
+    return num * (unit_i - to_i) * 1000
+
+benches = {
+    'full-no_optimize': [0, 0],
+    'full-optimize': [0, 0],
+    'lexer': [0, 0],
+    'parser': [0, 0],
+    'lower-no_optimize': [0, 0],
+    'evaluate-no_optimize': [0, 0],
+    'lower-optimize': [0, 0],
+    'evaluate-optimize': [0, 0],
+}
 
 
 print('| benchmark | current time | previous time | diff | diff% | change |')
@@ -49,10 +68,34 @@ for line in sys.stdin:
     if change:
         previous = typical_estimate * (1 + change)
 
-        prev = try_bump_unit(previous, orig_unit, unit)[0]
-        diff = try_bump_unit(previous - typical_estimate, orig_unit, unit)[0]
+        (prev, prev_unit) = try_bump_unit(previous, orig_unit, unit)
+        (diff, diff_unit) = try_bump_unit(previous - typical_estimate, orig_unit, unit)
         diff_percent = round(100 * change, 2)
 
-        print(f' {prev} {unit} | {format_signed(diff)} {unit} | {format_signed(diff_percent)}% | {change_txt} |')
+        bench_type = id.split('/')[-1]
+        benches[bench_type][0] += diff_percent
+        benches[bench_type][1] += 1
+
+        print(f' {prev} {prev_unit} | {format_signed(diff)} {diff_unit} | {format_signed(diff_percent)}% | {change_txt} |')
     else:
         print(' - | - | - | - |')
+
+print('\nAverage diff%\n')
+print('| benchmark | average diff% | change |')
+print('| --------- | ------------- | ------ |')
+
+for (bench_type, [total_diff_percent, count]) in benches.items():
+    if count == 0:
+        continue
+
+    diff_percent = round(total_diff_percent / count, 2)
+
+    change_txt = 'No Change'
+
+    # Arbitrary value for noise threshold
+    if diff_percent > 2.0:
+        change_txt = 'Regressed'
+    elif diff_percent < -2.0:
+        change_txt = 'Improved'
+
+    print(f'| {bench_type} | {format_signed(diff_percent)}% | {change_txt} |')
