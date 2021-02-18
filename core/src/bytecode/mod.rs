@@ -207,13 +207,13 @@ impl Serialize for InstructionKind {
             }
             InstructionKind::Store { ident, declaration } => {
                 buf.write_all(&[19])?;
-                ident.serialize(buf)?;
+                (Rc::as_ptr(ident) as *const u8 as usize).serialize(buf)?;
                 declaration.serialize(buf)?;
                 Ok(ident.len() + 3)
             }
             InstructionKind::Load { ident } => {
                 buf.write_all(&[20])?;
-                ident.serialize(buf)?;
+                (Rc::as_ptr(ident) as *const u8 as usize).serialize(buf)?;
                 Ok(ident.len() + 2)
             }
             InstructionKind::GetIndex => buf.write(&[21]),
@@ -290,17 +290,20 @@ impl DeserializeCtx<DeserializationContext> for InstructionKind {
                 InstructionKind::Push { value }
             }
             19 => {
-                // FIXME: This should probably reuse instances of Rc<str> if possible instead of
-                // creating a new one even if strings are the same.
-                let ident = String::deserialize(data)?.into();
+                let id = usize::deserialize(data)?;
                 let declaration = bool::deserialize(data)?;
-                InstructionKind::Store { ident, declaration }
+
+                InstructionKind::Store {
+                    ident: ctx.get_ident(id),
+                    declaration,
+                }
             }
             20 => {
-                // FIXME: This should probably reuse instances of Rc<str> if possible instead of
-                // creating a new one even if strings are the same.
-                let ident = String::deserialize(data)?.into();
-                InstructionKind::Load { ident }
+                let id = usize::deserialize(data)?;
+
+                InstructionKind::Load {
+                    ident: ctx.get_ident(id),
+                }
             }
             21 => InstructionKind::GetIndex,
             22 => InstructionKind::SetIndex,

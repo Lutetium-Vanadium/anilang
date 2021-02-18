@@ -186,12 +186,14 @@ use std::rc::Rc;
 pub struct DeserializationContext {
     global: Option<Rc<Scope>>,
     scopes: Vec<Rc<Scope>>,
+    idents: HashMap<usize, Rc<str>>,
 }
 
 impl DeserializationContext {
-    pub fn new(len: usize, global: Option<Rc<Scope>>) -> Self {
+    pub fn new(num_scopes: usize, num_idents: usize, global: Option<Rc<Scope>>) -> Self {
         Self {
-            scopes: Vec::with_capacity(len),
+            scopes: Vec::with_capacity(num_scopes),
+            idents: HashMap::with_capacity(num_idents),
             global,
         }
     }
@@ -210,7 +212,15 @@ impl DeserializationContext {
         )))
     }
 
-    pub fn get_scope(&mut self, id: usize) -> Rc<Scope> {
+    pub fn get_scope(&self, id: usize) -> Rc<Scope> {
         Rc::clone(&self.scopes[id])
+    }
+
+    pub fn add_ident(&mut self, id: usize, ident: Rc<str>) {
+        self.idents.insert(id, ident);
+    }
+
+    pub fn get_ident(&self, id: usize) -> Rc<str> {
+        Rc::clone(&self.idents[&id])
     }
 }
