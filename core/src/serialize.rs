@@ -78,13 +78,18 @@ impl Serialize for str {
 
 impl Serialize for Rc<str> {
     fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
-        str::serialize(&**self, buf)
+        let ptr = Self::as_ptr(self) as *const u8 as usize;
+        ptr.serialize(buf)
     }
 }
 
-impl Deserialize for Rc<str> {
-    fn deserialize<R: BufRead>(data: &mut R) -> Result<Rc<str>> {
-        String::deserialize(data).map(Into::into)
+impl DeserializeCtx<DeserializationContext> for Rc<str> {
+    fn deserialize_with_context<R: BufRead>(
+        data: &mut R,
+        ctx: &mut DeserializationContext,
+    ) -> Result<Rc<str>> {
+        let id = usize::deserialize(data)?;
+        Ok(ctx.get_ident(id))
     }
 }
 

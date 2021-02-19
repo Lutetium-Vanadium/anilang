@@ -64,7 +64,7 @@ impl DeserializeCtx<DeserializationContext> for Value {
                 std::collections::HashMap::deserialize_with_context(data, ctx)?,
             ))),
             Type::Function => {
-                let args = Vec::deserialize(data)?;
+                let args = Vec::deserialize_with_context(data, ctx)?;
                 let body = Vec::deserialize_with_context(data, ctx)?;
 
                 // Note native functions cannot be serialized, so the function has to be a AnilangFn
@@ -82,13 +82,32 @@ mod tests {
     use crate::test_helpers::*;
     use crate::value::Function;
     use std::rc::Rc;
+    use std::thread_local;
+
+    thread_local! {
+        static IDENT_A: Rc<str> = "a".into();
+        static IDENT_B: Rc<str> = "b".into();
+    }
+
+    fn id(rc: &Rc<str>) -> usize {
+        Rc::as_ptr(rc) as *const u8 as usize
+    }
 
     fn test_serialize(v: Value, expected_bytes: Vec<u8>) {
-        let mut context = DeserializationContext::new(1, None);
+        let mut context = DeserializationContext::new(1, 2, None);
         context.add_scope(0, None);
+
+        IDENT_A.with(|ident| {
+            context.add_ident(id(ident), Rc::clone(ident));
+        });
+        IDENT_B.with(|ident| {
+            context.add_ident(id(ident), Rc::clone(ident));
+        });
+
         let mut buf = Vec::new();
         assert_eq!(v.serialize(&mut buf).unwrap(), expected_bytes.len());
         assert_eq!(buf[..expected_bytes.len()], expected_bytes[..]);
+
         let dv = Value::deserialize_with_context(&mut &expected_bytes[..], &mut context).unwrap();
         match v {
             Value::Function(f) => match dv {
@@ -171,40 +190,64 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn function_serialize() {
-        let f = Value::Function(Rc::new(Function::anilang_fn(
-            vec!["a".into(), "b".into()],
-            vec![
-                InstructionKind::PushVar { scope: Rc::new(crate::Scope::new(0, None)) }.into(),
-                InstructionKind::Load {
-                    ident: "b".into(),
-                }
-                .into(),
-                InstructionKind::Load {
-                    ident: "a".into(),
-                }
-                .into(),
-                InstructionKind::BinaryAdd.into(),
-                InstructionKind::PopVar.into(),
-            ],
-        )));
+        let f = IDENT_A.with(|ident_a| {
+            IDENT_B.with(|ident_b| {
+                Value::Function(Rc::new(Function::anilang_fn(
+                    vec![Rc::clone(ident_a), Rc::clone(ident_b)],
+                    vec![
+                        InstructionKind::PushVar { scope: Rc::new(crate::Scope::new(0, None)) }.into(),
+                        InstructionKind::Load {
+                            ident: Rc::clone(ident_b),
+                        }
+                        .into(),
+                        InstructionKind::Load {
+                            ident: Rc::clone(ident_a),
+                        }
+                        .into(),
+                        InstructionKind::BinaryAdd.into(),
+                        InstructionKind::PopVar.into(),
+                    ],
+                )))
+            })
+        });
 
-        test_serialize(f, vec![
+        let mut bytes = vec![
             128, 0, // Value tag
             2, 0, 0, 0, 0, 0, 0, 0, // Length of args
-            b'a', b'\0', b'b', b'\0', // Args
+        ];
+
+        let ident_a_id = IDENT_A.with(|ident| id(ident));
+        let ident_b_id = IDENT_B.with(|ident| id(ident));
+        eprintln!("{} -- {}", ident_a_id, ident_b_id);
+
+        // Args
+        bytes.extend(ident_a_id.to_le_bytes().iter());
+        bytes.extend(ident_b_id.to_le_bytes().iter());
+
+        bytes.extend([
             5, 0, 0, 0, 0, 0, 0, 0, // Length of Instructions
             // Instruction 0
             30, 0, 0, 0, 0, 0, 0, 0, 0, // Tag + scope id (PushVar)
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Span
             // Instruction 1
-            20, b'b', b'\0', // Tag + ident (Load)
+            20, // Tag Load
+        ].iter());
+
+        bytes.extend(ident_b_id.to_le_bytes().iter());
+        bytes.extend([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Span
             // Instruction 2
-            20, b'a', b'\0', // Tag + ident (Load)
+            20, // Tag
+        ].iter());
+
+        bytes.extend(ident_a_id.to_le_bytes().iter());
+        bytes.extend([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Span
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Instruction 3 - Tag + Span
             31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Instruction 4 - Tag + Span
-        ]);
+        ].iter());
+
+        test_serialize(f, bytes);
     }
 
     #[test]

@@ -1,9 +1,20 @@
 use super::*;
 use crate::test_helpers::*;
+use std::rc::Rc;
+use std::thread_local;
+
+thread_local! {
+    static IDENT: Rc<str> = "ident".into();
+}
+
+fn id(rc: &Rc<str>) -> usize {
+    Rc::as_ptr(rc) as *const u8 as usize
+}
 
 fn test_serialize(instr: InstructionKind, expected_bytes: Vec<u8>) {
-    let mut context = DeserializationContext::new(1, None);
+    let mut context = DeserializationContext::new(1, 1, None);
     context.add_scope(0, None);
+    IDENT.with(|ident| context.add_ident(id(ident), Rc::clone(ident)));
     let mut buf = Vec::new();
     assert_eq!(instr.serialize(&mut buf).unwrap(), expected_bytes.len());
     assert_eq!(buf[..expected_bytes.len()], expected_bytes[..]);
@@ -116,22 +127,18 @@ fn serialize_instr_push() {
 #[test]
 fn serialize_instr_store() {
     let test_store = |declaration| {
-        test_serialize(
-            InstructionKind::Store {
-                ident: "ident".into(),
-                declaration,
-            },
-            vec![
-                19,
-                b'i',
-                b'd',
-                b'e',
-                b'n',
-                b't',
-                b'\0',
-                if declaration { 1 } else { 0 },
-            ],
-        );
+        IDENT.with(|ident| {
+            let mut bytes = vec![19];
+            bytes.extend(id(ident).to_le_bytes().iter());
+            bytes.push(if declaration { 1 } else { 0 });
+            test_serialize(
+                InstructionKind::Store {
+                    ident: Rc::clone(ident),
+                    declaration,
+                },
+                bytes,
+            );
+        });
     };
 
     test_store(true);
@@ -140,14 +147,17 @@ fn serialize_instr_store() {
 
 #[test]
 fn serialize_instr_load() {
-    test_serialize(
-        InstructionKind::Load {
-            ident: "some_ident".into(),
-        },
-        vec![
-            20, b's', b'o', b'm', b'e', b'_', b'i', b'd', b'e', b'n', b't', b'\0',
-        ],
-    );
+    IDENT.with(|ident| {
+        let mut bytes = vec![20];
+        bytes.extend(id(ident).to_le_bytes().iter());
+
+        test_serialize(
+            InstructionKind::Load {
+                ident: Rc::clone(ident),
+            },
+            bytes,
+        );
+    });
 }
 
 #[test]
