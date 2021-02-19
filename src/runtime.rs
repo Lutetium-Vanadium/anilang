@@ -21,7 +21,7 @@ pub fn run(bin_file: PathBuf, show_bytecode: bool) -> io::Result<()> {
         let is_ident = bool::deserialize(&mut bin)?;
         if is_ident {
             let id = usize::deserialize(&mut bin)?;
-            let ident = Deserialize::deserialize(&mut bin)?;
+            let ident = String::deserialize(&mut bin)?.into();
             ctx.add_ident(id, ident);
         } else {
             let parent_id = usize::deserialize(&mut bin)?;

@@ -113,7 +113,7 @@ fn serialize_scopes(
                 if !idents.contains(&ident_usize) {
                     true.serialize(output_file)?;
                     ident_usize.serialize(output_file)?;
-                    ident.serialize(output_file)?;
+                    ident[..].serialize(output_file)?;
                     idents.insert(ident_usize);
                 }
             }
