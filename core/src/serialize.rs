@@ -1,9 +1,6 @@
 use std::io::{BufRead, Result, Write};
 
-pub trait Serialize
-where
-    Self: Sized,
-{
+pub trait Serialize {
     fn serialize<W: Write>(&self, writer: &mut W) -> Result<usize>;
 }
 
@@ -71,11 +68,34 @@ impl Deserialize for usize {
     }
 }
 
-impl Serialize for String {
+impl Serialize for str {
     fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
         buf.write_all(self.as_bytes())?;
         buf.write_all(b"\0")?;
         Ok(self.len() + 1)
+    }
+}
+
+impl Serialize for Rc<str> {
+    fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
+        let ptr = Self::as_ptr(self) as *const u8 as usize;
+        ptr.serialize(buf)
+    }
+}
+
+impl DeserializeCtx<DeserializationContext> for Rc<str> {
+    fn deserialize_with_context<R: BufRead>(
+        data: &mut R,
+        ctx: &mut DeserializationContext,
+    ) -> Result<Rc<str>> {
+        let id = usize::deserialize(data)?;
+        Ok(ctx.get_ident(id))
+    }
+}
+
+impl Serialize for String {
+    fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
+        self.as_str().serialize(buf)
     }
 }
 
@@ -171,12 +191,14 @@ use std::rc::Rc;
 pub struct DeserializationContext {
     global: Option<Rc<Scope>>,
     scopes: Vec<Rc<Scope>>,
+    idents: HashMap<usize, Rc<str>>,
 }
 
 impl DeserializationContext {
-    pub fn new(len: usize, global: Option<Rc<Scope>>) -> Self {
+    pub fn new(num_scopes: usize, num_idents: usize, global: Option<Rc<Scope>>) -> Self {
         Self {
-            scopes: Vec::with_capacity(len),
+            scopes: Vec::with_capacity(num_scopes),
+            idents: HashMap::with_capacity(num_idents),
             global,
         }
     }
@@ -195,7 +217,15 @@ impl DeserializationContext {
         )))
     }
 
-    pub fn get_scope(&mut self, id: usize) -> Rc<Scope> {
+    pub fn get_scope(&self, id: usize) -> Rc<Scope> {
         Rc::clone(&self.scopes[id])
+    }
+
+    pub fn add_ident(&mut self, id: usize, ident: Rc<str>) {
+        self.idents.insert(id, ident);
+    }
+
+    pub fn get_ident(&self, id: usize) -> Rc<str> {
+        Rc::clone(&self.idents[&id])
     }
 }

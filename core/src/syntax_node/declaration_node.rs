@@ -1,31 +1,26 @@
 use super::{print_node, SyntaxNode};
-use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 use crossterm::style;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct DeclarationNode {
     pub span: TextSpan,
-    pub ident: String,
+    pub ident: Rc<str>,
     pub value: Box<SyntaxNode>,
 }
 
 impl DeclarationNode {
-    pub fn new(
-        declaration_token: &Token,
-        ident_token: &Token,
-        value: SyntaxNode,
-        src: &SourceText,
-    ) -> Self {
+    pub fn new(declaration_token: &Token, ident: Rc<str>, value: SyntaxNode) -> Self {
         Self {
-            ident: src[&ident_token.text_span].to_owned(),
+            ident,
             span: TextSpan::from_spans(&declaration_token.text_span, value.span()),
             value: Box::new(value),
         }
     }
 
-    pub fn from_span(ident: String, value: Box<SyntaxNode>, span: TextSpan) -> Self {
+    pub fn from_span(ident: Rc<str>, value: Box<SyntaxNode>, span: TextSpan) -> Self {
         Self { ident, value, span }
     }
 

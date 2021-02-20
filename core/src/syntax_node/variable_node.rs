@@ -1,22 +1,15 @@
-use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crossterm::style;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct VariableNode {
     pub span: TextSpan,
-    pub ident: String,
+    pub ident: Rc<str>,
 }
 
 impl VariableNode {
-    pub fn new(span: TextSpan, src: &SourceText) -> Self {
-        Self {
-            ident: src[&span].to_owned(),
-            span,
-        }
-    }
-
-    pub fn raw(ident: String, span: TextSpan) -> Self {
+    pub fn new(ident: Rc<str>, span: TextSpan) -> Self {
         Self { ident, span }
     }
 

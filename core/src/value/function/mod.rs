@@ -20,7 +20,7 @@ impl Function {
         }
     }
 
-    pub fn anilang_fn(args: Vec<String>, body: Bytecode) -> Self {
+    pub fn anilang_fn(args: Vec<Rc<str>>, body: Bytecode) -> Self {
         Self {
             fn_type: FunctionType::AnilangFn(AnilangFn::new(args, body)),
             this: None,

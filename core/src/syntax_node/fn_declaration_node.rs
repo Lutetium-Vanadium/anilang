@@ -2,20 +2,21 @@ use super::{print_node, BlockNode};
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 use crossterm::style;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct FnDeclarationNode {
     pub span: TextSpan,
-    pub ident: Option<String>,
-    pub args: Vec<String>,
+    pub ident: Option<Rc<str>>,
+    pub args: Vec<Rc<str>>,
     pub block: BlockNode,
 }
 
 impl FnDeclarationNode {
     pub fn new(
         fn_token: &Token,
-        ident: Option<String>,
-        args: Vec<String>,
+        ident: Option<Rc<str>>,
+        args: Vec<Rc<str>>,
         block: BlockNode,
     ) -> Self {
         Self {
@@ -27,8 +28,8 @@ impl FnDeclarationNode {
     }
 
     pub fn with_span(
-        ident: Option<String>,
-        args: Vec<String>,
+        ident: Option<Rc<str>>,
+        args: Vec<Rc<str>>,
         block: BlockNode,
         span: TextSpan,
     ) -> Self {

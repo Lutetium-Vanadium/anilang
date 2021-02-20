@@ -33,7 +33,7 @@ fn match_assignment(
             indices,
             ..
         }) => {
-            assert_eq!(ident.as_str(), expected_ident);
+            assert_eq!(&*ident, expected_ident);
             if let Some(ref indices) = indices {
                 assert_eq!(indices.len(), indices_len);
             }
@@ -78,7 +78,7 @@ fn match_break(node: SyntaxNode) {
 fn match_declaration(node: SyntaxNode, expected_ident: &str) -> SyntaxNode {
     match node {
         SyntaxNode::DeclarationNode(node::DeclarationNode { ident, value, .. }) => {
-            assert_eq!(ident.as_str(), expected_ident);
+            assert_eq!(&*ident, expected_ident);
             *value
         }
         n => panic!("expected declaration, got {:?}", n),
@@ -107,10 +107,8 @@ fn match_fn_declaration(
         SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
             ident, args, block, ..
         }) => {
-            assert_eq!(ident.as_ref().map(String::as_str), expected_ident);
-            args.iter()
-                .map(String::as_str)
-                .eq(expected_args.into_iter());
+            assert_eq!(ident.as_ref().map(Rc::as_ref), expected_ident);
+            args.iter().map(Rc::as_ref).eq(expected_args.into_iter());
             assert_eq!(block.block.len(), block_len);
             block.block
         }
@@ -158,7 +156,7 @@ fn match_interface(
 ) -> Vec<(String, SyntaxNode)> {
     match node {
         SyntaxNode::InterfaceNode(node::InterfaceNode { ident, values, .. }) => {
-            assert_eq!(ident.as_str(), expected_ident);
+            assert_eq!(dbg!(&*ident), expected_ident);
             assert_eq!(values.len(), len);
             values
         }
@@ -230,7 +228,7 @@ fn match_unary(node: SyntaxNode, expected_operator: TokenKind) -> SyntaxNode {
 fn match_variable(node: SyntaxNode, expected_ident: &str) {
     match node {
         SyntaxNode::VariableNode(node::VariableNode { ident, .. }) => {
-            assert_eq!(ident.as_str(), expected_ident)
+            assert_eq!(&*ident, expected_ident)
         }
         n => panic!("expected variable, got {:?}", n),
     }

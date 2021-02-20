@@ -7,7 +7,7 @@ fn base_scope() -> Rc<anilang::Scope> {
     let scope = Rc::new(anilang::Scope::new(0, None));
     scope
         .declare(
-            "assert".to_owned(),
+            "assert".into(),
             anilang::Value::Function(Rc::new(Function::native_fn(native::assert))),
         )
         .expect("Could not declare assert");

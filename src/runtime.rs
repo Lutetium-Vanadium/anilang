@@ -12,17 +12,29 @@ pub fn run(bin_file: PathBuf, show_bytecode: bool) -> io::Result<()> {
     let std = crate::stdlib::make_std();
 
     let num_scopes = usize::deserialize(&mut bin)?;
-    let mut ctx = anilang::DeserializationContext::new(num_scopes, Some(std));
-    for i in 0..num_scopes {
-        let parent_id = usize::deserialize(&mut bin)?;
+    let num_idents = usize::deserialize(&mut bin)?;
 
-        let parent_id = if parent_id != usize::MAX {
-            Some(parent_id)
+    let mut ctx = anilang::DeserializationContext::new(num_scopes, num_idents, Some(std));
+    let mut i = 0;
+
+    for _ in 0..(num_scopes + num_idents) {
+        let is_ident = bool::deserialize(&mut bin)?;
+        if is_ident {
+            let id = usize::deserialize(&mut bin)?;
+            let ident = String::deserialize(&mut bin)?.into();
+            ctx.add_ident(id, ident);
         } else {
-            None
-        };
+            let parent_id = usize::deserialize(&mut bin)?;
 
-        ctx.add_scope(i, parent_id);
+            let parent_id = if parent_id != usize::MAX {
+                Some(parent_id)
+            } else {
+                None
+            };
+
+            ctx.add_scope(i, parent_id);
+            i += 1;
+        }
     }
 
     let bytecode = Vec::deserialize_with_context(&mut bin, &mut ctx)?;

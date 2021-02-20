@@ -261,10 +261,7 @@ mod tests {
 
     #[test]
     fn val_to_ref_fn() {
-        let rc_f = Rc::new(Function::anilang_fn(
-            vec!["a".to_owned(), "b".to_owned()],
-            vec![],
-        ));
+        let rc_f = Rc::new(Function::anilang_fn(vec!["a".into(), "b".into()], vec![]));
         let f = Value::Function(Rc::clone(&rc_f));
         assert!(Rc::ptr_eq(&rc_f, &f.into_rc_fn()));
     }

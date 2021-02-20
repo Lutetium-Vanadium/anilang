@@ -15,13 +15,14 @@ use std::rc::Rc;
 /// let scope = Scope::new(0, None);
 ///
 /// assert_eq!(scope.try_get_value("variable"), None);
-/// scope.declare("variable".to_owned(), Value::Int(123));
+/// // Idents stored as Rc<str>
+/// scope.declare("variable".into(), Value::Int(123));
 /// assert_eq!(scope.try_get_value("variable"), Some(Value::Int(123)));
 /// ```
 #[derive(Default, Debug)]
 pub struct Scope {
     pub id: usize,
-    vars: UnsafeCell<HashMap<String, value::Value>>,
+    vars: UnsafeCell<HashMap<Rc<str>, value::Value>>,
     parent: Option<Rc<Scope>>,
 }
 
@@ -62,11 +63,11 @@ impl Scope {
     // since the only way value is accessible is to copy the whole value. Similarly, here no
     // references are possible since the value for the key is copied.
 
-    fn vars(&self) -> &HashMap<String, value::Value> {
+    fn vars(&self) -> &HashMap<Rc<str>, value::Value> {
         unsafe { &*self.vars.get() }
     }
 
-    fn insert(&self, key: String, value: value::Value) {
+    fn insert(&self, key: Rc<str>, value: value::Value) {
         let vars = unsafe { &mut *self.vars.get() };
         vars.insert(key, value);
     }
@@ -76,7 +77,7 @@ impl Scope {
     /// Creates the variable `key` with value `value` in this scope.
     ///
     /// If the variable could be declared, it returns Ok(()), otherwise it errors with the key
-    pub fn declare(&self, key: String, value: value::Value) -> Result<(), String> {
+    pub fn declare(&self, key: Rc<str>, value: value::Value) -> Result<(), Rc<str>> {
         if !self.vars().contains_key(&key) {
             self.insert(key, value);
             Ok(())
@@ -88,7 +89,7 @@ impl Scope {
     /// Sets the value for the variable. If the variable is not found, it recurses to its parent.
     ///
     /// If the variable could be set, it returns Ok(()), otherwise it errors with the key
-    pub fn set(&self, key: String, value: value::Value) -> Result<(), String> {
+    pub fn set(&self, key: Rc<str>, value: value::Value) -> Result<(), Rc<str>> {
         if self.vars().contains_key(&key) {
             self.insert(key, value);
             Ok(())

@@ -1,7 +1,9 @@
 use anilang::Serialize;
 use crossterm::Result;
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 pub fn compile(
     input_file: PathBuf,
@@ -31,10 +33,15 @@ pub fn compile(
         let mut output_file = fs::File::create(output_file)?;
         src.serialize(&mut output_file)?;
 
-        // Serialize scopes
-        count_scopes(&bytecode[..]).serialize(&mut output_file)?;
+        let mut idents = HashSet::new();
 
-        serialize_scopes(&bytecode[..], &mut output_file)?;
+        // Serialize scopes
+        count_scopes(&bytecode[..], &mut idents).serialize(&mut output_file)?;
+        idents.len().serialize(&mut output_file)?;
+
+        idents.clear();
+
+        serialize_scopes(&bytecode[..], &mut output_file, &mut idents)?;
 
         // Serialize the Instructions
         bytecode.serialize(&mut output_file)?;
@@ -53,7 +60,7 @@ pub fn compile(
 
 use anilang::{Instruction, InstructionKind, Value};
 
-fn count_scopes(bytecode: &[Instruction]) -> usize {
+fn count_scopes(bytecode: &[Instruction], idents: &mut HashSet<usize>) -> usize {
     let mut num_scopes = 0;
 
     for instr in bytecode {
@@ -62,8 +69,14 @@ fn count_scopes(bytecode: &[Instruction]) -> usize {
             InstructionKind::Push { value } => {
                 if let Value::Function(func) = value {
                     if let Some(func) = func.as_anilang_fn() {
-                        num_scopes += count_scopes(&func.body[..])
+                        num_scopes += count_scopes(&func.body[..], idents)
                     }
+                }
+            }
+            InstructionKind::Load { ident, .. } | InstructionKind::Store { ident, .. } => {
+                let ident = to_usize(ident);
+                if !idents.contains(&ident) {
+                    idents.insert(ident);
                 }
             }
             _ => {}
@@ -73,10 +86,15 @@ fn count_scopes(bytecode: &[Instruction]) -> usize {
     num_scopes
 }
 
-fn serialize_scopes(bytecode: &[Instruction], output_file: &mut fs::File) -> Result<()> {
+fn serialize_scopes(
+    bytecode: &[Instruction],
+    output_file: &mut fs::File,
+    idents: &mut HashSet<usize>,
+) -> Result<()> {
     for instr in bytecode {
         match &instr.kind {
             InstructionKind::PushVar { scope } => {
+                false.serialize(output_file)?;
                 if let Some(parent_id) = scope.parent_id() {
                     parent_id.serialize(output_file)?;
                 } else {
@@ -86,8 +104,17 @@ fn serialize_scopes(bytecode: &[Instruction], output_file: &mut fs::File) -> Res
             InstructionKind::Push { value } => {
                 if let Value::Function(func) = value {
                     if let Some(func) = func.as_anilang_fn() {
-                        serialize_scopes(&func.body[..], output_file)?;
+                        serialize_scopes(&func.body[..], output_file, idents)?;
                     }
+                }
+            }
+            InstructionKind::Store { ident, .. } | InstructionKind::Load { ident } => {
+                let ident_usize = to_usize(ident);
+                if !idents.contains(&ident_usize) {
+                    true.serialize(output_file)?;
+                    ident_usize.serialize(output_file)?;
+                    ident[..].serialize(output_file)?;
+                    idents.insert(ident_usize);
                 }
             }
             _ => {}
@@ -95,4 +122,8 @@ fn serialize_scopes(bytecode: &[Instruction], output_file: &mut fs::File) -> Res
     }
 
     Ok(())
+}
+
+fn to_usize(rc: &Rc<str>) -> usize {
+    Rc::as_ptr(rc) as *const u8 as usize
 }

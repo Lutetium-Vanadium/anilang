@@ -47,7 +47,7 @@ fn test(a: Bytecode, b: Vec<InstructionKind>) {
 
 fn make_assignment(ident: &str, value: SyntaxNode, indices: Option<Vec<SyntaxNode>>) -> SyntaxNode {
     SyntaxNode::AssignmentNode(node::AssignmentNode {
-        ident: ident.to_owned(),
+        ident: ident.into(),
         value: Box::new(value),
         indices,
         span: span(),
@@ -73,7 +73,7 @@ fn make_break() -> SyntaxNode {
 
 fn make_declaration(ident: &str, value: SyntaxNode) -> SyntaxNode {
     SyntaxNode::DeclarationNode(node::DeclarationNode {
-        ident: ident.to_owned(),
+        ident: ident.into(),
         value: Box::new(value),
         span: span(),
     })
@@ -89,8 +89,8 @@ fn make_fn_call(child: SyntaxNode, args: Vec<SyntaxNode>) -> SyntaxNode {
 
 fn make_fn_declaration(ident: Option<&str>, args: Vec<&str>, block: Vec<SyntaxNode>) -> SyntaxNode {
     SyntaxNode::FnDeclarationNode(node::FnDeclarationNode {
-        ident: ident.map(str::to_owned),
-        args: args.into_iter().map(str::to_owned).collect(),
+        ident: ident.map(Rc::from),
+        args: args.into_iter().map(Rc::from).collect(),
         block: block_from_vec(block),
         span: span(),
     })
@@ -119,7 +119,7 @@ fn make_index(child: SyntaxNode, index: SyntaxNode) -> SyntaxNode {
 
 fn make_interface(ident: &str, values: Vec<(&str, SyntaxNode)>) -> SyntaxNode {
     SyntaxNode::InterfaceNode(node::InterfaceNode {
-        ident: ident.to_owned(),
+        ident: ident.into(),
         values: values.into_iter().map(|(a, b)| (a.to_owned(), b)).collect(),
         span: span(),
     })
@@ -170,7 +170,7 @@ fn make_unary(operator: TokenKind, child: SyntaxNode) -> SyntaxNode {
 
 fn make_variable(ident: &str) -> SyntaxNode {
     SyntaxNode::VariableNode(node::VariableNode {
-        ident: ident.to_owned(),
+        ident: ident.into(),
         span: span(),
     })
 }
@@ -203,26 +203,22 @@ fn lower_block_properly() {
             },
             InstructionKind::Push { value: i(3) },
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: true,
             },
             InstructionKind::Pop,
             InstructionKind::Load {
-                ident: "global".to_owned(),
+                ident: "global".into(),
             },
-            InstructionKind::Load {
-                ident: "a".to_owned(),
-            },
+            InstructionKind::Load { ident: "a".into() },
             InstructionKind::BinarySubtract,
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: false,
             },
             InstructionKind::Pop,
             InstructionKind::Push { value: i(1) },
-            InstructionKind::Load {
-                ident: "a".to_owned(),
-            },
+            InstructionKind::Load { ident: "a".into() },
             InstructionKind::BinaryAdd,
             InstructionKind::PopVar,
         ],
@@ -233,9 +229,7 @@ fn lower_block_properly() {
 fn lower_variable_properly() {
     test(
         lower(make_variable("a")),
-        vec![InstructionKind::Load {
-            ident: "a".to_owned(),
-        }],
+        vec![InstructionKind::Load { ident: "a".into() }],
     );
 }
 
@@ -256,9 +250,7 @@ fn lower_index_properly() {
             InstructionKind::Push { value: i(3) },
             InstructionKind::Push { value: i(2) },
             InstructionKind::BinaryMultiply,
-            InstructionKind::Load {
-                ident: "a".to_owned(),
-            },
+            InstructionKind::Load { ident: "a".into() },
             InstructionKind::GetIndex,
         ],
     );
@@ -348,9 +340,7 @@ fn lower_loop_properly() {
             },
             InstructionKind::Label { number: loop_start },
             InstructionKind::Push { value: i(100) },
-            InstructionKind::Load {
-                ident: "a".to_owned(),
-            },
+            InstructionKind::Load { ident: "a".into() },
             InstructionKind::CompareGE,
             InstructionKind::PopJumpIfTrue { label: if_then },
             InstructionKind::Push { value: n() },
@@ -365,12 +355,10 @@ fn lower_loop_properly() {
             InstructionKind::Label { number: if_end },
             InstructionKind::Pop,
             InstructionKind::Push { value: i(5) },
-            InstructionKind::Load {
-                ident: "a".to_owned(),
-            },
+            InstructionKind::Load { ident: "a".into() },
             InstructionKind::BinaryAdd,
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: false,
             },
             InstructionKind::Pop,
@@ -452,12 +440,12 @@ fn lower_interface_properly() {
                     },
                     InstructionKind::MakeObject { len: 0 },
                     InstructionKind::Store {
-                        ident: "self".to_owned(),
+                        ident: "self".into(),
                         declaration: true,
                     },
                     InstructionKind::Pop,
                     InstructionKind::Load {
-                        ident: "self".to_owned(),
+                        ident: "self".into(),
                     },
                     InstructionKind::PopVar,
                     InstructionKind::Label { number: 0 },
@@ -470,7 +458,7 @@ fn lower_interface_properly() {
     assert_eq!(
         bytecode.next().unwrap().kind,
         InstructionKind::Store {
-            ident: "I".to_owned(),
+            ident: "I".into(),
             declaration: true
         }
     );
@@ -523,7 +511,7 @@ fn lower_interface_properly() {
         InstructionKind::Push { value } if value.type_() == Type::Function => {
             let f = value.into_rc_fn();
             let f = f.as_anilang_fn().unwrap();
-            assert_eq!(f.args, vec!["val".to_owned()]);
+            assert_eq!(f.args, vec!["val".into()]);
             f.body.clone()
         }
         i => panic!("expected InstructionKind::Push function, got {:?}", i),
@@ -541,7 +529,7 @@ fn lower_interface_properly() {
         InstructionKind::Push { value } if value.type_() == Type::Function => {
             let f = value.into_rc_fn();
             let f = f.as_anilang_fn().unwrap();
-            assert_eq!(f.args, vec!["self".to_owned()]);
+            assert_eq!(f.args, vec!["self".into()]);
             test(
                 f.body.clone(),
                 vec![
@@ -551,7 +539,7 @@ fn lower_interface_properly() {
                     InstructionKind::Push { value: i(10) },
                     InstructionKind::Push { value: s("val") },
                     InstructionKind::Load {
-                        ident: "self".to_owned(),
+                        ident: "self".into(),
                     },
                     InstructionKind::GetIndex,
                     InstructionKind::BinaryAdd,
@@ -588,7 +576,7 @@ fn lower_interface_properly() {
     assert_eq!(
         body.next().unwrap().kind,
         InstructionKind::Store {
-            ident: "self".to_owned(),
+            ident: "self".into(),
             declaration: true
         }
     );
@@ -597,7 +585,7 @@ fn lower_interface_properly() {
     assert_eq!(
         body.next().unwrap().kind,
         InstructionKind::Load {
-            ident: "val".to_owned()
+            ident: "val".into()
         }
     );
     assert_eq!(
@@ -607,7 +595,7 @@ fn lower_interface_properly() {
     assert_eq!(
         body.next().unwrap().kind,
         InstructionKind::Load {
-            ident: "self".to_owned()
+            ident: "self".into()
         }
     );
     assert_eq!(body.next().unwrap().kind, InstructionKind::SetIndex);
@@ -616,7 +604,7 @@ fn lower_interface_properly() {
     assert_eq!(
         body.next().unwrap().kind,
         InstructionKind::Load {
-            ident: "self".to_owned()
+            ident: "self".into()
         }
     );
     assert_eq!(body.next().unwrap().kind, InstructionKind::PopVar);
@@ -629,7 +617,7 @@ fn lower_interface_properly() {
     assert_eq!(
         bytecode.next().unwrap().kind,
         InstructionKind::Store {
-            ident: "I".to_owned(),
+            ident: "I".into(),
             declaration: true
         }
     );
@@ -640,7 +628,7 @@ fn lower_interface_properly() {
     assert_eq!(
         bytecode.next().unwrap().kind,
         InstructionKind::Store {
-            ident: "I::val".to_owned(),
+            ident: "I::val".into(),
             declaration: true
         }
     );
@@ -649,7 +637,7 @@ fn lower_interface_properly() {
     assert_eq!(
         bytecode.next().unwrap().kind,
         InstructionKind::Store {
-            ident: "I::val_10".to_owned(),
+            ident: "I::val_10".into(),
             declaration: true
         }
     );
@@ -663,7 +651,7 @@ fn lower_assignment_properly() {
         vec![
             InstructionKind::Push { value: s("world") },
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: false,
             },
         ],
@@ -679,15 +667,11 @@ fn lower_assignment_properly() {
             InstructionKind::Push { value: s("a") },
             InstructionKind::Push { value: i(1) },
             InstructionKind::Push { value: i(0) },
-            InstructionKind::Load {
-                ident: "a".to_owned(),
-            },
+            InstructionKind::Load { ident: "a".into() },
             InstructionKind::GetIndex,
             InstructionKind::SetIndex,
             InstructionKind::Pop,
-            InstructionKind::Load {
-                ident: "a".to_owned(),
-            },
+            InstructionKind::Load { ident: "a".into() },
         ],
     );
 }
@@ -699,7 +683,7 @@ fn lowerer_declaration_properly() {
         vec![
             InstructionKind::Push { value: i(0) },
             InstructionKind::Store {
-                ident: "a".to_owned(),
+                ident: "a".into(),
                 declaration: true,
             },
         ],
@@ -717,7 +701,7 @@ fn lower_fn_declaration_properly() {
             value: crate::Value::Function(f),
         } => {
             let f = f.as_anilang_fn().unwrap();
-            assert_eq!(f.args, vec!["arg1".to_owned()]);
+            assert_eq!(f.args, vec!["arg1".into()]);
             assert!(f.body.is_empty());
         }
         i => panic!("Expected Push Value::Function, got {:?}", i),
@@ -726,7 +710,7 @@ fn lower_fn_declaration_properly() {
     assert_eq!(
         bytecode[1].kind,
         InstructionKind::Store {
-            ident: "a".to_owned(),
+            ident: "a".into(),
             declaration: true
         }
     );
@@ -745,7 +729,7 @@ fn lower_fn_declaration_properly() {
             value: crate::Value::Function(f),
         } => {
             let f = f.as_anilang_fn().unwrap();
-            assert_eq!(f.args, vec!["arg1".to_owned()]);
+            assert_eq!(f.args, vec!["arg1".into()]);
             f.body.clone()
         }
         i => panic!("Expected Push Value::Function, got {:?}", i),
@@ -776,7 +760,7 @@ fn lower_fn_call_properly() {
             InstructionKind::Push { value: i(2) },
             InstructionKind::Push { value: i(1) },
             InstructionKind::Load {
-                ident: "add".to_owned(),
+                ident: "add".into(),
             },
             InstructionKind::CallFunction { num_args: 2 },
         ],
@@ -792,7 +776,7 @@ fn lower_fn_call_properly() {
                 value: s("Hello World!"),
             },
             InstructionKind::Load {
-                ident: "print".to_owned(),
+                ident: "print".into(),
             },
             InstructionKind::CallFunction { num_args: 1 },
         ],

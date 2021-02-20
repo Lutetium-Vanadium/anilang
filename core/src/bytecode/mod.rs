@@ -141,9 +141,9 @@ pub enum InstructionKind {
     ///
     /// stack = `[b, c, d, ...]`
     /// ident = a
-    Store { ident: String, declaration: bool },
+    Store { ident: Rc<str>, declaration: bool },
     /// Load the value of variable on to the stack.
-    Load { ident: String },
+    Load { ident: Rc<str> },
     /// Take 2 values from the stack, and index the first from the second, and push that onto the
     /// stack
     ///
@@ -207,14 +207,14 @@ impl Serialize for InstructionKind {
             }
             InstructionKind::Store { ident, declaration } => {
                 buf.write_all(&[19])?;
-                ident.serialize(buf)?;
+                Rc::serialize(&ident, buf)?;
                 declaration.serialize(buf)?;
-                Ok(ident.len() + 3)
+                Ok(10)
             }
             InstructionKind::Load { ident } => {
                 buf.write_all(&[20])?;
-                ident.serialize(buf)?;
-                Ok(ident.len() + 2)
+                Rc::serialize(&ident, buf)?;
+                Ok(9)
             }
             InstructionKind::GetIndex => buf.write(&[21]),
             InstructionKind::SetIndex => buf.write(&[22]),
@@ -289,15 +289,13 @@ impl DeserializeCtx<DeserializationContext> for InstructionKind {
                 let value = Value::deserialize_with_context(data, ctx)?;
                 InstructionKind::Push { value }
             }
-            19 => {
-                let ident = String::deserialize(data)?;
-                let declaration = bool::deserialize(data)?;
-                InstructionKind::Store { ident, declaration }
-            }
-            20 => {
-                let ident = String::deserialize(data)?;
-                InstructionKind::Load { ident }
-            }
+            19 => InstructionKind::Store {
+                ident: Rc::deserialize_with_context(data, ctx)?,
+                declaration: bool::deserialize(data)?,
+            },
+            20 => InstructionKind::Load {
+                ident: Rc::deserialize_with_context(data, ctx)?,
+            },
             21 => InstructionKind::GetIndex,
             22 => InstructionKind::SetIndex,
             23 => {

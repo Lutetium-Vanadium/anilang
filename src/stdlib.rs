@@ -6,7 +6,7 @@ macro_rules! declare_native_fn {
     ($scope:expr => $fn_name:ident) => {
         $scope
             .declare(
-                stringify!($fn_name).to_owned(),
+                stringify!($fn_name).into(),
                 Value::Function(Rc::new(Function::native_fn(native::$fn_name))),
             )
             .unwrap_or_else(|_| {

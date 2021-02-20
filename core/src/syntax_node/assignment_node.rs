@@ -1,13 +1,13 @@
 use super::{print_node, SyntaxNode};
-use crate::source_text::SourceText;
 use crate::text_span::TextSpan;
 use crate::tokens::Token;
 use crossterm::style;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct AssignmentNode {
     pub span: TextSpan,
-    pub ident: String,
+    pub ident: Rc<str>,
     /// For an assignment `<variable>[<index>] = <value>`, index refers to the <index>, and *not*
     /// a `IndexNode`
     pub indices: Option<Vec<SyntaxNode>>,
@@ -16,13 +16,13 @@ pub struct AssignmentNode {
 
 impl AssignmentNode {
     pub fn new(
+        ident: Rc<str>,
         ident_token: &Token,
         indices: Option<Vec<SyntaxNode>>,
         value: SyntaxNode,
-        src: &SourceText,
     ) -> Self {
         Self {
-            ident: src[&ident_token.text_span].to_owned(),
+            ident,
             span: TextSpan::from_spans(&ident_token.text_span, value.span()),
             indices,
             value: Box::new(value),

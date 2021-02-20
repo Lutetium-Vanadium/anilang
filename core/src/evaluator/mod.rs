@@ -34,7 +34,7 @@ mod tests;
 /// use anilang::{SourceText, Scope, Diagnostics, Lexer, Parser, Lowerer, Evaluator, Value};
 ///
 /// let scope = Rc::new(Scope::new(0, None));
-/// scope.declare("var".to_owned(), Value::Int(1));
+/// scope.declare("var".into(), Value::Int(1));
 ///
 /// let src = SourceText::new("var + 2 + 3");
 /// let diagnostics = Diagnostics::new(&src);
@@ -126,7 +126,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 InstructionKind::Pop => self.evaluate_pop(),
                 InstructionKind::Push { value } => self.evaluate_push(value.clone()),
                 InstructionKind::Store { ident, declaration } => {
-                    self.evaluate_store(ident.clone(), *declaration)
+                    self.evaluate_store(Rc::clone(&ident), *declaration)
                 }
                 InstructionKind::Load { ident } => self.evaluate_load(ident),
                 InstructionKind::GetIndex => self.evaluate_get_index(),
@@ -290,7 +290,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         self.stack.push(value);
     }
 
-    fn evaluate_store(&mut self, ident: String, declaration: bool) {
+    fn evaluate_store(&mut self, ident: Rc<str>, declaration: bool) {
         let v = self
             .stack
             .last()
