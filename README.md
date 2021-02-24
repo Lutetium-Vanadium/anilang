@@ -27,7 +27,22 @@ cargo install --path .
 
 Run tests:
 ```sh
-cargo test -p anilang -p anilang-core
+cargo test --workspace
+```
+
+Run benchmarks:
+```sh
+cargo bench --workspace
+```
+
+Alternatively, install [cargo-criterion](https://crates.io/crates/cargo-criterion)
+and run:
+```sh
+# Regular output to terminal
+cargo criterion --workspace
+
+# additionally format the output into a md table
+cargo criterion --workspace --message-format=json | python3 ./.github/format_bench.py > bench.md
 ```
 
 ## Usage

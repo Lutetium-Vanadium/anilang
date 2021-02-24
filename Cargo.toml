@@ -1,20 +1,15 @@
-[package]
-name = "anilang"
-version = "0.1.0"
-authors = ["Lutetium-Vanadium"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-app_dirs2 = "2.3"
-shelp = "0.2.1"
-anilang-core = { path="core" }
-crossterm = "0.18.2"
-structopt = "0.3"
-
 [workspace]
 members = [
-    ".",
-    "core",
+    "crates/anilang",
+    "crates/diagnostics",
+    "crates/evaluator",
+    "crates/intermediaries",
+    "crates/lexer",
+    "crates/lowerer",
+    "crates/parser",
+    "crates/serialize",
+    "crates/source",
+    "crates/vm",
 ]
+
+default-members = [ "crates/anilang" ]

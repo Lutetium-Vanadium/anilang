@@ -22,7 +22,7 @@ jobs:
           ref: ${{ github.base_ref }}
 
       - name: Run cargo criterion on base
-        run: cargo criterion -p anilang-core
+        run: cargo criterion --workspace
 
       - name: Checkout repository head
         uses: actions/checkout@v2
@@ -31,7 +31,7 @@ jobs:
           clean: false # Do not remove bench from base branch
 
       - name: Run cargo criterion on head
-        run: cargo criterion -p anilang-core --message-format=json | python3 ./.github/format_bench.py > bench.txt
+        run: cargo criterion --workspace --message-format=json | python3 ./.github/format_bench.py > bench.md
       
       - name: "Read file contents"
         id: read_bench

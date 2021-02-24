@@ -1,0 +1,29 @@
+[package]
+name = "anilang"
+version = "0.1.0"
+authors = ["Lutetium Vanadium"]
+edition = "2018"
+
+[[bench]]
+name = "anilang"
+harness = false
+
+[dependencies]
+app_dirs2 = "2.3"
+shelp = "0.2.1"
+crossterm = "0.18.2"
+structopt = "0.3"
+
+diagnostics = { path = "../diagnostics" }
+evaluator = { path = "../evaluator" }
+intermediaries = { path = "../intermediaries" }
+lexer = { path = "../lexer" }
+lowerer = { path = "../lowerer" }
+parser = { path = "../parser" }
+serialize = { path = "../serialize" }
+source = { path = "../source" }
+vm = { path = "../vm" }
+
+[dev-dependencies]
+criterion = "0.3.4"
+rand = "0.8.3"
