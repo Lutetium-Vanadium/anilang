@@ -220,7 +220,6 @@ mod tests {
 
         let ident_a_id = IDENT_A.with(|ident| id(ident));
         let ident_b_id = IDENT_B.with(|ident| id(ident));
-        eprintln!("{} -- {}", ident_a_id, ident_b_id);
 
         // Args
         bytes.extend(ident_a_id.to_le_bytes().iter());

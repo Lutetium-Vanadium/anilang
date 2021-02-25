@@ -160,7 +160,7 @@ fn match_interface(
 ) -> Vec<(String, SyntaxNode)> {
     match node {
         SyntaxNode::InterfaceNode(node::InterfaceNode { ident, values, .. }) => {
-            assert_eq!(dbg!(&*ident), expected_ident);
+            assert_eq!(&*ident, expected_ident);
             assert_eq!(values.len(), len);
             values
         }
@@ -321,7 +321,7 @@ fn parse_calc_assignment_properly() {
         Token::new(TokenKind::AssignmentOperator, 8, 1),
         Token::new(TokenKind::Number, 10, 3),
     ];
-    let root = dbg!(parse("a[0].b += 123", tokens));
+    let root = parse("a[0].b += 123", tokens);
 
     let (value, indices) = match_assignment(root, "a", 2);
     let mut indices = indices.unwrap();
