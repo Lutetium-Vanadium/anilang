@@ -287,7 +287,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
 
     /// Generated in the lexer
     ///
-    /// Is reported when an unknown character is present in the source code, see `core/src/lexer.rs`
+    /// Is reported when an unknown character is present in the source code, see `lexer/src/lib.rs`
     /// Examples:
     /// let a = ~1213
     ///         ^
@@ -305,7 +305,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
 
     /// Generated in the lexer and parser
     ///
-    /// Is reported when a token is expected, but an EOF is found, see `core/src/parser.rs`
+    /// Is reported when a token is expected, but an EOF is found, see `parser/src/lib.rs`
     /// Examples:
     /// if true {
     ///         ^
@@ -317,7 +317,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     /// Generated in the parser
     ///
     /// Is reported when a part of the source text being evaluated as a literal fails to parse into
-    /// the rust format, see `core/src/syntax_node/literal_node.rs`
+    /// the rust format, see `intermediaries/src/syntax_node/literal_node.rs`
     /// Examples:
     /// let a = 16398612361278713193
     ///         ^^^^^^^^^^^^^^^^^^^^
@@ -342,7 +342,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
 
     /// Generated in the parser
     ///
-    /// Is reported when a token is expected, but a different one is found `core/src/parser.rs`
+    /// Is reported when a token is expected, but a different one is found `parser/src/lib.rs`
     /// Examples:
     /// if true 2131
     ///         ^^^^
@@ -373,7 +373,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     /// Generated in the lowerer
     ///
     /// Is reported when there is a break statement outside a loop.
-    /// see `core/src/lowerer/mod.rs`
+    /// see `lowerer/src/lib.rs`
     pub fn break_outside_loop(&self, span: TextSpan) {
         self.report_err(
             "BreakOutsideLoop: breaks can only be used in for loops, while loops and regular loops"
@@ -385,7 +385,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     /// Generated in the lowerer
     ///
     /// Is reported when there is a break statement outside a loop.
-    /// see `core/src/lowerer/mod.rs`
+    /// see `lowerer/src/lib.rs`
     pub fn return_outside_fn(&self, span: TextSpan) {
         self.report_err(
             "ReturnOutsideFn: return can only be used in function declarations".to_owned(),
@@ -396,7 +396,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     /// Generated in the lowerer
     ///
     /// Is reported when a statement is const evaluable, but does not occur at the end of the block
-    /// see `core/src/lowerer/mod.rs`
+    /// see `lowerer/src/lib.rs`
     /// Examples:
     /// {
     ///     let a = 1231
@@ -417,7 +417,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     /// Generated in the evaluator
     ///
     /// Is reported when a variable is used without being previously declared,
-    /// see `core/src/evaluator/mod.rs`
+    /// see `evaluator/src/lib.rs`
     /// Examples:
     /// let a = a + 123
     ///         ^
@@ -432,7 +432,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     /// Generated in the evaluator
     ///
     /// Is reported when a variable is being redeclared while already being declared in the
-    /// current, see `core/src/evaluator/mod.rs`
+    /// current see `evaluator/src/lib.rs`
     /// Examples:
     /// let a = 123
     /// let a = a + 123
@@ -448,7 +448,7 @@ impl<'a, T: TextBase> Diagnostics<'a, T> {
     /// Generated in the evaluator
     ///
     /// This is a general method to convert a `value::ErrorKind` to an printed error, these are
-    /// errors from executing binary or unary operations, see `core/src/value/mod.rs`
+    /// errors from executing binary or unary operations, see `vm/src/value/mod.rs`
     /// Examples:
     /// 123 / 0
     ///     ^

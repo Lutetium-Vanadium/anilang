@@ -7,7 +7,7 @@ use std::rc::Rc;
 use vm::Value;
 
 /// Converts given a stream of tokens into a parsed AST. The root node returned is a `BlockNode`
-/// defined in `core/src/syntax_node/block_node.rs`
+/// defined in `intermediaries/src/syntax_node/block_node.rs`
 ///
 /// # Examples
 /// ```no_run

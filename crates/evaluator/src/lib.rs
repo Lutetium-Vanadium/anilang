@@ -435,9 +435,10 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
         }
 
         // An optimization of checking the strong count of the function to avoid copying (similar to
-        // the one for list and string in `core/src/value/mod.rs`) cannot be made since functions
-        // can never be generated in runtime, so there will always be at least 2 references: The one
-        // on the stack, which we are using to execute, and the one in the bytecode instructions
+        // the one for list and string in `vm/src/value/mod.rs`) cannot be made since functions
+        // can never be generated at execution time, so there will always be at least 2 references:
+        // The one on the stack, which we are using to execute, and the one in the bytecode
+        // instructions
 
         let fn_body = func.duplicate_body();
 

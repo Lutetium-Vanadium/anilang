@@ -115,7 +115,7 @@ fn serialize_instr_pop() {
 }
 
 // Only tests one, since more in depth testing of value writing is done in
-// `core/src/value/serialize.rs`
+// `vm/src/value/serialize.rs`
 #[test]
 fn serialize_instr_push() {
     test_serialize(

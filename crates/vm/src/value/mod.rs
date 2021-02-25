@@ -19,6 +19,7 @@ pub type Object = std::collections::HashMap<String, Value>;
 pub type Ref<T> = Rc<RefCell<T>>;
 pub(crate) type Result<T> = std::result::Result<T, ErrorKind>;
 
+/// Errors generated during the execution of code are handled through this enum
 #[derive(Debug, PartialEq)]
 pub enum ErrorKind {
     IncorrectType { got: Type, expected: BitFlags<Type> },
@@ -53,8 +54,8 @@ pub enum Value {
     /// instead of directly using `Rc<HashMap>`, we use `Rc<RefCell<HashMap>>` to provide mutable
     /// objects.
     Object(Ref<Object>),
-    /// A pointer to a function, see `core/src/value/function/mod.rs` for more information, easy to
-    /// copy so not placed in a `Rc`.
+    /// A pointer to a function, see `vm/src/function/mod.rs` for more information, function
+    /// objects are expensive to copy, so are placed in a `Rc`.
     Function(Rc<Function>),
     /// A range value, easy to copy, so it is not placed in a `Rc`
     Range(i64, i64),
@@ -70,8 +71,8 @@ pub enum Value {
     Null,
 }
 
-// Also see `core/src/types.rs` for type impls &
-//          `core/src/value/from.rs` for to base type impls
+// Also see `vm/src/types/mod.rs` for type impls &
+//          `vm/src/value/from_impl.rs` for to base type impls
 
 /// impl for the various unary operations
 impl Value {

@@ -6,7 +6,8 @@
 
 ## Installation
 
-You will need to install the [`cargo`](https://www.rust-lang.org/learn/get-started) to compile the both the `repl` and the `core`.
+You will need to install the [`cargo`](https://www.rust-lang.org/learn/get-started)
+to compile and run the required crates.
 
 To start the `repl`, run
 ```sh
