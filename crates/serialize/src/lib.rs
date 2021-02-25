@@ -85,18 +85,6 @@ impl Serialize for Rc<str> {
     }
 }
 
-// TODO this should be moved somewhere
-//
-// impl DeserializeCtx<DeserializationContext> for Rc<str> {
-//     fn deserialize_with_context<R: BufRead>(
-//         data: &mut R,
-//         ctx: &mut DeserializationContext,
-//     ) -> Result<Rc<str>> {
-//         let id = usize::deserialize(data)?;
-//         Ok(ctx.get_ident(id))
-//     }
-// }
-
 impl Serialize for String {
     fn serialize<W: Write>(&self, buf: &mut W) -> Result<usize> {
         self.as_str().serialize(buf)
