@@ -6,5 +6,7 @@ pub use lowerer::Lowerer;
 pub use parser::Parser;
 pub use serialize::{Deserialize, DeserializeCtx, Serialize};
 pub use source::SourceText;
-pub use vm::bytecode::*;
-pub use vm::{function, DeserializationContext, Scope, Type, Value};
+pub use vm::{
+    function, print_bytecode, Bytecode, DeserializationContext, Instruction, InstructionKind,
+    LabelNumber, Scope, Type, Value,
+};
