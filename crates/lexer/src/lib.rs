@@ -32,7 +32,7 @@ use source::{SourceText, TextBase, TextSpan};
 pub struct Lexer<'diagnostics, 'src, T: TextBase> {
     diagnostics: &'diagnostics Diagnostics<'src, T>,
     /// The lexed tokens get added to this `Vec`
-    pub tokens: Vec<Token>,
+    tokens: Vec<Token>,
     /// The source text, used to detect keywords, and add EOF at the end
     src: &'src SourceText<'src, T>,
     /// The iterator constructed from src, which is used to lex tokens

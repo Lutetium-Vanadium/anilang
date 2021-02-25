@@ -23,23 +23,23 @@ use source::TextSpan;
 use std::io::prelude::*;
 
 pub mod node {
-    pub use super::assignment_node::*;
-    pub use super::binary_node::*;
-    pub use super::block_node::*;
-    pub use super::break_node::*;
-    pub use super::declaration_node::*;
-    pub use super::fn_call_node::*;
-    pub use super::fn_declaration_node::*;
-    pub use super::if_node::*;
-    pub use super::index_node::*;
-    pub use super::interface_node::*;
-    pub use super::list_node::*;
-    pub use super::literal_node::*;
-    pub use super::loop_node::*;
-    pub use super::object_node::*;
-    pub use super::return_node::*;
-    pub use super::unary_node::*;
-    pub use super::variable_node::*;
+    pub use super::assignment_node::AssignmentNode;
+    pub use super::binary_node::BinaryNode;
+    pub use super::block_node::BlockNode;
+    pub use super::break_node::BreakNode;
+    pub use super::declaration_node::DeclarationNode;
+    pub use super::fn_call_node::FnCallNode;
+    pub use super::fn_declaration_node::FnDeclarationNode;
+    pub use super::if_node::IfNode;
+    pub use super::index_node::IndexNode;
+    pub use super::interface_node::InterfaceNode;
+    pub use super::list_node::ListNode;
+    pub use super::literal_node::LiteralNode;
+    pub use super::loop_node::LoopNode;
+    pub use super::object_node::ObjectNode;
+    pub use super::return_node::ReturnNode;
+    pub use super::unary_node::UnaryNode;
+    pub use super::variable_node::VariableNode;
 }
 
 use node::*;
