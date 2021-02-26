@@ -1,0 +1,11 @@
+[package]
+name = "parser"
+version = "0.1.0"
+authors = ["Lutetium Vanadium"]
+edition = "2018"
+
+[dependencies]
+diagnostics = { path = "../diagnostics" }
+source = { path = "../source" }
+vm = { path = "../vm" }
+intermediaries = { path = "../intermediaries" }

@@ -1,0 +1,13 @@
+[package]
+name = "lowerer"
+version = "0.1.0"
+authors = ["Lutetium Vanadium"]
+edition = "2018"
+
+[dependencies]
+vm = { path = "../vm" }
+intermediaries = { path = "../intermediaries" }
+diagnostics = { path = "../diagnostics" }
+
+[dev-dependencies]
+source = { path = "../source" }

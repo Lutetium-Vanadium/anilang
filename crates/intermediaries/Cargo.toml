@@ -1,0 +1,10 @@
+[package]
+name = "intermediaries"
+version = "0.1.0"
+authors = ["Lutetium Vanadium"]
+edition = "2018"
+
+[dependencies]
+crossterm = "0.18.2"
+source = { path = "../source" }
+vm = { path = "../vm" }
