@@ -350,7 +350,7 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
 
     // MARK
     //
-    // Then we pass pass over all the `GcInner`s marking them suitably. All objects not marked are
+    // Then we pass over all the `GcInner`s marking them suitably. All objects not marked are
     // not being referenced from anywhere else can be deleted.
     {
         let mut head = gcd.root;
