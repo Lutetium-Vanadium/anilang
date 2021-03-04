@@ -509,7 +509,9 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
     //
     // (side effect: collect_garbage is called if bytes_allocated exceeds max_bytes, which means
     // that if not enough memory could be allocated, this will take care of that too)
-    gcd.max_bytes = gcd.bytes_allocated.next_power_of_two();
+    gcd.max_bytes = (gcd.bytes_allocated | 128).next_power_of_two();
+    //              ^^^^^^^^^^^^^^^^^^^^^^^^^^^-- makes sure that max_bytes is a minimum of 256
+
     // overflow of pow2_greater is irrelevant since the only time bytes_allocated can be greater
     // than isize::MAX is if the garbage collection was triggered by an allocation of a new garbage
     // collected object, which panics if the bytes_allocated is more than isize::MAX.
