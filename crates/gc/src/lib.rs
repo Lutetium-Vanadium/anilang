@@ -10,6 +10,8 @@
 //!
 //! To see more information about how the mark and sweep algorithm is implemented, see `src/inner.rs`.
 
+use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::NonNull;
@@ -124,11 +126,61 @@ unsafe impl<T: Mark + ?Sized> Mark for Gc<T> {
     }
 }
 
-impl<T> Deref for Gc<T> {
+impl<T: ?Sized> Deref for Gc<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
         self.inner().value()
+    }
+}
+
+impl<T: ?Sized + PartialEq> PartialEq for Gc<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Gc::ptr_eq(self, other) || **self == **other
+    }
+}
+
+impl<T: ?Sized + Eq> Eq for Gc<T> {}
+
+impl<T: ?Sized + PartialOrd> PartialOrd for Gc<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        (**self).partial_cmp(&**other)
+    }
+}
+
+impl<T: ?Sized + Ord> Ord for Gc<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (**self).cmp(&**other)
+    }
+}
+
+impl<T: ?Sized + fmt::Debug> fmt::Debug for Gc<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&**self, f)
+    }
+}
+
+impl<T: ?Sized + fmt::Display> fmt::Display for Gc<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&**self, f)
+    }
+}
+
+impl<T: ?Sized> fmt::Pointer for Gc<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Pointer::fmt(&self.inner.ptr(), f)
+    }
+}
+
+impl<T: ?Sized + Hash> Hash for Gc<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (**self).hash(state)
+    }
+}
+
+impl<T: ?Sized + Default + Mark> Default for Gc<T> {
+    fn default() -> Self {
+        Self::new(T::default())
     }
 }
 
