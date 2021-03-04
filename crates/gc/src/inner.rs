@@ -84,23 +84,6 @@ pub(crate) struct GcInner<T: ?Sized + 'static> {
     value: T,
 }
 
-/// Get the first power of 2 greater than a number n
-///
-/// note: if n is isize::MAX or greater, it will overflow and return 0
-fn pow2_greater(mut n: usize) -> usize {
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-
-    if mem::size_of::<usize>() == 8 {
-        n |= n >> 32;
-    }
-
-    n + 1
-}
-
 #[cold]
 /// Mark a branch as unlikely to happen to help the compiler with optimization
 fn cold() {}
@@ -234,8 +217,12 @@ mod flags {
 
         /// Set the marked flag
         pub fn set_marked(&self, marked: bool) {
-            self.flags
-                .set(self.ref_count() | ((marked as usize) << MARKED_BIT_OFFSET));
+            let mut flags = self.flags.get();
+
+            flags &= !MARKED_FLAG_MASK;
+            flags |= (marked as usize) << MARKED_BIT_OFFSET;
+
+            self.flags.set(flags);
         }
 
         /// Get the updated flag
@@ -245,8 +232,12 @@ mod flags {
 
         /// Set the updated flag
         pub fn set_updated(&self, updated: bool) {
-            self.flags
-                .set(self.ref_count() | ((updated as usize) << UPDATED_BIT_OFFSET));
+            let mut flags = self.flags.get();
+
+            flags &= !UPDATED_FLAG_MASK;
+            flags |= (updated as usize) << UPDATED_BIT_OFFSET;
+
+            self.flags.set(flags);
         }
 
         /// Get the reference count
@@ -308,6 +299,97 @@ mod flags {
                     w = UPDATED_BIT_OFFSET
                 )
             }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        fn test_state(flags: &GcInnerFlags, ref_count: usize, updated: bool, marked: bool) {
+            let mut state = ref_count;
+            if updated {
+                state |= UPDATED_FLAG_MASK;
+            }
+
+            if marked {
+                state |= MARKED_FLAG_MASK;
+            }
+
+            assert_eq!(flags.ref_count(), ref_count);
+            assert_eq!(flags.updated(), updated);
+            assert_eq!(flags.marked(), marked);
+            assert_eq!(flags.flags.get(), state);
+        }
+
+        #[test]
+        fn test_gc_inner_flags() {
+            let flags = &GcInnerFlags::new();
+
+            test_state(flags, 1, false, false);
+
+            flags.set_updated(true);
+            test_state(flags, 1, true, false);
+
+            flags.set_marked(true);
+            test_state(flags, 1, true, true);
+
+            flags.inc_ref();
+            test_state(flags, 2, true, true);
+
+            flags.set_updated(false);
+            test_state(flags, 2, false, true);
+
+            flags.set_marked(false);
+            test_state(flags, 2, false, false);
+
+            flags.dec_ref();
+            test_state(flags, 1, false, false);
+
+            flags.dec_ref();
+            test_state(flags, 0, false, false);
+        }
+
+        #[test]
+        #[should_panic(expected = "GcInnerFlags: unexpected dec_ref at ref_count 0")]
+        fn test_dec_ref_panic_at_0() {
+            let flags = &GcInnerFlags::new();
+
+            flags.dec_ref();
+            flags.set_marked(true);
+            test_state(flags, 0, false, true);
+
+            flags.dec_ref();
+        }
+
+        fn inc_ref_panic_at_max() {
+            let max = (usize::MAX >> 2) - 2;
+            let flags = &GcInnerFlags::new();
+
+            flags.flags.set(usize::MAX >> 2 - 2);
+
+            flags.set_updated(true);
+
+            flags.inc_ref();
+            test_state(flags, max, true, false);
+
+            flags.inc_ref();
+        }
+
+        #[cfg(target_pointer_width = "64")]
+        #[test]
+        #[should_panic(
+            expected = "GcInnerFlags: unexpected inc_ref at max ref_count 4611686018427387903"
+        )]
+        fn test_inc_ref_panic_at_max() {
+            inc_ref_panic_at_max();
+        }
+
+        #[cfg(target_pointer_width = "32")]
+        #[test]
+        #[should_panic(expected = "GcInnerFlags: unexpected inc_ref at max ref_count 1073741823")]
+        fn test_inc_ref_panic_at_max() {
+            inc_ref_panic_at_max();
         }
     }
 }
@@ -427,7 +509,7 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
     //
     // (side effect: collect_garbage is called if bytes_allocated exceeds max_bytes, which means
     // that if not enough memory could be allocated, this will take care of that too)
-    gcd.max_bytes = pow2_greater(gcd.bytes_allocated);
+    gcd.max_bytes = gcd.bytes_allocated.next_power_of_two();
     // overflow of pow2_greater is irrelevant since the only time bytes_allocated can be greater
     // than isize::MAX is if the garbage collection was triggered by an allocation of a new garbage
     // collected object, which panics if the bytes_allocated is more than isize::MAX.

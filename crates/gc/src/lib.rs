@@ -245,4 +245,41 @@ mod inner_ptr {
     fn get_bit<T: ?Sized>(ptr: NonNull<T>, bit_index: usize) -> bool {
         ptr.as_ptr() as *mut u8 as usize & (1 << bit_index) != 0
     }
+
+    #[test]
+    fn test_gc_inner_ptr() {
+        fn make_usize<T: ?Sized>(t: NonNull<T>) -> usize {
+            t.as_ptr() as *const u8 as usize
+        }
+
+        let ptr = Box::leak(Box::new(0usize));
+        let ptr_usize = ptr as *const _ as usize;
+        let ptr = unsafe { GcInnerPtr::new(NonNull::new_unchecked(ptr), true) };
+
+        assert_eq!(ptr.ptr().as_ptr() as usize, ptr_usize);
+        assert_eq!(make_usize(ptr.ptr.get()), UNREACHABLE_BIT_MASK | ptr_usize);
+        assert_eq!(ptr.unreachable(), true);
+        assert_eq!(unsafe { *ptr.ptr().as_ptr() }, 0);
+
+        ptr.set_unreachable(true);
+
+        assert_eq!(ptr.ptr().as_ptr() as usize, ptr_usize);
+        assert_eq!(make_usize(ptr.ptr.get()), UNREACHABLE_BIT_MASK | ptr_usize);
+        assert_eq!(ptr.unreachable(), true);
+        assert_eq!(unsafe { *ptr.ptr().as_ptr() }, 0);
+
+        unsafe { *ptr.ptr().as_mut() = 23 };
+
+        assert_eq!(ptr.ptr().as_ptr() as usize, ptr_usize);
+        assert_eq!(make_usize(ptr.ptr.get()), UNREACHABLE_BIT_MASK | ptr_usize);
+        assert_eq!(ptr.unreachable(), true);
+        assert_eq!(unsafe { *ptr.ptr().as_ptr() }, 23);
+
+        ptr.set_unreachable(false);
+
+        assert_eq!(ptr.ptr().as_ptr() as usize, ptr_usize);
+        assert_eq!(make_usize(ptr.ptr.get()), ptr_usize);
+        assert_eq!(ptr.unreachable(), false);
+        assert_eq!(unsafe { *ptr.ptr().as_ptr() }, 23);
+    }
 }
