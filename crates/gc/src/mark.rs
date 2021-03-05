@@ -87,3 +87,16 @@ impl_mark!(RefCell<T: Mark>; this =>
 );
 
 impl_mark!(String);
+
+impl_mark!(i8);
+impl_mark!(i16);
+impl_mark!(i32);
+impl_mark!(i64);
+impl_mark!(i128);
+impl_mark!(isize);
+impl_mark!(u8);
+impl_mark!(u16);
+impl_mark!(u32);
+impl_mark!(u64);
+impl_mark!(u128);
+impl_mark!(usize);

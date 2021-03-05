@@ -454,7 +454,7 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
     {
         // Should be impossible to fail since sweep is not recursive, and during sweeping, new
         // objects shouldn't be created
-        SweepGuard::take().expect("unexpected call to sweep, while already sweeping");
+        let _guard = SweepGuard::take().expect("unexpected call to sweep, while already sweeping");
 
         let mut head = gcd.root;
         // We need to keep track of previous so that we can set its `next` field while removing a
