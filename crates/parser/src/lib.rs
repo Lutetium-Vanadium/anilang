@@ -103,7 +103,9 @@ impl<'diagnostics, 'src> Parser<'diagnostics, 'src> {
     // ----- Other helper Methods -----
 
     fn literal_from_ident(&self, ident: &Token) -> SyntaxNode {
-        let value = Value::String(Rc::new(RefCell::new(self.src[&ident.text_span].to_owned())));
+        let value = Value::String(gc::Gc::new(RefCell::new(
+            self.src[&ident.text_span].to_owned(),
+        )));
         SyntaxNode::LiteralNode(node::LiteralNode::from_val(value, ident.text_span.clone()))
     }
 

@@ -85,6 +85,11 @@ impl_mark!(HashMap<K: Mark, V: Mark, S>; this =>
 impl_mark!(RefCell<T: Mark>; this =>
     mark(&*this.borrow())
 );
+impl_mark!(Option<T: Mark>; this =>
+    if let Some(val) = this {
+        mark(val)
+    }
+);
 
 impl_mark!(String);
 

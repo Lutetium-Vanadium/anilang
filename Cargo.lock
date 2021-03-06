@@ -364,6 +364,7 @@ name = "evaluator"
 version = "0.1.0"
 dependencies = [
  "diagnostics",
+ "gc",
  "source",
  "vm",
 ]
@@ -446,6 +447,7 @@ name = "intermediaries"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "gc",
  "source",
  "vm",
 ]
@@ -558,6 +560,7 @@ name = "lowerer"
 version = "0.1.0"
 dependencies = [
  "diagnostics",
+ "gc",
  "intermediaries",
  "source",
  "vm",
@@ -732,6 +735,7 @@ name = "parser"
 version = "0.1.0"
 dependencies = [
  "diagnostics",
+ "gc",
  "intermediaries",
  "source",
  "vm",
@@ -1203,6 +1207,7 @@ version = "0.1.0"
 dependencies = [
  "crossterm",
  "enumflags2",
+ "gc",
  "serialize",
  "source",
 ]

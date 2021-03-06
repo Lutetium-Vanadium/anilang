@@ -1,4 +1,5 @@
 use crate::bytecode::Bytecode;
+use gc::Mark;
 use std::rc::Rc;
 
 mod anilang_fn;
@@ -61,6 +62,16 @@ impl Function {
     pub fn with_this(mut self, this: Value) -> Self {
         self.this = Some(this);
         self
+    }
+}
+
+unsafe impl Mark for Function {
+    fn mark(&self) {
+        self.this.mark();
+    }
+
+    fn update_reachable(&self) {
+        self.this.update_reachable();
     }
 }
 

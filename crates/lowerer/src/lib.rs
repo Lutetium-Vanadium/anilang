@@ -1,4 +1,5 @@
 use diagnostics::Diagnostics;
+use gc::Gc;
 use intermediaries::{node, SyntaxNode, TokenKind};
 use std::cell::RefCell;
 use std::mem;
@@ -318,14 +319,14 @@ impl<'diagnostics, 'src> Lowerer<'diagnostics, 'src> {
                 // Got a function, if first arg is 'self', we want to include it in the object
                 if let Some("self") = node.args.first().map(Rc::as_ref) {
                     object_elements.push(SyntaxNode::LiteralNode(node::LiteralNode::from_val(
-                        Value::String(Rc::new(RefCell::new(k.clone()))),
+                        Value::String(Gc::new(RefCell::new(k.clone()))),
                         v.span().clone(),
                     )));
                     object_elements.push(v.clone());
                 }
             } else {
                 object_elements.push(SyntaxNode::LiteralNode(node::LiteralNode::from_val(
-                    Value::String(Rc::new(RefCell::new(k.clone()))),
+                    Value::String(Gc::new(RefCell::new(k.clone()))),
                     v.span().clone(),
                 )));
                 object_elements.push(v.clone());

@@ -2,6 +2,7 @@ use super::Value;
 use crate::function::Function;
 use crate::types::Type;
 use crate::DeserializationContext;
+use gc::Gc;
 use serialize::{Deserialize, DeserializeCtx, Serialize};
 use std::cell::RefCell;
 use std::io::{self, prelude::*};
@@ -58,11 +59,11 @@ impl DeserializeCtx<DeserializationContext> for Value {
                 let e = i64::deserialize(data)?;
                 Value::Range(s, e)
             }
-            Type::List => Value::List(Rc::new(RefCell::new(Vec::deserialize_with_context(
+            Type::List => Value::List(Gc::new(RefCell::new(Vec::deserialize_with_context(
                 data, ctx,
             )?))),
-            Type::String => Value::String(Rc::new(RefCell::new(String::deserialize(data)?))),
-            Type::Object => Value::Object(Rc::new(RefCell::new(
+            Type::String => Value::String(Gc::new(RefCell::new(String::deserialize(data)?))),
+            Type::Object => Value::Object(Gc::new(RefCell::new(
                 std::collections::HashMap::deserialize_with_context(data, ctx)?,
             ))),
             Type::Function => {

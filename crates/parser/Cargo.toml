@@ -8,4 +8,5 @@ edition = "2018"
 diagnostics = { path = "../diagnostics" }
 source = { path = "../source" }
 vm = { path = "../vm" }
+gc = { path = "../gc" }
 intermediaries = { path = "../intermediaries" }

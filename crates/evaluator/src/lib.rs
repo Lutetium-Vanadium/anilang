@@ -1,4 +1,5 @@
 use diagnostics::Diagnostics;
+use gc::Gc;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -476,7 +477,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
             list.push(self.stack.pop().unwrap_or_else(e_msg));
         }
 
-        self.stack.push(Value::List(Rc::new(RefCell::new(list))));
+        self.stack.push(Value::List(Gc::new(RefCell::new(list))));
     }
 
     fn evaluate_make_object(&mut self, len: usize) {
@@ -501,10 +502,10 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 return;
             }
 
-            map.insert(k.into_str(), v);
+            map.insert(k.to_ref_str().to_owned(), v);
         }
 
-        self.stack.push(Value::Object(Rc::new(RefCell::new(map))));
+        self.stack.push(Value::Object(Gc::new(RefCell::new(map))));
     }
 
     fn evaluate_make_range(&mut self) {

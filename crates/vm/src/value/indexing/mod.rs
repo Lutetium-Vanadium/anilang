@@ -1,7 +1,7 @@
 use super::{ErrorKind, Result, Value};
 use crate::types::Type;
+use gc::Gc;
 use std::cell::RefCell;
-use std::rc::Rc;
 
 mod access_property;
 
@@ -98,7 +98,7 @@ impl Value {
                     _ => unreachable!("Unindexable type should be caught by earlier check"),
                 };
 
-                Ok(Value::String(Rc::new(RefCell::new(s))))
+                Ok(Value::String(Gc::new(RefCell::new(s))))
             }
             Value::List(l) => {
                 let l = l.borrow();
@@ -112,7 +112,7 @@ impl Value {
                         let s = normalise_index(s, l.len() as i64)?;
                         let e = normalise_index_len(e, l.len() as i64)?;
 
-                        Ok(Value::List(Rc::new(RefCell::new(Vec::from(&l[s..e])))))
+                        Ok(Value::List(Gc::new(RefCell::new(Vec::from(&l[s..e])))))
                     }
                     _ => unreachable!("Unindexable type should be caught by earlier check"),
                 }

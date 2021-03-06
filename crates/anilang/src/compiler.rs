@@ -66,11 +66,11 @@ fn count_scopes(bytecode: &[Instruction], idents: &mut HashSet<usize>) -> usize 
     for instr in bytecode {
         match &instr.kind {
             InstructionKind::PushVar { .. } => num_scopes += 1,
-            InstructionKind::Push { value } => {
-                if let Value::Function(func) = value {
-                    if let Some(func) = func.as_anilang_fn() {
-                        num_scopes += count_scopes(&func.body[..], idents)
-                    }
+            InstructionKind::Push {
+                value: Value::Function(func),
+            } => {
+                if let Some(func) = func.as_anilang_fn() {
+                    num_scopes += count_scopes(&func.body[..], idents)
                 }
             }
             InstructionKind::Load { ident, .. } | InstructionKind::Store { ident, .. } => {
@@ -101,11 +101,11 @@ fn serialize_scopes(
                     usize::MAX.serialize(output_file)?;
                 }
             }
-            InstructionKind::Push { value } => {
-                if let Value::Function(func) = value {
-                    if let Some(func) = func.as_anilang_fn() {
-                        serialize_scopes(&func.body[..], output_file, idents)?;
-                    }
+            InstructionKind::Push {
+                value: Value::Function(func),
+            } => {
+                if let Some(func) = func.as_anilang_fn() {
+                    serialize_scopes(&func.body[..], output_file, idents)?;
                 }
             }
             InstructionKind::Store { ident, .. } | InstructionKind::Load { ident } => {

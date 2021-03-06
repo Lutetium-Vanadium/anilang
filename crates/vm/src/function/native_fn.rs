@@ -1,8 +1,8 @@
 use crate::types::Type;
 use crate::value::{ErrorKind, Result, Value};
+use gc::Gc;
 use std::cell::RefCell;
 use std::io::{self, prelude::*};
-use std::rc::Rc;
 
 pub type NativeFn = fn(Vec<Value>) -> Result<Value>;
 
@@ -43,7 +43,7 @@ pub fn input(args: Vec<Value>) -> Result<Value> {
     let new_len = s.trim_end_matches(|c| c == '\n' || c == '\r').len();
     s.truncate(new_len);
 
-    Ok(Value::String(Rc::new(RefCell::new(s))))
+    Ok(Value::String(Gc::new(RefCell::new(s))))
 }
 
 pub fn push(mut args: Vec<Value>) -> Result<Value> {
