@@ -173,28 +173,51 @@ impl Add for Value {
             Value::Int(left) => Ok(Value::Int(left + i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left + f64::from(right))),
             Value::String(left) => {
-                let right = right.to_gc_str();
-                let l = left.borrow();
-                let r = right.borrow();
-                let mut s = String::with_capacity(l.len() + r.len());
-                s += &l;
-                s += &r;
+                let right = right.into_gc_str();
 
-                Ok(Value::String(Gc::new(RefCell::new(s))))
+                let gc = if Gc::ref_count(&left) == 1 {
+                    *left.borrow_mut() += &**right.borrow();
+                    left
+                } else if Gc::ref_count(&right) == 1 {
+                    *right.borrow_mut() += &**left.borrow();
+                    right
+                } else {
+                    let l = left.borrow();
+                    let r = right.borrow();
+                    let mut s = String::with_capacity(l.len() + r.len());
+                    s += &l;
+                    s += &r;
+
+                    Gc::new(RefCell::new(s))
+                };
+
+                Ok(Value::String(gc))
             }
             Value::List(left) => {
-                let right = right.to_gc_list();
-                let l = left.borrow();
-                let r = right.borrow();
-                let mut v = Vec::with_capacity(l.len() + r.len());
-                v.extend_from_slice(&l[..]);
-                v.extend_from_slice(&r[..]);
+                let right = right.into_gc_list();
 
-                Ok(Value::List(Gc::new(RefCell::new(v))))
+                let gc = if Gc::ref_count(&left) == 1 {
+                    left.borrow_mut().extend_from_slice(&**right.borrow());
+                    left
+                } else if Gc::ref_count(&right) == 1 {
+                    right.borrow_mut().extend_from_slice(&**left.borrow());
+                    right
+                } else {
+                    let l = left.borrow();
+                    let r = right.borrow();
+
+                    let mut v = Vec::with_capacity(l.len() + r.len());
+                    v.extend_from_slice(&**l);
+                    v.extend_from_slice(&**r);
+
+                    Gc::new(RefCell::new(v))
+                };
+
+                Ok(Value::List(gc))
             }
             _ => Err(ErrorKind::IncorrectLeftType {
                 got: self.type_(),
-                expected: Type::Int | Type::Float | Type::String,
+                expected: Type::Int | Type::Float | Type::String | Type::List,
             }),
         }
     }

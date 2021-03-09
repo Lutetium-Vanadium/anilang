@@ -51,7 +51,9 @@ fn normalise_index_len(index: i64, len: i64) -> Result<usize> {
 
 /// impl for index operations
 impl Value {
-    /// Property access is equivalent to indexing by strings
+    /// returns whether self's type is indexable be index_type
+    ///
+    /// note: property access is equivalent to indexing by strings
     pub fn indexable(&self, index_type: Type) -> bool {
         match self.type_() {
             Type::String if (Type::Int | Type::Range | Type::String).contains(index_type) => true,

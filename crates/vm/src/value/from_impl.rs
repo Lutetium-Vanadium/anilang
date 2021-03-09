@@ -124,6 +124,13 @@ impl Value {
         }
     }
 
+    pub fn into_gc_str(self) -> Gc<RefCell<String>> {
+        match self {
+            Value::String(s) => s,
+            _ => unreachable!(),
+        }
+    }
+
     pub fn to_ref_str(&self) -> Ref<String> {
         match self {
             Value::String(ref s) => s.borrow(),
@@ -132,15 +139,19 @@ impl Value {
     }
 
     pub fn into_string(self) -> String {
+        Gc::try_unwrap(self.into_gc_str())
+            .map(RefCell::into_inner)
+            .unwrap_or_else(|gc| gc.borrow().as_str().to_owned())
+    }
+
+    pub fn to_gc_list(&self) -> &Gc<RefCell<List>> {
         match self {
-            Value::String(s) => Gc::try_unwrap(s)
-                .map(RefCell::into_inner)
-                .unwrap_or_else(|gc| gc.borrow().as_str().to_owned()),
+            Value::List(l) => l,
             _ => unreachable!(),
         }
     }
 
-    pub fn to_gc_list(&self) -> &Gc<RefCell<List>> {
+    pub fn into_gc_list(self) -> Gc<RefCell<List>> {
         match self {
             Value::List(l) => l,
             _ => unreachable!(),
@@ -234,6 +245,7 @@ mod tests {
     #[test]
     fn val_to_ref_string() {
         assert_eq!(s("s").to_gc_str().borrow().as_str(), "s");
+        assert_eq!(s("s").into_gc_str().borrow().as_str(), "s");
         assert_eq!(s("s").to_ref_str().as_str(), "s");
     }
 
@@ -246,6 +258,10 @@ mod tests {
     fn val_to_ref_list() {
         assert_eq!(
             l(vec![i(0), i(1), s("s")]).to_gc_list().borrow()[..],
+            [i(0), i(1), s("s")]
+        );
+        assert_eq!(
+            l(vec![i(0), i(1), s("s")]).into_gc_list().borrow()[..],
             [i(0), i(1), s("s")]
         );
         assert_eq!(
