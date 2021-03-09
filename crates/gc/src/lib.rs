@@ -153,14 +153,14 @@ impl<T: ?Sized> Drop for Gc<T> {
 }
 
 unsafe impl<T: Mark + ?Sized> Mark for Gc<T> {
-    fn mark(&self) {
+    unsafe fn mark(&self) {
         // update_reachable should have marked this as reachable
         debug_assert!(!self.unreachable());
 
         self.inner().mark();
     }
 
-    fn update_reachable(&self) {
+    unsafe fn update_reachable(&self) {
         // If unreachable, set reachable and decrement inner ref.
         if self.unreachable() {
             self.inner.set_unreachable(false);

@@ -196,7 +196,7 @@ impl<T> GcInner<T> {
 }
 
 unsafe impl<T: Mark + ?Sized> Mark for GcInner<T> {
-    fn mark(&self) {
+    unsafe fn mark(&self) {
         // update_reachable should have marked this as updated
         debug_assert!(self.flags.updated());
 
@@ -208,7 +208,7 @@ unsafe impl<T: Mark + ?Sized> Mark for GcInner<T> {
         }
     }
 
-    fn update_reachable(&self) {
+    unsafe fn update_reachable(&self) {
         // This is called by other values that implement Mark during a garbage collection, if we
         // have already visited this node, we need not go through its children again.
         if !self.flags.updated() {
@@ -255,7 +255,8 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
             // SAFETY: All `GcInner`s are valid until they are removed in the sweep phase or have
             // been manually removed by try_unwrap
             let node = unsafe { node.as_ref() };
-            node.update_reachable();
+            // SAFETY: We are the garbage collector, so we are allowed to call this.
+            unsafe { node.update_reachable() };
             head = node.next;
         }
     }
@@ -273,7 +274,8 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
             // If ref_count == 0, then this is a candidate for collecting and unless accessible from
             // another node will not be marked.
             if node.flags.ref_count() > 0 {
-                node.mark();
+                // SAFETY: We are the garbage collector, so we are allowed to call this.
+                unsafe { node.mark() };
             }
             head = node.next;
         }

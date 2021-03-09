@@ -4,8 +4,8 @@ use std::collections::HashMap;
 macro_rules! impl_mark {
     ($type:ty) => {
         unsafe impl Mark for $type {
-            fn mark(&self) {}
-            fn update_reachable(&self) {}
+            unsafe fn mark(&self) {}
+            unsafe fn update_reachable(&self) {}
         }
     };
 
@@ -14,16 +14,16 @@ macro_rules! impl_mark {
             $crate::Mark
             for $ty< $( $N ),* >
         {
-            fn mark(&self) {
-                fn mark<T: Mark>(t: &T) {
+            unsafe fn mark(&self) {
+                unsafe fn mark<T: Mark>(t: &T) {
                     Mark::mark(t)
                 }
                 let $this = self;
                 $body
             }
 
-            fn update_reachable(&self) {
-                fn mark<T: Mark>(t: &T) {
+            unsafe fn update_reachable(&self) {
+                unsafe fn mark<T: Mark>(t: &T) {
                     Mark::update_reachable(t)
                 }
                 let $this = self;
@@ -57,7 +57,9 @@ pub unsafe trait Mark {
     ///
     /// If all contained `Gc`s are not marked, then a `Gc` which is still in use could be registered
     /// to be collected which cause use after free issues.
-    fn mark(&self);
+    ///
+    /// This function is unsafe since it should only be called from mark itself.
+    unsafe fn mark(&self);
 
     /// This should call `Mark::update_reachable` on all contained `Gc`s.
     ///
@@ -65,7 +67,9 @@ pub unsafe trait Mark {
     ///
     /// If all contained `Gc`s are not marked, then there may be an issue with the detecting of an
     /// object being ready to be collected, which will lead to memory leaks.
-    fn update_reachable(&self);
+    ///
+    /// This function is unsafe since it should only be called from mark itself.
+    unsafe fn update_reachable(&self);
 }
 
 impl_mark!(Vec<T: Mark>; this =>

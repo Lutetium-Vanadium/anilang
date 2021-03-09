@@ -66,11 +66,20 @@ impl Function {
 }
 
 unsafe impl Mark for Function {
-    fn mark(&self) {
+    unsafe fn mark(&self) {
+        // NOTE: This implementation does not call mark on all contained `Gc` values, and so
+        // violates the safety requirement given for the mark function. The `Gc`s not marked are
+        // within the function body. However, this is safe since those `Gc`s will be considered
+        // unreachable as they are not updated in update_reachable.
         self.this.mark();
     }
 
-    fn update_reachable(&self) {
+    unsafe fn update_reachable(&self) {
+        // NOTE: This implementation does not call update_reachable on all contained `Gc` values,
+        // and so violates the safety requirement given for the update_reachable function. The `Gc`s
+        // not updated are within the function body. However, this is safe since those `Gc`s will be
+        // considered unreachable and will not be cyclic (since cycles can only be created within
+        // the Evaluator), so no memory leaks will occur.
         self.this.update_reachable();
     }
 }

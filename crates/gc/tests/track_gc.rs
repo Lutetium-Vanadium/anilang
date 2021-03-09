@@ -25,14 +25,15 @@ const fn new_tdc(updates: usize, marks: usize, drops: usize) -> Cell<GcTrackerDa
 struct GcTracker(&'static LocalKey<Cell<GcTrackerData>>);
 
 unsafe impl Mark for GcTracker {
-    fn mark(&self) {
+    unsafe fn mark(&self) {
         self.0.with(|td| {
             let mut d = td.get();
             d.marks += 1;
             td.set(d);
         })
     }
-    fn update_reachable(&self) {
+
+    unsafe fn update_reachable(&self) {
         self.0.with(|td| {
             let mut d = td.get();
             d.updates += 1;
@@ -57,13 +58,14 @@ struct GcTrackerCycle {
 }
 
 unsafe impl Mark for GcTrackerCycle {
-    fn mark(&self) {
+    unsafe fn mark(&self) {
         self.tracker.mark();
         if let Some(ref next) = *self.next.borrow() {
             next.mark();
         }
     }
-    fn update_reachable(&self) {
+
+    unsafe fn update_reachable(&self) {
         self.tracker.update_reachable();
         if let Some(ref next) = *self.next.borrow() {
             next.update_reachable();
@@ -77,10 +79,11 @@ struct GcTrackerT<T> {
 }
 
 unsafe impl<T> Mark for GcTrackerT<T> {
-    fn mark(&self) {
+    unsafe fn mark(&self) {
         self.tracker.mark();
     }
-    fn update_reachable(&self) {
+
+    unsafe fn update_reachable(&self) {
         self.tracker.update_reachable();
     }
 }

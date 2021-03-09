@@ -2,7 +2,7 @@ use super::*;
 use gc::{Gc, Mark};
 
 unsafe impl Mark for Value {
-    fn mark(&self) {
+    unsafe fn mark(&self) {
         match self {
             Value::String(s) => Gc::mark(s),
             Value::List(l) => Gc::mark(l),
@@ -12,7 +12,7 @@ unsafe impl Mark for Value {
         }
     }
 
-    fn update_reachable(&self) {
+    unsafe fn update_reachable(&self) {
         match self {
             Value::String(s) => Gc::update_reachable(s),
             Value::List(l) => Gc::update_reachable(l),
