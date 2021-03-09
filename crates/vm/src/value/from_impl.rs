@@ -131,6 +131,15 @@ impl Value {
         }
     }
 
+    pub fn into_string(self) -> String {
+        match self {
+            Value::String(s) => Gc::try_unwrap(s)
+                .map(RefCell::into_inner)
+                .unwrap_or_else(|gc| gc.borrow().as_str().to_owned()),
+            _ => unreachable!(),
+        }
+    }
+
     pub fn to_gc_list(&self) -> &Gc<RefCell<List>> {
         match self {
             Value::List(l) => l,
@@ -226,6 +235,11 @@ mod tests {
     fn val_to_ref_string() {
         assert_eq!(s("s").to_gc_str().borrow().as_str(), "s");
         assert_eq!(s("s").to_ref_str().as_str(), "s");
+    }
+
+    #[test]
+    fn val_to_string() {
+        assert_eq!(s("string").into_string().as_str(), "string");
     }
 
     #[test]

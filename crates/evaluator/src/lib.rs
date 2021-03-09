@@ -502,7 +502,7 @@ impl<'diagnostics, 'src, 'bytecode> Evaluator<'diagnostics, 'src, 'bytecode> {
                 return;
             }
 
-            map.insert(k.to_ref_str().to_owned(), v);
+            map.insert(k.into_string(), v);
         }
 
         self.stack.push(Value::Object(Gc::new(RefCell::new(map))));

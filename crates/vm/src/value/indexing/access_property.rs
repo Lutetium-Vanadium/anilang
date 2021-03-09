@@ -83,10 +83,7 @@ fn make_fn(this: Value, native_fn: NativeFn) -> Value {
 }
 
 fn copy_str(string: Ref<String>) -> String {
-    // TODO: Gc has not try_unwrap, which means this optimization can't happen
-    //
-    // Gc::try_unwrap(string)
-    //     .map(std::cell::RefCell::into_inner)
-    //     .unwrap_or_else(|string| string.borrow().as_str().to_owned())
-    String::from(&**string.borrow())
+    Gc::try_unwrap(string)
+        .map(std::cell::RefCell::into_inner)
+        .unwrap_or_else(|string| string.borrow().as_str().to_owned())
 }

@@ -136,7 +136,7 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
                     k_span,
                 );
             } else {
-                map.insert(k.to_ref_str().to_owned(), v);
+                map.insert(k.into_string(), v);
             }
         }
 
