@@ -16,19 +16,21 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::NonNull;
 
+mod guards;
 mod inner;
 mod mark;
 
 pub use inner::collect;
 pub use mark::Mark;
 
-use inner::{GcInner, SweepGuard};
+use guards::DropGuard;
+use inner::GcInner;
 use inner_ptr::GcInnerPtr;
 
 /// A garbage collected pointer. Like an `Rc`, it is not thread safe and cloning it does not clone
-/// the inner data. The max number of unreachable clones is `2^62 - 1` for 64 bit systems and
-/// `2^30 - 1` for 32 bit systems, quarter that of `Rc`. An unreachable clone is one that is not
-/// nested in another Gc object.
+/// the inner data. The max number of unreachable clones is `2^62 - 1` for 64 bit systems and `2^30
+/// - 1` for 32 bit systems, quarter that of `Rc`. An unreachable clone is one that is not nested in
+/// another Gc object. The max number of clones (both reachable and unreachable) is the same as `Rc`.
 ///
 /// Also like `Rc`, the inherent methods are all associated functions and should be called with
 /// `Gc::func(&gc_object, ...)` instead of `gc_object.func(...)`. This avoids conflict with the
@@ -60,11 +62,15 @@ impl<T: ?Sized> Gc<T> {
         }
     }
 
-    fn inner(&self) -> &GcInner<T> {
+    fn check_for_drop(&self) {
         assert!(
-            !SweepGuard::is_taken(),
-            "tried to access inner value while freeing Gc objects"
+            !DropGuard::is_dropping(Gc::id(self)),
+            "tried to access inner value while dropping Gc objects"
         );
+    }
+
+    fn inner(&self) -> &GcInner<T> {
+        self.check_for_drop();
 
         // SAFETY: inner will be valid as long as `Gc`s point to it, and since self is a `Gc`, inner
         // is valid
@@ -74,6 +80,14 @@ impl<T: ?Sized> Gc<T> {
     #[inline]
     fn unreachable(&self) -> bool {
         self.inner.unreachable()
+    }
+
+    /// The number of references to the same Gc object. This is the equivalent of Rc::strong_count.
+    ///
+    /// note: garbage collection is not based on this.
+    #[inline]
+    pub fn ref_count(this: &Self) -> usize {
+        this.inner().actual_count()
     }
 
     /// A unique `usize` corresponding to the object.
@@ -89,9 +103,36 @@ impl<T: ?Sized> Gc<T> {
     }
 }
 
+impl<T> Gc<T> {
+    /// Try to unwrap the inner value if there are no other `Gc`s pointing to it.
+    ///
+    /// If it fails to unwrap, it errors with the same Gc.
+    pub fn try_unwrap(this: Self) -> Result<T, Gc<T>> {
+        if Gc::ref_count(&this) == 1 {
+            this.check_for_drop();
+
+            let inner_ptr = this.inner.ptr();
+
+            // The inner will not be valid at the end of this function. So accessing the inner in
+            // the Drop will cause a use after free.
+            std::mem::forget(this);
+
+            // SAFETY: this branch is only taken when we are the last pointer to the `GcInner`.
+            unsafe {
+                let inner = Box::from_raw(inner_ptr.as_ptr());
+
+                Ok(inner.pop_self())
+            }
+        } else {
+            Err(this)
+        }
+    }
+}
+
 impl<T: ?Sized> Clone for Gc<T> {
     fn clone(&self) -> Self {
         self.inner().inc_ref();
+        self.inner().inc_actual();
 
         Self::from_ptr(self.inner.ptr())
     }
@@ -99,11 +140,15 @@ impl<T: ?Sized> Clone for Gc<T> {
 
 impl<T: ?Sized> Drop for Gc<T> {
     fn drop(&mut self) {
-        if self.unreachable() {
-            self.inner().dec_ref();
+        if !DropGuard::is_dropping(Gc::id(self)) {
+            self.inner().dec_actual();
+
+            if self.unreachable() {
+                self.inner().dec_ref();
+            }
         }
-        // NOTE: Do not access inner if self is reachable, as it will panic. This means we are in
-        // the middle of a garbage collection and could possibly be dropping inner.
+        // NOTE: Do not access inner if drop guard is taken. This means the inner is currently
+        // dropping and dereferencing it could lead to issues.
     }
 }
 

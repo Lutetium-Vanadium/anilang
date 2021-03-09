@@ -1,8 +1,10 @@
 use std::cell::{Cell, RefCell};
 use std::mem;
+use std::num::NonZeroUsize;
 use std::ptr::NonNull;
 use std::thread_local;
 
+use crate::guards::{DropGuard, GcGuard};
 use crate::mark::Mark;
 
 use flags::GcInnerFlags;
@@ -27,59 +29,21 @@ thread_local! {
         max_bytes: 256,
         root: None,
     });
-
-    /// A flag to indicate whether the 'sweep' phase of the mark and sweep algorithm is going on. It
-    /// is undefined behaviour to dereference a pointer to a inner during this time (unless you are
-    /// the sweeper), as an inner may or may not be dropping at that time.
-    static IS_SWEEPING: Cell<bool> = Cell::new(false);
-}
-
-/// A lock to take during sweeping.
-pub(crate) struct SweepGuard {
-    _private: (),
-}
-
-impl SweepGuard {
-    /// Returns a lock which automatically handles changing the state of the IS_SWEEPING global.
-    /// If None is returned, a sweep is going on and the lock cannot be taken.
-    fn take() -> Option<SweepGuard> {
-        IS_SWEEPING.with(|is_sweeping| {
-            if is_sweeping.get() {
-                None
-            } else {
-                is_sweeping.set(true);
-                Some(SweepGuard { _private: () })
-            }
-        })
-    }
-
-    /// A flag to indicate whether the 'sweep' phase of the mark and sweep algorithm is going on. It
-    /// is undefined behaviour to dereference a pointer to a inner during this time (unless you are
-    /// the sweeper), as an inner may or may not be dropping at that time.
-    pub fn is_taken() -> bool {
-        IS_SWEEPING.with(|is_sweeping| is_sweeping.get())
-    }
-}
-
-impl Drop for SweepGuard {
-    fn drop(&mut self) {
-        IS_SWEEPING.with(|is_sweeping| {
-            // Should be true as the only way to construct a SweepGuard is through SweepGuard::take
-            debug_assert_eq!(is_sweeping.get(), true);
-
-            is_sweeping.set(false);
-        })
-    }
 }
 
 // Sanity check to make sure the bottom bit optimization for `Gc<T>` is valid. Alignment should be
 // unaffected and remain 8 for 64 bit and 4 for 32bit.
 #[repr(align(2))]
 pub(crate) struct GcInner<T: ?Sized + 'static> {
-    /// The reference count and marked and updated flag.
+    /// The number of 'unreachable' `Gc`s that exist + marked and updated flag.
     flags: GcInnerFlags,
+    /// The actual number of `Gc`s that exist.
+    /// note: this is not used for garbage collection, it is only used for Gc::try_unwrap
+    actual_count: Cell<usize>,
     /// The next in the linked list of `GcInner`s.
     next: Option<NonNull<GcInner<dyn Mark>>>,
+    /// The previous in the linked list of `GcInner`s.
+    prev: Option<NonNull<GcInner<dyn Mark>>>,
     /// The actual value of the object.
     value: T,
 }
@@ -96,7 +60,7 @@ impl<T: Mark> GcInner<T> {
         }
 
         assert!(
-            !SweepGuard::is_taken(),
+            !GcGuard::is_taken(),
             "cannot create Gc object during a garbage collection"
         );
 
@@ -127,10 +91,20 @@ impl<T: Mark> GcInner<T> {
             let this = unsafe {
                 NonNull::new_unchecked(Box::leak(Box::new(Self {
                     flags: GcInnerFlags::new(),
+                    actual_count: Cell::new(1),
                     next,
+                    prev: None,
                     value,
                 })))
             };
+
+            if let Some(mut next) = next {
+                // SAFETY: All `GcInner`s are valid until they are removed in the sweep phase or
+                // manually removed by try_unwrap
+                let next = unsafe { next.as_mut() };
+                debug_assert!(next.prev.is_none());
+                next.prev = Some(this);
+            }
 
             gcd.root = Some(this);
 
@@ -151,8 +125,73 @@ impl<T: ?Sized> GcInner<T> {
     }
 
     #[inline]
+    pub fn dec_actual(&self) {
+        let actual_count = self.actual_count();
+        assert_ne!(
+            actual_count, 0,
+            "tried to decrement actual_count when count is 0"
+        );
+        self.actual_count.set(actual_count - 1);
+    }
+
+    #[inline]
+    pub fn inc_actual(&self) {
+        let actual_count = self.actual_count();
+        assert_ne!(
+            actual_count,
+            usize::MAX,
+            "tried to increment actual_count when count is max [{}]",
+            usize::MAX
+        );
+        self.actual_count.set(actual_count + 1);
+    }
+
+    #[inline]
+    pub fn actual_count(&self) -> usize {
+        self.actual_count.get()
+    }
+
+    #[inline]
     pub fn value(&self) -> &T {
         &self.value
+    }
+
+    #[inline]
+    pub fn id(&self) -> usize {
+        self as *const _ as *const u8 as usize
+    }
+
+    /// Removes self from the global GcInner linked list.
+    ///
+    /// # Safety
+    ///
+    /// This `GcInner` **must** be freed by the caller as the garbage collector will no longer know
+    /// about this inner. This method effectively transfers ownership of the `GcInner` to the
+    /// caller. It can be freed by calling Box::from_raw.
+    unsafe fn pop_self_impl(&mut self, gcd: &mut GlobalGCData) {
+        if let Some(mut next) = self.next {
+            next.as_mut().prev = self.prev;
+            self.next = None;
+        }
+
+        if let Some(mut prev) = self.prev {
+            prev.as_mut().next = self.next;
+            self.prev = None;
+        } else {
+            gcd.root = self.next;
+        }
+    }
+}
+
+impl<T> GcInner<T> {
+    /// Removes self from the global GcInner linked list.
+    ///
+    /// # Safety
+    ///
+    /// There must be no more `Gc`s that point to this inner.
+    pub unsafe fn pop_self(mut self) -> T {
+        GLOBAL_GC_DATA.with(|gcd| self.pop_self_impl(&mut *gcd.borrow_mut()));
+        self.value
     }
 }
 
@@ -177,6 +216,143 @@ unsafe impl<T: Mark + ?Sized> Mark for GcInner<T> {
             self.value.update_reachable();
         }
     }
+}
+
+// The reason for a separate function for the implementation of garbage collection, is so that other
+// functions which have already mutably borrowed it can collect garbage without having to drop the
+// borrow.
+fn collect_garbage(gcd: &mut GlobalGCData) {
+    // Should be impossible to fail since garbage collection is not recursive, and during sweeping,
+    // new objects shouldn't be created
+    let _guard =
+        GcGuard::take().expect("Unexpected call to garbage collection during a garbage collection");
+
+    // # Different types of references to a GcInner
+    // The `Gc` can be of 2 types: reachable and unreachable. The kind is indicated in the lowermost
+    // bit of the pointer (see `Gc` in `src/lib.rs`). An unreachable Gc is one that is not nested
+    // within another Gc object, hence it is unreachable during a mark.
+    //
+    // Every `Gc` starts out as a unreachable, but during a garbage collection if an unreachable Gc
+    // is encountered, it is converted to a reachable one, and the appropriate ref count is
+    // decremented.
+    //
+    // # ref count
+    // Each `GcInner` keeps a reference count of the number of unreachable `Gc`s that exist.
+    //
+    // # garbage collection
+    // The garbage collection can be broken down into 3 phases:
+    // - Update reachable
+    // - Mark
+    // - Sweep
+
+    // UPDATE REACHABLE
+    //
+    // First we go through every node and mark all `Gc`s which are unreachable as reachable and
+    // change the ref count appropriately.
+    {
+        let mut head = gcd.root;
+        while let Some(node) = head {
+            // SAFETY: All `GcInner`s are valid until they are removed in the sweep phase or have
+            // been manually removed by try_unwrap
+            let node = unsafe { node.as_ref() };
+            node.update_reachable();
+            head = node.next;
+        }
+    }
+
+    // MARK
+    //
+    // Then we pass over all the `GcInner`s marking them suitably. All objects not marked are
+    // not being referenced from anywhere else can be deleted.
+    {
+        let mut head = gcd.root;
+        while let Some(node) = head {
+            // SAFETY: All `GcInner`s are valid until they are removed in the sweep phase or have
+            // been manually removed by try_unwrap
+            let node = unsafe { node.as_ref() };
+            // If ref_count == 0, then this is a candidate for collecting and unless accessible from
+            // another node will not be marked.
+            if node.flags.ref_count() > 0 {
+                node.mark();
+            }
+            head = node.next;
+        }
+    }
+
+    // SWEEP
+    //
+    // After the mark, there is a sweep which deallocates the unmarked `GcInner`s.
+    {
+        let mut head = gcd.root;
+
+        while let Some(mut node_ptr) = head {
+            // SAFETY: The GcInner list will always have valid inners, since the only times a GcInner
+            // is deallocated, is during the sweep or try_unwrap, where it also is removed from the
+            // list.
+            let node = unsafe { node_ptr.as_mut() };
+
+            head = if node.flags.marked() {
+                node.flags.set_marked(false);
+                node.flags.set_updated(false);
+                node.next
+            } else {
+                // Node not marked, it can be collected
+
+                // Should be impossible to fail since sweeping is not recursive, and during sweeping,
+                // new objects shouldn't be created
+                // SAFETY: usize comes from NonNull
+                let _guard = DropGuard::take(unsafe { NonZeroUsize::new_unchecked(node.id()) })
+                    .expect("DropGuard already taken");
+
+                // Final sanity check to make sure that we aren't deallocating something in use.
+                debug_assert_eq!(node.flags.ref_count(), 0);
+                let next = node.next;
+
+                // SAFETY: Inner was ready for collection and will be dropped at the end of this
+                // scope.
+                unsafe { node.pop_self_impl(gcd) };
+
+                gcd.bytes_allocated -= mem::size_of_val(&node.value);
+
+                // Drop early to make sure it is never used past this point as the contents it
+                // points to will be dropped at the end of the scope.
+                #[allow(clippy::drop_ref)]
+                drop(node);
+
+                // SAFETY: node was not marked so should be deallocated, all the remaining `Gc`s
+                // are not unreachable, so the `Drop` shouldn't access the inner value to decrement
+                // the reference count.
+                unsafe {
+                    Box::from_raw(node_ptr.as_ptr());
+                }
+
+                next
+            };
+        }
+    }
+
+    // resize max_bytes so that if lots of memory is cleared, the next garbage collection will
+    // happen early instead of waiting for a long time.
+    //
+    // (side effect: collect_garbage is called if bytes_allocated exceeds max_bytes, which means
+    // that if not enough memory could be allocated, this will take care of that too)
+    gcd.max_bytes = (gcd.bytes_allocated | 128).next_power_of_two();
+    //              ^^^^^^^^^^^^^^^^^^^^^^^^^^^-- makes sure that max_bytes is a minimum of 256
+
+    // overflow of pow2_greater is irrelevant since the only time bytes_allocated can be greater
+    // than isize::MAX is if the garbage collection was triggered by an allocation of a new garbage
+    // collected object, which panics if the bytes_allocated is more than isize::MAX.
+}
+
+/// Tries to perform a garbage collection. It returns whether a garbage collection took place.
+pub fn collect() -> bool {
+    GLOBAL_GC_DATA
+        .with(|gcd| {
+            let mut gcd = gcd.try_borrow_mut().ok()?;
+            collect_garbage(&mut *gcd);
+            Some(())
+        })
+        .is_some()
 }
 
 mod flags {
@@ -392,138 +568,4 @@ mod flags {
             inc_ref_panic_at_max();
         }
     }
-}
-
-// The reason for a separate function for the implementation of garbage collection, is so that other
-// functions which have already mutably borrowed it can collect garbage without having to drop the
-// borrow.
-fn collect_garbage(gcd: &mut GlobalGCData) {
-    // # Different types of references to a GcInner
-    // The `Gc` can be of 2 types: reachable and unreachable. The kind is indicated in the lowermost
-    // bit of the pointer (see `Gc` in `src/lib.rs`). An unreachable Gc is one that is not nested
-    // within another Gc object, hence it is unreachable during a mark.
-    //
-    // Every `Gc` starts out as a unreachable, but during a garbage collection if an unreachable Gc
-    // is encountered, it is converted to a reachable one, and the appropriate ref count is
-    // decremented.
-    //
-    // # ref count
-    // Each `GcInner` keeps a reference count of the number of unreachable `Gc`s that exist.
-    //
-    // # garbage collection
-    // The garbage collection can be broken down into 3 phases:
-    // - Update reachable
-    // - Mark
-    // - Sweep
-
-    // UPDATE REACHABLE
-    //
-    // First we go through every node and mark all `Gc`s which are unreachable as reachable and
-    // change the ref count appropriately.
-    {
-        let mut head = gcd.root;
-        while let Some(node) = head {
-            // SAFETY: All `GcInner`s are valid until they are removed in the sweep phase
-            let node = unsafe { node.as_ref() };
-            node.update_reachable();
-            head = node.next;
-        }
-    }
-
-    // MARK
-    //
-    // Then we pass over all the `GcInner`s marking them suitably. All objects not marked are
-    // not being referenced from anywhere else can be deleted.
-    {
-        let mut head = gcd.root;
-        while let Some(node) = head {
-            // SAFETY: All `GcInner`s are valid until they are removed in the sweep phase
-            let node = unsafe { node.as_ref() };
-            // If ref_count == 0, then this is a candidate for collecting and unless accessible from
-            // another node will not be marked.
-            if node.flags.ref_count() > 0 {
-                node.mark();
-            }
-            head = node.next;
-        }
-    }
-
-    // SWEEP
-    //
-    // After the mark, there is a sweep which deallocates the unmarked `GcInner`s.
-    {
-        // Should be impossible to fail since sweep is not recursive, and during sweeping, new
-        // objects shouldn't be created
-        let _guard = SweepGuard::take().expect("unexpected call to sweep, while already sweeping");
-
-        let mut head = gcd.root;
-        // We need to keep track of previous so that we can set its `next` field while removing a
-        // node.
-        let mut prev = None;
-
-        while let Some(node_ptr) = head {
-            // SAFETY: The GcInner list will always have valid inners, since the only time a GcInner
-            // is deallocated, is during the sweep, where it also is removed from the list.
-            let node = unsafe { node_ptr.as_ref() };
-
-            head = if node.flags.marked() {
-                node.flags.set_marked(false);
-                node.flags.set_updated(false);
-                prev = head;
-                node.next
-            } else {
-                // Node not marked, it can be collected
-
-                // Final sanity check to make sure that we aren't deallocating something in use.
-                debug_assert_eq!(node.flags.ref_count(), 0);
-
-                // remove node from the GcInner list.
-                if let Some(mut prev) = prev {
-                    unsafe { prev.as_mut().next = node.next };
-                } else {
-                    gcd.root = node.next;
-                }
-
-                let next = node.next;
-                gcd.bytes_allocated -= mem::size_of_val(&node.value);
-
-                // Drop early to make sure it is never used past this point as the contents it
-                // points to will be dropped at the end of the scope.
-                #[allow(clippy::drop_ref)]
-                drop(node);
-
-                // SAFETY: node was not marked so should be deallocated, all the remaining `Gc`s
-                // are not unreachable, so the `Drop` shouldn't access the inner value to decrement
-                // the reference count.
-                unsafe {
-                    Box::from_raw(node_ptr.as_ptr());
-                }
-
-                next
-            };
-        }
-    }
-
-    // resize max_bytes so that if lots of memory is cleared, the next garbage collection will
-    // happen early instead of waiting for a long time.
-    //
-    // (side effect: collect_garbage is called if bytes_allocated exceeds max_bytes, which means
-    // that if not enough memory could be allocated, this will take care of that too)
-    gcd.max_bytes = (gcd.bytes_allocated | 128).next_power_of_two();
-    //              ^^^^^^^^^^^^^^^^^^^^^^^^^^^-- makes sure that max_bytes is a minimum of 256
-
-    // overflow of pow2_greater is irrelevant since the only time bytes_allocated can be greater
-    // than isize::MAX is if the garbage collection was triggered by an allocation of a new garbage
-    // collected object, which panics if the bytes_allocated is more than isize::MAX.
-}
-
-/// Tries to perform a garbage collection. It returns whether a garbage collection took place.
-pub fn collect() -> bool {
-    GLOBAL_GC_DATA
-        .with(|gcd| {
-            let mut gcd = gcd.try_borrow_mut().ok()?;
-            collect_garbage(&mut *gcd);
-            Some(())
-        })
-        .is_some()
 }

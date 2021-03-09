@@ -45,14 +45,13 @@ macro_rules! impl_mark {
 ///
 /// While implementing this trait, keep the following things in mind:
 ///
-/// TODO: Drop unsafety may not be a thing because Gc panics if trying to get value during a drop.
-/// - The types [`Drop`] implementation **should not** access any data within a `Gc`. During garbage
-///   collection, when a Gc object is being dropped, accessing data through cyclic references may
-///   end up trying to read/write from deallocated memory.
-/// - No new `Gc`s should be created inside the `mark`, `update_reachable` and drop functions.
+/// - The types [`Drop`] implementation **should not** access any data within a `Gc`. If a `Gc` tries
+///   to access the inner value while it is being dropped, it will panic.
+/// - No new `Gc`s should be created inside the `mark`, `update_reachable` and drop functions, as
+///   this may lead to incorrect reference counting.
 /// - Read each functions documentation to see what invariants that particular function holds.
 pub unsafe trait Mark {
-    /// This should call `Mark::mark` all contained `Gc`s.
+    /// This should call `Mark::mark` on all contained `Gc`s.
     ///
     /// # Safety
     ///
