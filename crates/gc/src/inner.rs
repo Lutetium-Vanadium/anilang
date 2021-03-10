@@ -1,13 +1,12 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::mem;
 use std::num::NonZeroUsize;
 use std::ptr::NonNull;
 use std::thread_local;
 
+use crate::flag_usize::FlagUsize;
 use crate::guards::{DropGuard, GcGuard};
 use crate::mark::Mark;
-
-use flags::GcInnerFlags;
 
 #[derive(Debug)]
 struct GlobalGCData {
@@ -35,11 +34,12 @@ thread_local! {
 // unaffected and remain 8 for 64 bit and 4 for 32bit.
 #[repr(align(2))]
 pub(crate) struct GcInner<T: ?Sized + 'static> {
-    /// The number of 'unreachable' `Gc`s that exist + marked and updated flag.
-    flags: GcInnerFlags,
-    /// The actual number of `Gc`s that exist.
+    /// The number of 'unreachable' `Gc`s that exist + marked flag.
+    ucnt_marked: FlagUsize,
+    /// The actual number of `Gc`s that exist + updated flag.
+    ///
     /// note: this is not used for garbage collection, it is only used for Gc::try_unwrap
-    actual_count: Cell<usize>,
+    acnt_updated: FlagUsize,
     /// The next in the linked list of `GcInner`s.
     next: Option<NonNull<GcInner<dyn Mark>>>,
     /// The previous in the linked list of `GcInner`s.
@@ -90,8 +90,8 @@ impl<T: Mark> GcInner<T> {
             // SAFETY: `Box::new()` will not give a null pointer
             let this = unsafe {
                 NonNull::new_unchecked(Box::leak(Box::new(Self {
-                    flags: GcInnerFlags::new(),
-                    actual_count: Cell::new(1),
+                    ucnt_marked: FlagUsize::new(1, false),
+                    acnt_updated: FlagUsize::new(1, false),
                     next,
                     prev: None,
                     value,
@@ -115,13 +115,41 @@ impl<T: Mark> GcInner<T> {
 
 impl<T: ?Sized> GcInner<T> {
     #[inline]
+    fn marked(&self) -> bool {
+        self.ucnt_marked.get_flag()
+    }
+
+    #[inline]
+    fn set_marked(&self, marked: bool) {
+        self.ucnt_marked.set_flag(marked);
+    }
+
+    #[inline]
+    fn updated(&self) -> bool {
+        self.acnt_updated.get_flag()
+    }
+
+    #[inline]
+    fn set_updated(&self, updated: bool) {
+        self.acnt_updated.set_flag(updated);
+    }
+
+    #[inline]
     pub fn dec_ref(&self) {
-        self.flags.dec_ref();
+        let count = self.ucnt_marked.get_usize();
+        assert_ne!(
+            count, 0,
+            "tried to decrement unreachable count when it is 0"
+        );
+        self.ucnt_marked.set_usize(count - 1);
     }
 
     #[inline]
     pub fn inc_ref(&self) {
-        self.flags.inc_ref();
+        let count = self.ucnt_marked.get_usize();
+
+        // Do not need to check for count > usize::MAX / 2 as set_usize does that already.
+        self.ucnt_marked.set_usize(count + 1);
     }
 
     #[inline]
@@ -129,26 +157,22 @@ impl<T: ?Sized> GcInner<T> {
         let actual_count = self.actual_count();
         assert_ne!(
             actual_count, 0,
-            "tried to decrement actual_count when count is 0"
+            "tried to decrement actual count when count is 0"
         );
-        self.actual_count.set(actual_count - 1);
+        self.acnt_updated.set_usize(actual_count - 1);
     }
 
     #[inline]
     pub fn inc_actual(&self) {
         let actual_count = self.actual_count();
-        assert_ne!(
-            actual_count,
-            usize::MAX,
-            "tried to increment actual_count when count is max [{}]",
-            usize::MAX
-        );
-        self.actual_count.set(actual_count + 1);
+
+        // Do not need to check for count > usize::MAX / 2 as set_usize does that already.
+        self.acnt_updated.set_usize(actual_count + 1);
     }
 
     #[inline]
     pub fn actual_count(&self) -> usize {
-        self.actual_count.get()
+        self.acnt_updated.get_usize()
     }
 
     #[inline]
@@ -198,12 +222,12 @@ impl<T> GcInner<T> {
 unsafe impl<T: Mark + ?Sized> Mark for GcInner<T> {
     unsafe fn mark(&self) {
         // update_reachable should have marked this as updated
-        debug_assert!(self.flags.updated());
+        debug_assert!(self.updated());
 
         // This is called by other values that implement Mark during a garbage collection, if we
         // have already visited this node, we need not go through its children again.
-        if !self.flags.marked() {
-            self.flags.set_marked(true);
+        if !self.marked() {
+            self.set_marked(true);
             self.value.mark();
         }
     }
@@ -211,8 +235,8 @@ unsafe impl<T: Mark + ?Sized> Mark for GcInner<T> {
     unsafe fn update_reachable(&self) {
         // This is called by other values that implement Mark during a garbage collection, if we
         // have already visited this node, we need not go through its children again.
-        if !self.flags.updated() {
-            self.flags.set_updated(true);
+        if !self.updated() {
+            self.set_updated(true);
             self.value.update_reachable();
         }
     }
@@ -273,7 +297,7 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
             let node = unsafe { node.as_ref() };
             // If ref_count == 0, then this is a candidate for collecting and unless accessible from
             // another node will not be marked.
-            if node.flags.ref_count() > 0 {
+            if node.ucnt_marked.get_usize() > 0 {
                 // SAFETY: We are the garbage collector, so we are allowed to call this.
                 unsafe { node.mark() };
             }
@@ -293,9 +317,9 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
             // list.
             let node = unsafe { node_ptr.as_mut() };
 
-            head = if node.flags.marked() {
-                node.flags.set_marked(false);
-                node.flags.set_updated(false);
+            head = if node.marked() {
+                node.set_marked(false);
+                node.set_updated(false);
                 node.next
             } else {
                 // Node not marked, it can be collected
@@ -307,7 +331,7 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
                     .expect("DropGuard already taken");
 
                 // Final sanity check to make sure that we aren't deallocating something in use.
-                debug_assert_eq!(node.flags.ref_count(), 0);
+                debug_assert_eq!(node.ucnt_marked.get_usize(), 0);
                 let next = node.next;
 
                 // SAFETY: Inner was ready for collection and will be dropped at the end of this
@@ -355,219 +379,4 @@ pub fn collect() -> bool {
             Some(())
         })
         .is_some()
-}
-
-mod flags {
-    use std::cell::Cell;
-    use std::fmt;
-    use std::mem;
-
-    const USIZE_BIT_WIDTH: usize = mem::size_of::<usize>() * 8;
-
-    const MARKED_BIT_OFFSET: usize = USIZE_BIT_WIDTH - 1;
-    const MARKED_FLAG_MASK: usize = 1 << MARKED_BIT_OFFSET;
-
-    const UPDATED_BIT_OFFSET: usize = MARKED_BIT_OFFSET - 1;
-    const UPDATED_FLAG_MASK: usize = 1 << UPDATED_BIT_OFFSET;
-
-    const REF_COUNT_MASK: usize = !(MARKED_FLAG_MASK | UPDATED_FLAG_MASK);
-
-    /// A reference counter and two bools within the size of usize.
-    ///
-    /// The reference counter must not exceed `2^62 - 1` on 64 bit platforms, and `2^30 - 1` on
-    /// 32 bit platforms. Exceeding it will cause a panic.
-    pub(super) struct GcInnerFlags {
-        flags: Cell<usize>,
-    }
-
-    impl GcInnerFlags {
-        /// Creates a `GcInnerFlags` which both bools are false, and has a reference count of 1.
-        pub fn new() -> Self {
-            Self {
-                flags: Cell::new(1),
-            }
-        }
-
-        /// Get the marked flag
-        pub fn marked(&self) -> bool {
-            (self.flags.get() & MARKED_FLAG_MASK) != 0
-        }
-
-        /// Set the marked flag
-        pub fn set_marked(&self, marked: bool) {
-            let mut flags = self.flags.get();
-
-            flags &= !MARKED_FLAG_MASK;
-            flags |= (marked as usize) << MARKED_BIT_OFFSET;
-
-            self.flags.set(flags);
-        }
-
-        /// Get the updated flag
-        pub fn updated(&self) -> bool {
-            (self.flags.get() & UPDATED_FLAG_MASK) != 0
-        }
-
-        /// Set the updated flag
-        pub fn set_updated(&self, updated: bool) {
-            let mut flags = self.flags.get();
-
-            flags &= !UPDATED_FLAG_MASK;
-            flags |= (updated as usize) << UPDATED_BIT_OFFSET;
-
-            self.flags.set(flags);
-        }
-
-        /// Get the reference count
-        pub fn ref_count(&self) -> usize {
-            self.flags.get() & REF_COUNT_MASK
-        }
-
-        /// Increment the reference count by 1.
-        ///
-        /// # Panics
-        ///
-        /// If the adding one to the reference count makes it exceed the max ref count, it will
-        /// panic.
-        pub fn inc_ref(&self) {
-            if self.ref_count() == REF_COUNT_MASK {
-                panic!(
-                    "GcInnerFlags: unexpected inc_ref at max ref_count {}",
-                    REF_COUNT_MASK,
-                );
-            }
-            self.flags.set(self.flags.get() + 1);
-        }
-
-        /// Decrement the reference count by 1.
-        ///
-        /// # Panics
-        ///
-        /// If the reference count is currently 0, it will panic.
-        pub fn dec_ref(&self) {
-            if self.ref_count() == 0 {
-                panic!("GcInnerFlags: unexpected dec_ref at ref_count 0");
-            }
-
-            self.flags.set(self.flags.get() - 1);
-        }
-    }
-
-    impl fmt::Debug for GcInnerFlags {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            f.debug_struct("GcInnerFlags")
-                .field("marked", &self.marked())
-                .field("updated", &self.updated())
-                .field("ref_count", &self.ref_count())
-                .finish()
-        }
-    }
-
-    impl fmt::Binary for GcInnerFlags {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            if f.alternate() {
-                write!(f, "{:#0w$b}", self.flags.get(), w = USIZE_BIT_WIDTH)
-            } else {
-                write!(
-                    f,
-                    "{} {} {:0w$b}",
-                    self.marked() as u8,
-                    self.updated() as u8,
-                    self.ref_count(),
-                    w = UPDATED_BIT_OFFSET
-                )
-            }
-        }
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        fn test_state(flags: &GcInnerFlags, ref_count: usize, updated: bool, marked: bool) {
-            let mut state = ref_count;
-            if updated {
-                state |= UPDATED_FLAG_MASK;
-            }
-
-            if marked {
-                state |= MARKED_FLAG_MASK;
-            }
-
-            assert_eq!(flags.ref_count(), ref_count);
-            assert_eq!(flags.updated(), updated);
-            assert_eq!(flags.marked(), marked);
-            assert_eq!(flags.flags.get(), state);
-        }
-
-        #[test]
-        fn test_gc_inner_flags() {
-            let flags = &GcInnerFlags::new();
-
-            test_state(flags, 1, false, false);
-
-            flags.set_updated(true);
-            test_state(flags, 1, true, false);
-
-            flags.set_marked(true);
-            test_state(flags, 1, true, true);
-
-            flags.inc_ref();
-            test_state(flags, 2, true, true);
-
-            flags.set_updated(false);
-            test_state(flags, 2, false, true);
-
-            flags.set_marked(false);
-            test_state(flags, 2, false, false);
-
-            flags.dec_ref();
-            test_state(flags, 1, false, false);
-
-            flags.dec_ref();
-            test_state(flags, 0, false, false);
-        }
-
-        #[test]
-        #[should_panic(expected = "GcInnerFlags: unexpected dec_ref at ref_count 0")]
-        fn test_dec_ref_panic_at_0() {
-            let flags = &GcInnerFlags::new();
-
-            flags.dec_ref();
-            flags.set_marked(true);
-            test_state(flags, 0, false, true);
-
-            flags.dec_ref();
-        }
-
-        fn inc_ref_panic_at_max() {
-            let max = (usize::MAX >> 2) - 2;
-            let flags = &GcInnerFlags::new();
-
-            flags.flags.set(usize::MAX >> 2 - 2);
-
-            flags.set_updated(true);
-
-            flags.inc_ref();
-            test_state(flags, max, true, false);
-
-            flags.inc_ref();
-        }
-
-        #[cfg(target_pointer_width = "64")]
-        #[test]
-        #[should_panic(
-            expected = "GcInnerFlags: unexpected inc_ref at max ref_count 4611686018427387903"
-        )]
-        fn test_inc_ref_panic_at_max() {
-            inc_ref_panic_at_max();
-        }
-
-        #[cfg(target_pointer_width = "32")]
-        #[test]
-        #[should_panic(expected = "GcInnerFlags: unexpected inc_ref at max ref_count 1073741823")]
-        fn test_inc_ref_panic_at_max() {
-            inc_ref_panic_at_max();
-        }
-    }
 }

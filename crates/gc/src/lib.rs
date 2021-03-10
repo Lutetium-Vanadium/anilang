@@ -16,6 +16,7 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::NonNull;
 
+mod flag_usize;
 mod guards;
 mod inner;
 mod mark;
@@ -28,9 +29,8 @@ use inner::GcInner;
 use inner_ptr::GcInnerPtr;
 
 /// A garbage collected pointer. Like an `Rc`, it is not thread safe and cloning it does not clone
-/// the inner data. The max number of unreachable clones is `2^62 - 1` for 64 bit systems and `2^30
-/// - 1` for 32 bit systems, quarter that of `Rc`. An unreachable clone is one that is not nested in
-/// another Gc object. The max number of clones (both reachable and unreachable) is the same as `Rc`.
+/// the inner data. The max number of clones is `2^63 - 1` for 64 bit systems and `2^31 - 1` for 32
+/// bit systems, half that of `Rc`.
 ///
 /// Also like `Rc`, the inherent methods are all associated functions and should be called with
 /// `Gc::func(&gc_object, ...)` instead of `gc_object.func(...)`. This avoids conflict with the
