@@ -131,7 +131,6 @@ impl<T> Gc<T> {
 
 impl<T: ?Sized> Clone for Gc<T> {
     fn clone(&self) -> Self {
-        self.inner().inc_ref();
         self.inner().inc_actual();
 
         Self::from_ptr(self.inner.ptr())
@@ -142,10 +141,6 @@ impl<T: ?Sized> Drop for Gc<T> {
     fn drop(&mut self) {
         if !DropGuard::is_dropping(Gc::id(self)) {
             self.inner().dec_actual();
-
-            if self.unreachable() {
-                self.inner().dec_ref();
-            }
         }
         // NOTE: Do not access inner if drop guard is taken. This means the inner is currently
         // dropping and dereferencing it could lead to issues.
@@ -154,17 +149,21 @@ impl<T: ?Sized> Drop for Gc<T> {
 
 unsafe impl<T: Mark + ?Sized> Mark for Gc<T> {
     unsafe fn mark(&self) {
-        // update_reachable should have marked this as reachable
-        debug_assert!(!self.unreachable());
-
+        // note: we cannot assert that unreachable is set to false, since this sets it true. In case
+        // there are multiple references to the same `Gc` (&Gc), then this may be called multiple
+        // times (self.inner().mark() de-duplicates it).
+        self.inner.set_unreachable(true);
         self.inner().mark();
     }
 
     unsafe fn update_reachable(&self) {
-        // If unreachable, set reachable and decrement inner ref.
+        // If unreachable, set reachable and increment the inner reachable count.
         if self.unreachable() {
+            // note: we need to keep track of unreachable because this function can be called
+            // multiple times if there are multiple references to the same `Gc`, i.e., if they are
+            // stored as &Gc instead just an owned `Gc`.
             self.inner.set_unreachable(false);
-            self.inner().dec_ref();
+            self.inner().inc_reachable();
         }
 
         self.inner().update_reachable();

@@ -34,8 +34,11 @@ thread_local! {
 // unaffected and remain 8 for 64 bit and 4 for 32bit.
 #[repr(align(2))]
 pub(crate) struct GcInner<T: ?Sized + 'static> {
-    /// The number of 'unreachable' `Gc`s that exist + marked flag.
-    ucnt_marked: FlagUsize,
+    /// The number of 'reachable' `Gc`s that exist + marked flag.
+    ///
+    /// note: this is only used during garbage collection. If a garbage collection is not going on,
+    /// this should be set to 0.
+    rcnt_marked: FlagUsize,
     /// The actual number of `Gc`s that exist + updated flag.
     ///
     /// note: this is not used for garbage collection, it is only used for Gc::try_unwrap
@@ -90,7 +93,7 @@ impl<T: Mark> GcInner<T> {
             // SAFETY: `Box::new()` will not give a null pointer
             let this = unsafe {
                 NonNull::new_unchecked(Box::leak(Box::new(Self {
-                    ucnt_marked: FlagUsize::new(1, false),
+                    rcnt_marked: FlagUsize::new(0, false),
                     acnt_updated: FlagUsize::new(1, false),
                     next,
                     prev: None,
@@ -116,12 +119,12 @@ impl<T: Mark> GcInner<T> {
 impl<T: ?Sized> GcInner<T> {
     #[inline]
     fn marked(&self) -> bool {
-        self.ucnt_marked.get_flag()
+        self.rcnt_marked.get_flag()
     }
 
     #[inline]
     fn set_marked(&self, marked: bool) {
-        self.ucnt_marked.set_flag(marked);
+        self.rcnt_marked.set_flag(marked);
     }
 
     #[inline]
@@ -135,21 +138,11 @@ impl<T: ?Sized> GcInner<T> {
     }
 
     #[inline]
-    pub fn dec_ref(&self) {
-        let count = self.ucnt_marked.get_usize();
-        assert_ne!(
-            count, 0,
-            "tried to decrement unreachable count when it is 0"
-        );
-        self.ucnt_marked.set_usize(count - 1);
-    }
-
-    #[inline]
-    pub fn inc_ref(&self) {
-        let count = self.ucnt_marked.get_usize();
+    pub fn inc_reachable(&self) {
+        let count = self.rcnt_marked.get_usize();
 
         // Do not need to check for count > usize::MAX / 2 as set_usize does that already.
-        self.ucnt_marked.set_usize(count + 1);
+        self.rcnt_marked.set_usize(count + 1);
     }
 
     #[inline]
@@ -173,6 +166,14 @@ impl<T: ?Sized> GcInner<T> {
     #[inline]
     pub fn actual_count(&self) -> usize {
         self.acnt_updated.get_usize()
+    }
+
+    #[inline]
+    /// WARNING: DO NOT USE.
+    ///
+    /// This is only reliable for a brief period during garbage collection -- during the mark phase.
+    pub fn unreachable_count(&self) -> usize {
+        self.actual_count() - self.rcnt_marked.get_usize()
     }
 
     #[inline]
@@ -261,7 +262,9 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
     // decremented.
     //
     // # ref count
-    // Each `GcInner` keeps a reference count of the number of unreachable `Gc`s that exist.
+    // Each `GcInner` keeps a reference count of the number of `Gc`s that exist (similar to
+    // Rc::strong_count), and during Update Reachable phase, the number of reachable `Gc`s are
+    // counted, and stored in rcnt_marked.
     //
     // # garbage collection
     // The garbage collection can be broken down into 3 phases:
@@ -279,8 +282,10 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
             // SAFETY: All `GcInner`s are valid until they are removed in the sweep phase or have
             // been manually removed by try_unwrap
             let node = unsafe { node.as_ref() };
+
             // SAFETY: We are the garbage collector, so we are allowed to call this.
             unsafe { node.update_reachable() };
+
             head = node.next;
         }
     }
@@ -295,12 +300,14 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
             // SAFETY: All `GcInner`s are valid until they are removed in the sweep phase or have
             // been manually removed by try_unwrap
             let node = unsafe { node.as_ref() };
-            // If ref_count == 0, then this is a candidate for collecting and unless accessible from
-            // another node will not be marked.
-            if node.ucnt_marked.get_usize() > 0 {
+
+            // If unreachable_count == 0, then this is a candidate for collecting and unless
+            // accessible from another node will not be marked.
+            if node.unreachable_count() > 0 {
                 // SAFETY: We are the garbage collector, so we are allowed to call this.
                 unsafe { node.mark() };
             }
+
             head = node.next;
         }
     }
@@ -320,6 +327,7 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
             head = if node.marked() {
                 node.set_marked(false);
                 node.set_updated(false);
+                node.rcnt_marked.set_usize(0);
                 node.next
             } else {
                 // Node not marked, it can be collected
@@ -330,8 +338,6 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
                 let _guard = DropGuard::take(unsafe { NonZeroUsize::new_unchecked(node.id()) })
                     .expect("DropGuard already taken");
 
-                // Final sanity check to make sure that we aren't deallocating something in use.
-                debug_assert_eq!(node.ucnt_marked.get_usize(), 0);
                 let next = node.next;
 
                 // SAFETY: Inner was ready for collection and will be dropped at the end of this
@@ -348,9 +354,7 @@ fn collect_garbage(gcd: &mut GlobalGCData) {
                 // SAFETY: node was not marked so should be deallocated, all the remaining `Gc`s
                 // are not unreachable, so the `Drop` shouldn't access the inner value to decrement
                 // the reference count.
-                unsafe {
-                    Box::from_raw(node_ptr.as_ptr());
-                }
+                let _ = unsafe { Box::from_raw(node_ptr.as_ptr()) };
 
                 next
             };
