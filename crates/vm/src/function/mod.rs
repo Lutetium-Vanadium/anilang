@@ -1,4 +1,5 @@
 use crate::bytecode::Bytecode;
+use crate::value::FmtValue;
 use gc::Mark;
 use std::rc::Rc;
 
@@ -100,7 +101,7 @@ impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.fn_type)?;
         if let Some(ref this) = self.this {
-            write!(f, " on {}", this)?;
+            write!(f, " on {}", FmtValue(this))?;
         }
         Ok(())
     }

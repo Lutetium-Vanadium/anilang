@@ -138,7 +138,7 @@ impl Value {
             }
             _ => unreachable!(
                 "Unexpected explicit cast from {:?} to {:?}, for possible explicit casts call try_cast() instead",
-                self, to_type
+                self.type_(), to_type
             ),
         }
     }

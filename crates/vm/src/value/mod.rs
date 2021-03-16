@@ -20,6 +20,7 @@ pub type List = Vec<Value>;
 pub type Object = std::collections::HashMap<String, Value>;
 pub type Ref<T> = Gc<RefCell<T>>;
 pub(crate) type Result<T> = std::result::Result<T, ErrorKind>;
+pub use fmt_impl::{print_value, FmtValue};
 
 /// Errors generated during the execution of code are handled through this enum
 #[derive(Debug, PartialEq)]

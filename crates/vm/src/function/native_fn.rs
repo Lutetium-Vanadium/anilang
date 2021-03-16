@@ -1,5 +1,5 @@
 use crate::types::Type;
-use crate::value::{ErrorKind, Result, Value};
+use crate::value::{print_value, ErrorKind, FmtValue, Result, Value};
 use gc::Gc;
 use std::cell::RefCell;
 use std::io::{self, prelude::*};
@@ -13,10 +13,10 @@ pub fn print(args: Vec<Value>) -> Result<Value> {
     }
 
     for value in &args[..(args.len() - 1)] {
-        print!("{} ", value)
+        print!("{} ", FmtValue(value));
     }
 
-    println!("{}", args.last().unwrap());
+    print_value(args.last().unwrap(), false);
 
     Ok(Value::Null)
 }
@@ -30,7 +30,7 @@ pub fn input(args: Vec<Value>) -> Result<Value> {
     }
 
     if let Some(arg) = args.last() {
-        print!("{} ", arg);
+        print!("{} ", FmtValue(arg));
     }
 
     io::stdout().flush().unwrap();
@@ -98,7 +98,7 @@ pub fn assert(args: Vec<Value>) -> Result<Value> {
     for arg in args {
         if !bool::from(&arg) {
             return Err(ErrorKind::Other {
-                message: format!("Assertion failed: {} is not truthy", arg),
+                message: format!("Assertion failed: {} is not truthy", FmtValue(&arg)),
             });
         }
     }

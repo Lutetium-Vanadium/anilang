@@ -151,6 +151,8 @@ const YELLOW: style::Color = style::Color::Rgb {
 };
 
 use crate::types::Type;
+
+// note: direct debug print is alright, since there can never be cyclic references in the bytecode.
 fn print_value(value: &crate::value::Value, stdout: &mut std::io::Stdout) -> Result<()> {
     match value.type_() {
         Type::Int | Type::Bool | Type::Float | Type::Range => queue!(
