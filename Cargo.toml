@@ -3,6 +3,7 @@ members = [
     "crates/anilang",
     "crates/diagnostics",
     "crates/evaluator",
+    "crates/gc",
     "crates/intermediaries",
     "crates/lexer",
     "crates/lowerer",

@@ -1,5 +1,6 @@
 use crate::types::{Cast, Type};
 use enumflags2::BitFlags;
+use gc::Gc;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -7,6 +8,7 @@ mod cmp_impl;
 mod fmt_impl;
 mod from_impl;
 mod indexing;
+mod mark_impl;
 mod serialize;
 
 #[cfg(test)]
@@ -16,8 +18,9 @@ use crate::function::Function;
 
 pub type List = Vec<Value>;
 pub type Object = std::collections::HashMap<String, Value>;
-pub type Ref<T> = Rc<RefCell<T>>;
+pub type Ref<T> = Gc<RefCell<T>>;
 pub(crate) type Result<T> = std::result::Result<T, ErrorKind>;
+pub use fmt_impl::{print_value, FmtValue};
 
 /// Errors generated during the execution of code are handled through this enum
 #[derive(Debug, PartialEq)]
@@ -171,13 +174,13 @@ impl Add for Value {
             Value::Int(left) => Ok(Value::Int(left + i64::from(right))),
             Value::Float(left) => Ok(Value::Float(left + f64::from(right))),
             Value::String(left) => {
-                let right = right.into_rc_str();
+                let right = right.into_gc_str();
 
-                Ok(Value::String(if Rc::strong_count(&left) == 1 {
-                    left.borrow_mut().push_str(&right.borrow());
+                let gc = if Gc::ref_count(&left) == 1 {
+                    *left.borrow_mut() += &**right.borrow();
                     left
-                } else if Rc::strong_count(&right) == 1 {
-                    right.borrow_mut().push_str(&left.borrow());
+                } else if Gc::ref_count(&right) == 1 {
+                    *right.borrow_mut() += &**left.borrow();
                     right
                 } else {
                     let l = left.borrow();
@@ -185,30 +188,37 @@ impl Add for Value {
                     let mut s = String::with_capacity(l.len() + r.len());
                     s += &l;
                     s += &r;
-                    Rc::new(RefCell::new(s))
-                }))
+
+                    Gc::new(RefCell::new(s))
+                };
+
+                Ok(Value::String(gc))
             }
             Value::List(left) => {
-                let right = right.into_rc_list();
+                let right = right.into_gc_list();
 
-                Ok(Value::List(if Rc::strong_count(&left) == 1 {
-                    left.borrow_mut().extend_from_slice(&right.borrow()[..]);
+                let gc = if Gc::ref_count(&left) == 1 {
+                    left.borrow_mut().extend_from_slice(&**right.borrow());
                     left
-                } else if Rc::strong_count(&right) == 1 {
-                    right.borrow_mut().extend_from_slice(&left.borrow()[..]);
+                } else if Gc::ref_count(&right) == 1 {
+                    right.borrow_mut().extend_from_slice(&**left.borrow());
                     right
                 } else {
                     let l = left.borrow();
                     let r = right.borrow();
+
                     let mut v = Vec::with_capacity(l.len() + r.len());
-                    v.extend_from_slice(&l[..]);
-                    v.extend_from_slice(&r[..]);
-                    Rc::new(RefCell::new(v))
-                }))
+                    v.extend_from_slice(&**l);
+                    v.extend_from_slice(&**r);
+
+                    Gc::new(RefCell::new(v))
+                };
+
+                Ok(Value::List(gc))
             }
             _ => Err(ErrorKind::IncorrectLeftType {
                 got: self.type_(),
-                expected: Type::Int | Type::Float | Type::String,
+                expected: Type::Int | Type::Float | Type::String | Type::List,
             }),
         }
     }

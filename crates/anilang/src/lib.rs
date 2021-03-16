@@ -7,6 +7,6 @@ pub use parser::Parser;
 pub use serialize::{Deserialize, DeserializeCtx, Serialize};
 pub use source::SourceText;
 pub use vm::{
-    function, print_bytecode, Bytecode, DeserializationContext, Instruction, InstructionKind,
-    LabelNumber, Scope, Type, Value,
+    function, print_bytecode, print_value, Bytecode, DeserializationContext, FmtValue, Instruction,
+    InstructionKind, LabelNumber, Scope, Type, Value,
 };

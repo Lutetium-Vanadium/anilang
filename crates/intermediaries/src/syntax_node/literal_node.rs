@@ -1,7 +1,6 @@
 use crossterm::style;
 use source::{SourceText, TextSpan};
 use std::cell::RefCell;
-use std::rc::Rc;
 use vm::value::Value;
 
 type Result<T> = std::result::Result<T, ()>;
@@ -62,7 +61,7 @@ impl Parse for String {
             string.push(chr);
         }
 
-        Ok(Value::String(Rc::new(RefCell::new(string))))
+        Ok(Value::String(gc::Gc::new(RefCell::new(string))))
     }
 }
 

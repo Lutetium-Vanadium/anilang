@@ -7,7 +7,7 @@ fn err_ior(index: i64, len: i64) -> Result<Value> {
 
 fn test_invalid_prop(v: Value, prop: &str) {
     let p = s(prop);
-    let prop_str = p.clone().into_rc_str();
+    let prop_str = Gc::clone(&p.to_gc_str());
     assert_eq!(
         v.clone().get_at(p),
         Err(ErrorKind::InvalidProperty {
@@ -19,7 +19,7 @@ fn test_invalid_prop(v: Value, prop: &str) {
 
 fn test_invalid_prop_set(v: Value, prop: &str, set: Value) {
     let p = s(prop);
-    let prop_str = p.clone().into_rc_str();
+    let prop_str = Gc::clone(&p.to_gc_str());
     assert_eq!(
         v.clone().set_at(p, set),
         Err(ErrorKind::InvalidProperty {
@@ -31,7 +31,7 @@ fn test_invalid_prop_set(v: Value, prop: &str, set: Value) {
 
 fn test_readonly_prop(v: Value, prop: &str, set: Value) {
     let p = s(prop);
-    let prop_str = p.clone().into_rc_str();
+    let prop_str = Gc::clone(&p.to_gc_str());
     assert_eq!(
         v.clone().set_at(p, set),
         Err(ErrorKind::ReadonlyProperty {

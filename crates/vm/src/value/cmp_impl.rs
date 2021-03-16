@@ -22,26 +22,12 @@ impl PartialEq for Value {
             Value::Float(l) => l == r.into(),
             Value::Bool(l) => l == r.into(),
             Value::Range(s, e) => (s..e) == r.into(),
-            Value::String(ref l_rc) => {
-                // Easy to check if both are references to the same string, otherwise check if the
-                // actual strings are equal
-                Rc::ptr_eq(&l_rc, &r.clone().into_rc_str())
-                    || l_rc.borrow().as_str() == r.to_ref_str().as_str()
-            }
-            Value::List(ref l_rc) => {
-                // Easy to check if both are references to the same list, otherwise check if the
-                // actual elements are equal
-                Rc::ptr_eq(&l_rc, &r.clone().into_rc_list())
-                    || l_rc.borrow()[..] == r.to_ref_list()[..]
-            }
-            Value::Object(ref l_rc) => {
-                // Easy to check if both are references to the same object, otherwise check if the
-                // actual elements are equal
-                Rc::ptr_eq(&l_rc, &r.clone().into_rc_obj()) || l_rc.borrow().eq(&*r.to_ref_obj())
-            }
+            Value::String(ref l_rc) => l_rc == r.to_gc_str(),
+            Value::List(ref l_rc) => l_rc == r.to_gc_list(),
+            Value::Object(ref l_rc) => l_rc == r.to_gc_obj(),
             // Functions are only equal if they are references to the same definition, the actual
             // args and function body are not considered.
-            Value::Function(ref l) => Rc::ptr_eq(l, &r.into_rc_fn()),
+            Value::Function(ref l) => Rc::ptr_eq(l, r.to_rc_fn()),
             Value::Null => true,
         }
     }

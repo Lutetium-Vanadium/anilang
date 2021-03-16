@@ -115,7 +115,7 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
         for e in node.elements {
             list.push(self.evaluate_node(e));
         }
-        Value::List(std::rc::Rc::new(std::cell::RefCell::new(list)))
+        Value::List(gc::Gc::new(std::cell::RefCell::new(list)))
     }
 
     fn evaluate_object(&self, mut node: node::ObjectNode) -> Value {
@@ -136,11 +136,11 @@ impl<'diagnostics, 'src> ConstEvaluator<'diagnostics, 'src> {
                     k_span,
                 );
             } else {
-                map.insert(k.into_str(), v);
+                map.insert(k.into_string(), v);
             }
         }
 
-        Value::Object(std::rc::Rc::new(std::cell::RefCell::new(map)))
+        Value::Object(gc::Gc::new(std::cell::RefCell::new(map)))
     }
 
     fn evaluate_unary(&self, node: node::UnaryNode) -> Value {

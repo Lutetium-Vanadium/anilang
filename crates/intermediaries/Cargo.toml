@@ -8,3 +8,4 @@ edition = "2018"
 crossterm = "0.18.2"
 source = { path = "../source" }
 vm = { path = "../vm" }
+gc = { path = "../gc" }

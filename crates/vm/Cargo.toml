@@ -7,5 +7,6 @@ edition = "2018"
 [dependencies]
 serialize = { path = "../serialize" }
 source = { path = "../source" }
+gc = { path = "../gc" }
 enumflags2 = "0.6.4"
 crossterm = "0.18.2"

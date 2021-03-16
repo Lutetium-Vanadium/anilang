@@ -1,4 +1,6 @@
 use crate::bytecode::Bytecode;
+use crate::value::FmtValue;
+use gc::Mark;
 use std::rc::Rc;
 
 mod anilang_fn;
@@ -64,6 +66,25 @@ impl Function {
     }
 }
 
+unsafe impl Mark for Function {
+    unsafe fn mark(&self) {
+        // NOTE: This implementation does not call mark on all contained `Gc` values, and so
+        // violates the safety requirement given for the mark function. The `Gc`s not marked are
+        // within the function body. However, this is safe since those `Gc`s will be considered
+        // unreachable as they are not updated in update_reachable.
+        self.this.mark();
+    }
+
+    unsafe fn update_reachable(&self) {
+        // NOTE: This implementation does not call update_reachable on all contained `Gc` values,
+        // and so violates the safety requirement given for the update_reachable function. The `Gc`s
+        // not updated are within the function body. However, this is safe since those `Gc`s will be
+        // considered unreachable and will not be cyclic (since cycles can only be created within
+        // the Evaluator), so no memory leaks will occur.
+        self.this.update_reachable();
+    }
+}
+
 /// Representation of pointer to function which can be executed
 #[derive(Clone)]
 pub enum FunctionType {
@@ -80,7 +101,7 @@ impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.fn_type)?;
         if let Some(ref this) = self.this {
-            write!(f, " on {}", this)?;
+            write!(f, " on {}", FmtValue(this))?;
         }
         Ok(())
     }

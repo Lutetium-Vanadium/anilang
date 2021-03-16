@@ -10,6 +10,7 @@
 /// }
 /// ```
 use super::{Function, List, Object, Value};
+use gc::Gc;
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
@@ -116,17 +117,18 @@ impl From<&Value> for Range<i64> {
 }
 
 impl Value {
-    pub fn into_rc_str(self) -> Rc<RefCell<String>> {
+    pub fn to_gc_str(&self) -> &Gc<RefCell<String>> {
         match self {
             Value::String(s) => s,
             _ => unreachable!(),
         }
     }
 
-    pub fn into_str(self) -> String {
-        Rc::try_unwrap(self.into_rc_str())
-            .map(RefCell::into_inner)
-            .unwrap_or_else(|rc| rc.borrow().as_str().to_owned())
+    pub fn into_gc_str(self) -> Gc<RefCell<String>> {
+        match self {
+            Value::String(s) => s,
+            _ => unreachable!(),
+        }
     }
 
     pub fn to_ref_str(&self) -> Ref<String> {
@@ -136,7 +138,20 @@ impl Value {
         }
     }
 
-    pub fn into_rc_list(self) -> Rc<RefCell<List>> {
+    pub fn into_string(self) -> String {
+        Gc::try_unwrap(self.into_gc_str())
+            .map(RefCell::into_inner)
+            .unwrap_or_else(|gc| gc.borrow().as_str().to_owned())
+    }
+
+    pub fn to_gc_list(&self) -> &Gc<RefCell<List>> {
+        match self {
+            Value::List(l) => l,
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn into_gc_list(self) -> Gc<RefCell<List>> {
         match self {
             Value::List(l) => l,
             _ => unreachable!(),
@@ -150,6 +165,13 @@ impl Value {
         }
     }
 
+    pub fn to_rc_fn(&self) -> &Rc<Function> {
+        match self {
+            Value::Function(f) => f,
+            _ => unreachable!(),
+        }
+    }
+
     pub fn into_rc_fn(self) -> Rc<Function> {
         match self {
             Value::Function(f) => f,
@@ -157,7 +179,7 @@ impl Value {
         }
     }
 
-    pub fn into_rc_obj(self) -> Rc<RefCell<Object>> {
+    pub fn to_gc_obj(&self) -> &Gc<RefCell<Object>> {
         match self {
             Value::Object(o) => o,
             _ => unreachable!(),
@@ -222,19 +244,24 @@ mod tests {
 
     #[test]
     fn val_to_ref_string() {
-        assert_eq!(s("s").into_rc_str().borrow().as_str(), "s");
+        assert_eq!(s("s").to_gc_str().borrow().as_str(), "s");
+        assert_eq!(s("s").into_gc_str().borrow().as_str(), "s");
         assert_eq!(s("s").to_ref_str().as_str(), "s");
     }
 
     #[test]
-    fn val_to_str() {
-        assert_eq!(s("string").into_str().as_str(), "string");
+    fn val_to_string() {
+        assert_eq!(s("string").into_string().as_str(), "string");
     }
 
     #[test]
     fn val_to_ref_list() {
         assert_eq!(
-            l(vec![i(0), i(1), s("s")]).into_rc_list().borrow()[..],
+            l(vec![i(0), i(1), s("s")]).to_gc_list().borrow()[..],
+            [i(0), i(1), s("s")]
+        );
+        assert_eq!(
+            l(vec![i(0), i(1), s("s")]).into_gc_list().borrow()[..],
             [i(0), i(1), s("s")]
         );
         assert_eq!(
@@ -253,7 +280,7 @@ mod tests {
         assert_eq!(*ref_obj.get("b").unwrap(), b(true));
         drop(ref_obj);
 
-        let rc_obj = obj.into_rc_obj();
+        let rc_obj = obj.to_gc_obj();
 
         assert_eq!(*rc_obj.borrow().get("a").unwrap(), i(0));
         assert_eq!(*rc_obj.borrow().get("b").unwrap(), b(true));

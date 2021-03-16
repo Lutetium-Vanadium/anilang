@@ -364,6 +364,7 @@ name = "evaluator"
 version = "0.1.0"
 dependencies = [
  "diagnostics",
+ "gc",
  "source",
  "vm",
 ]
@@ -373,6 +374,10 @@ name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
+
+[[package]]
+name = "gc"
+version = "0.1.0"
 
 [[package]]
 name = "generator"
@@ -442,6 +447,7 @@ name = "intermediaries"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "gc",
  "source",
  "vm",
 ]
@@ -554,6 +560,7 @@ name = "lowerer"
 version = "0.1.0"
 dependencies = [
  "diagnostics",
+ "gc",
  "intermediaries",
  "source",
  "vm",
@@ -728,6 +735,7 @@ name = "parser"
 version = "0.1.0"
 dependencies = [
  "diagnostics",
+ "gc",
  "intermediaries",
  "source",
  "vm",
@@ -1199,6 +1207,7 @@ version = "0.1.0"
 dependencies = [
  "crossterm",
  "enumflags2",
+ "gc",
  "serialize",
  "source",
 ]

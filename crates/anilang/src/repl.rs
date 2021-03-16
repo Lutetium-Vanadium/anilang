@@ -81,7 +81,7 @@ pub fn run(mut show_ast: bool, mut show_bytecode: bool) {
             let value = anilang::Evaluator::evaluate(&bytecode[..], &diagnostics);
             match value {
                 anilang::Value::Null => {}
-                value if !diagnostics.any() => println!("{:?}", value),
+                value if !diagnostics.any() => anilang::print_value(&value, true),
                 _ => {}
             }
         }
